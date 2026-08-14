@@ -8,6 +8,7 @@ const NAV = [
   { href: '/blind', label: '🙈 Blind Ranking', match: '/blind' },
   { href: '/tier', label: '🎯 Tier List', match: '/tier' },
   { href: '/undercover', label: '🐐 Undercover', match: '/undercover' },
+  { href: '/undercover-artist', label: '🎨 Undercover Artist', match: '/undercover-artist' },
 ];
 
 export default function Sidebar() {
@@ -21,7 +22,7 @@ export default function Sidebar() {
           La Caverne des <span className="text-amber">Goats</span>
         </div>
         {NAV.map((item) => {
-          const active = pathname?.startsWith(item.match);
+          const active = pathname === item.href;
           return (
             <Link
               key={item.href}
@@ -47,7 +48,7 @@ export default function Sidebar() {
       </div>
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-border flex justify-around px-1 py-2">
         {NAV.map((item) => {
-          const active = pathname?.startsWith(item.match);
+          const active = pathname === item.href;
           const [icon, ...rest] = item.label.split(' ');
           return (
             <Link

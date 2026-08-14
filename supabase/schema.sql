@@ -48,4 +48,30 @@ create policy "public all tier_assignments" on tier_assignments for all using (t
 -- ============================================================
 -- Storage : crée en plus, à la main, un bucket nommé "item-images"
 -- (Storage > New bucket > "item-images" > Public bucket : coché)
+--
+-- Rendre le bucket "public" permet de LIRE les images via leur URL,
+-- mais l'upload (INSERT) reste bloqué par la RLS de storage.objects
+-- tant qu'aucune policy ne l'autorise explicitement. D'où l'erreur
+-- "new row violates row-level security policy" pendant l'upload.
+-- Les policies ci-dessous l'autorisent, pour ce bucket uniquement.
 -- ============================================================
+
+drop policy if exists "public read item-images" on storage.objects;
+create policy "public read item-images"
+on storage.objects for select
+using (bucket_id = 'item-images');
+
+drop policy if exists "public upload item-images" on storage.objects;
+create policy "public upload item-images"
+on storage.objects for insert
+with check (bucket_id = 'item-images');
+
+drop policy if exists "public update item-images" on storage.objects;
+create policy "public update item-images"
+on storage.objects for update
+using (bucket_id = 'item-images');
+
+drop policy if exists "public delete item-images" on storage.objects;
+create policy "public delete item-images"
+on storage.objects for delete
+using (bucket_id = 'item-images');

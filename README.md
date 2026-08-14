@@ -43,6 +43,23 @@ Ouvre [http://localhost:3000](http://localhost:3000) — l'appli tourne en local
 
 Dans le dashboard Supabase → **Table Editor** → tu retrouves `lists` et `items` sous forme de tableur : tu peux ajouter, modifier ou supprimer des lignes directement à la main, exactement comme dans Excel. Les changements apparaissent immédiatement dans l'appli au prochain chargement de page.
 
+## 5. Accès mobile — déployer en ligne gratuitement (Vercel)
+
+L'appli est déjà adaptée aux petits écrans (barre de navigation en bas sur mobile). Pour y accéder depuis ton téléphone n'importe où (même PC éteint), déploie-la sur Vercel — gratuit, et connecté à la **même base Supabase** :
+
+1. Va sur [vercel.com](https://vercel.com) → connecte-toi (tu peux utiliser GitHub).
+2. Mets ce dossier de projet sur GitHub (crée un repo, `git init` / `git add .` / `git commit` / `git push` — ou utilise GitHub Desktop si tu préfères une interface).
+3. Sur Vercel → **Add New → Project** → importe ce repo GitHub.
+4. Dans les réglages du projet Vercel, section **Environment Variables**, ajoute les deux mêmes variables que dans ton `.env.local` :
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. Clique **Deploy**. Au bout d'une minute, Vercel te donne une URL du type `https://la-caverne-des-goats.vercel.app`.
+6. Ouvre cette URL sur ton téléphone (tu peux l'ajouter à l'écran d'accueil pour un accès en un tap, comme une appli).
+
+Comme la base de données est sur Supabase et pas sur ton PC, la version Vercel (mobile) et la version locale (PC) pointent vers **les mêmes listes, items et parties** — tout ce que tu ajoutes d'un côté est visible de l'autre.
+
+Après ce premier déploiement, chaque `git push` sur ce repo republie automatiquement la nouvelle version.
+
 ## Structure du projet
 
 ```
@@ -61,13 +78,10 @@ supabase/
   schema.sql             → schéma SQL à exécuter une fois dans Supabase
 ```
 
-## Points notables par mode
+## Modes de jeu, en bref
 
 - **Mes bases** : crée une base texte ou image ; pour une base image, tu peux sélectionner **plusieurs fichiers en une fois** (le nom de fichier devient le nom de l'item, modifiable ensuite dans Supabase). Pour une base texte, tu peux aussi coller une liste de noms (un par ligne) pour tout ajouter d'un coup.
 - **Blind Ranking** : choisis une base, un nombre (5 / 10 / 20), puis pour chaque item révélé tu cliques directement sur sa position finale (1 à N).
 - **Tier List** : glisse-dépose les items dans les rangées ; clique sur la lettre d'un tier pour la renommer (ex. remplacer "S/A/B/C/D/E" par tes propres noms). Sauvegardé par base.
 - **Undercover** : choisis une base de mots/images, le nombre de joueurs, leurs noms, le nombre d'undercover, et active Mister White à partir de 5 joueurs. Chaque joueur voit sa carte seul (mode "passe l'appareil"). Ensuite, à chaque tour, on élimine un joueur en cliquant dessus : son rôle est révélé, jamais son mot. Si Mister White est éliminé, il peut tenter de deviner le mot des civils pour gagner.
-
-## Déploiement (optionnel, plus tard)
-
-Le projet reste 100% gratuit en local. Si un jour tu veux y accéder depuis ton téléphone sans allumer ton PC, tu pourras déployer gratuitement sur [Vercel](https://vercel.com) en connectant juste ce dossier (mêmes variables d'environnement à renseigner dans les settings Vercel).
+- **Undercover Artist** : variante dessinée de l'Undercover. Les civils reçoivent tous le même mot, l'undercover n'a rien. À tour de rôle (mode "passe l'appareil"), chaque joueur ajoute **un seul trait continu** sur un dessin commun — dès qu'il relâche, c'est au joueur suivant. Une fois que tout le monde a dessiné pour la manche, on élimine un joueur (rôle révélé, mot jamais révélé), et le dessin continue à la manche suivante avec les joueurs restants, jusqu'à la victoire des civils ou de l'undercover.
