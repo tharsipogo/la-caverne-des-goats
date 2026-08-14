@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
+
+html, body {
+  padding: 0;
+  margin: 0;
+  background: #14151a;
+  color: #f2f0e8;
+}
+
+::selection {
+  background: #e8ab4f;
+  color: #1a1a1a;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: #23252f;
+  border-radius: 20px;
+}
+
+.btn {
+  @apply bg-amber text-[#1a1408] border-none px-4 py-2.5 rounded-lg font-semibold text-sm cursor-pointer transition;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-secondary {
+  @apply bg-surface2 text-text border border-border px-4 py-2.5 rounded-lg font-semibold text-sm cursor-pointer transition;
+}
+.btn-ghost {
+  @apply bg-transparent text-muted border border-border px-4 py-2.5 rounded-lg font-semibold text-sm cursor-pointer transition;
+}
+.btn-danger {
+  @apply bg-transparent text-red border border-[#4a2c2c] px-4 py-2.5 rounded-lg font-semibold text-sm cursor-pointer transition;
+}
+.btn-small { @apply px-3 py-1.5 text-xs; }
+
+.input, select.input {
+  @apply bg-surface2 border border-border text-text px-3 py-2.5 rounded-lg text-sm w-full;
+}
+.input:focus, select.input:focus {
+  outline: 2px solid #e8ab4f;
+  outline-offset: 1px;
+}
+
+.panel {
+  @apply bg-surface border border-border rounded-card p-6 mt-5;
+}
+
+.eyebrow {
+  @apply font-mono text-[11px] tracking-[0.12em] uppercase text-amber mb-1.5;
+}
