@@ -6,7 +6,7 @@
 create table if not exists lists (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  type text not null check (type in ('text','image')),
+  type text not null check (type in ('text','image','audio')),
   tier_labels jsonb not null default '["S","A","B","C","D","E"]',
   created_at timestamptz not null default now()
 );
@@ -16,6 +16,7 @@ create table if not exists items (
   list_id uuid not null references lists(id) on delete cascade,
   name text not null,
   image_url text,
+  audio_url text,
   created_at timestamptz not null default now()
 );
 
@@ -75,3 +76,28 @@ drop policy if exists "public delete item-images" on storage.objects;
 create policy "public delete item-images"
 on storage.objects for delete
 using (bucket_id = 'item-images');
+
+-- ============================================================
+-- Storage : crée aussi un bucket nommé "item-audio" (Public bucket coché)
+-- pour les extraits du mode Blind Test.
+-- ============================================================
+
+drop policy if exists "public read item-audio" on storage.objects;
+create policy "public read item-audio"
+on storage.objects for select
+using (bucket_id = 'item-audio');
+
+drop policy if exists "public upload item-audio" on storage.objects;
+create policy "public upload item-audio"
+on storage.objects for insert
+with check (bucket_id = 'item-audio');
+
+drop policy if exists "public update item-audio" on storage.objects;
+create policy "public update item-audio"
+on storage.objects for update
+using (bucket_id = 'item-audio');
+
+drop policy if exists "public delete item-audio" on storage.objects;
+create policy "public delete item-audio"
+on storage.objects for delete
+using (bucket_id = 'item-audio');

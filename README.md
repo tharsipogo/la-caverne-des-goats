@@ -43,6 +43,10 @@ Ouvre [http://localhost:3000](http://localhost:3000) — l'appli tourne en local
 
 Dans le dashboard Supabase → **Table Editor** → tu retrouves `lists` et `items` sous forme de tableur : tu peux ajouter, modifier ou supprimer des lignes directement à la main, exactement comme dans Excel. Les changements apparaissent immédiatement dans l'appli au prochain chargement de page.
 
+## 4bis. Déjà une base Supabase existante ? Ajoute le support audio (Blind Test)
+
+Si tu avais déjà exécuté `supabase/schema.sql` avant l'ajout du mode Blind Test, exécute en plus, une seule fois, `supabase/migration_audio.sql` dans le SQL Editor. Puis crée un nouveau bucket **`item-audio`** (Storage > New bucket > Public bucket coché), comme tu l'as fait pour `item-images`.
+
 ## 5. Accès mobile — déployer en ligne gratuitement (Vercel)
 
 L'appli est déjà adaptée aux petits écrans (barre de navigation en bas sur mobile). Pour y accéder depuis ton téléphone n'importe où (même PC éteint), déploie-la sur Vercel — gratuit, et connecté à la **même base Supabase** :
@@ -85,3 +89,4 @@ supabase/
 - **Tier List** : glisse-dépose les items dans les rangées ; clique sur la lettre d'un tier pour la renommer (ex. remplacer "S/A/B/C/D/E" par tes propres noms). Sauvegardé par base.
 - **Undercover** : choisis une base de mots/images, le nombre de joueurs, leurs noms, le nombre d'undercover, et active Mister White à partir de 5 joueurs. Chaque joueur voit sa carte seul (mode "passe l'appareil"). Ensuite, à chaque tour, on élimine un joueur en cliquant dessus : son rôle est révélé, jamais son mot. Si Mister White est éliminé, il peut tenter de deviner le mot des civils pour gagner.
 - **Undercover Artist** : variante dessinée de l'Undercover. Les civils reçoivent tous le même mot, l'undercover n'a rien. À tour de rôle (mode "passe l'appareil"), chaque joueur ajoute **un seul trait continu** sur un dessin commun — dès qu'il relâche, c'est au joueur suivant. Une fois que tout le monde a dessiné pour la manche, on élimine un joueur (rôle révélé, mot jamais révélé), et le dessin continue à la manche suivante avec les joueurs restants, jusqu'à la victoire des civils ou de l'undercover.
+- **Blind Test** : crée une base de type "Audio" dans "Mes bases" et uploade tes propres extraits (l'appli ne fournit aucune musique). Choisis une base, un nombre d'extraits (5/10/20) et une durée par extrait (10/15/20/30s). L'extrait est joué et se coupe automatiquement à la fin du temps, puis le titre s'affiche tout seul — pas de score, juste écoute et devine à l'oral. Un bouton permet aussi de couper et révéler plus tôt si le groupe a trouvé.

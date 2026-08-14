@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem, ListType } from '@/lib/types';
-import { nameFromFilename, uploadItemImage } from '@/lib/utils';
+import { nameFromFilename, uploadItemAudio, uploadItemImage } from '@/lib/utils';
 
 export default function ListsPage() {
   const [lists, setLists] = useState<GameList[]>([]);
@@ -84,6 +84,7 @@ export default function ListsPage() {
           <select className="input" value={newType} onChange={(e) => setNewType(e.target.value as ListType)}>
             <option value="text">Texte (noms)</option>
             <option value="image">Images</option>
+            <option value="audio">Audio (extraits)</option>
           </select>
         </div>
         <button className="btn" onClick={createList}>+ Créer la base</button>
@@ -97,7 +98,7 @@ export default function ListsPage() {
         <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-4 mt-6">
           {lists.map((l) => (
             <div key={l.id} className="bg-surface border border-border rounded-card p-4.5 flex flex-col gap-2 hover:border-amberDim transition">
-              <div className="eyebrow">{l.type === 'image' ? 'Images' : 'Texte'}</div>
+              <div className="eyebrow">{l.type === 'image' ? 'Images' : l.type === 'audio' ? 'Audio' : 'Texte'}</div>
               <h3 className="font-serif text-lg">{l.name}</h3>
               <div className="mt-auto pt-2.5 flex gap-2">
                 <button className="btn-secondary btn-small" onClick={() => setOpenListId(l.id)}>Ouvrir</button>
@@ -154,20 +155,25 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
     loadItems();
   }
 
-  // Ajout de PLUSIEURS fichiers images en une fois
+  // Ajout de PLUSIEURS fichiers (images ou audio) en une fois
   async function handleMultiFileUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
       const fileArr = Array.from(files);
       for (const file of fileArr) {
-        const image_url = await uploadItemImage(file);
         const name = nameFromFilename(file.name);
-        await supabase.from('items').insert({ list_id: list.id, name, image_url });
+        if (list.type === 'audio') {
+          const audio_url = await uploadItemAudio(file);
+          await supabase.from('items').insert({ list_id: list.id, name, audio_url });
+        } else {
+          const image_url = await uploadItemImage(file);
+          await supabase.from('items').insert({ list_id: list.id, name, image_url });
+        }
       }
       await loadItems();
     } catch (e) {
-      alert("Erreur pendant l'upload d'une image : " + (e as Error).message);
+      alert("Erreur pendant l'upload d'un fichier : " + (e as Error).message);
     } finally {
       setUploading(false);
     }
@@ -184,19 +190,19 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
         ← Toutes les bases
       </button>
       <div className="mb-7">
-        <div className="eyebrow">{list.type === 'image' ? 'Base image' : 'Base texte'}</div>
+        <div className="eyebrow">{list.type === 'image' ? 'Base image' : list.type === 'audio' ? 'Base audio' : 'Base texte'}</div>
         <h1 className="font-serif text-3xl">{list.name}</h1>
         <p className="text-muted mt-2 text-[14.5px]">{items.length} item{items.length > 1 ? 's' : ''}</p>
       </div>
 
-      {list.type === 'image' ? (
+      {list.type === 'image' || list.type === 'audio' ? (
         <div className="panel">
           <label className="text-[12.5px] text-muted block mb-1.5">
-            Ajouter une ou plusieurs images d'un coup
+            Ajouter un ou plusieurs {list.type === 'audio' ? 'extraits audio' : 'images'} d'un coup
           </label>
           <input
             type="file"
-            accept="image/*"
+            accept={list.type === 'audio' ? 'audio/*' : 'image/*'}
             multiple
             disabled={uploading}
             onChange={(e) => handleMultiFileUpload(e.target.files)}
@@ -242,11 +248,14 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
               {it.image_url ? (
                 <img src={it.image_url} className="w-9 h-9 object-cover rounded-md" alt={it.name} />
               ) : (
-                <div className="w-9 h-9 rounded-md bg-bg flex items-center justify-center text-muted text-sm">
-                  {list.type === 'image' ? '🖼' : '✎'}
+                <div className="w-9 h-9 rounded-md bg-bg flex items-center justify-center text-muted text-sm shrink-0">
+                  {list.type === 'image' ? '🖼' : list.type === 'audio' ? '🎵' : '✎'}
                 </div>
               )}
               <div className="flex-1 text-sm">{it.name}</div>
+              {it.audio_url && (
+                <audio controls preload="none" src={it.audio_url} className="h-8 max-w-[180px]" />
+              )}
               <button className="btn-danger btn-small" onClick={() => deleteItem(it.id)}>Retirer</button>
             </div>
           ))

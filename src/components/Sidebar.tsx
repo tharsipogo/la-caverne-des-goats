@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 const NAV = [
   { href: '/lists', label: '📋 Mes bases', match: '/lists' },
   { href: '/blind', label: '🙈 Blind Ranking', match: '/blind' },
+  { href: '/blindtest', label: '🎧 Blind Test', match: '/blindtest' },
   { href: '/tier', label: '🎯 Tier List', match: '/tier' },
   { href: '/undercover', label: '🐐 Undercover', match: '/undercover' },
   { href: '/undercover-artist', label: '🎨 Undercover Artist', match: '/undercover-artist' },

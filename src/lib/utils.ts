@@ -14,6 +14,7 @@ export function pickRandom<T>(arr: T[], n: number): T[] {
 }
 
 export const IMAGE_BUCKET = 'item-images';
+export const AUDIO_BUCKET = 'item-audio';
 
 /**
  * Upload une image vers le bucket Supabase Storage "item-images"
@@ -28,6 +29,22 @@ export async function uploadItemImage(file: File): Promise<string> {
   });
   if (error) throw error;
   const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
+ * Upload un extrait audio vers le bucket Supabase Storage "item-audio"
+ * et renvoie son URL publique.
+ */
+export async function uploadItemAudio(file: File): Promise<string> {
+  const ext = file.name.split('.').pop() || 'mp3';
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from(AUDIO_BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from(AUDIO_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }
 

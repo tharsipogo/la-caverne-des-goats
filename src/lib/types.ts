@@ -1,4 +1,4 @@
-export type ListType = 'text' | 'image';
+export type ListType = 'text' | 'image' | 'audio';
 
 export interface GameList {
   id: string;
@@ -13,6 +13,7 @@ export interface ListItem {
   list_id: string;
   name: string;
   image_url: string | null;
+  audio_url: string | null;
   created_at: string;
 }
 
