@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { pickRandom, shuffle } from '@/lib/utils';
+import { pickRandom, rotateRandomStart, shuffle } from '@/lib/utils';
 
 type Role = 'civil' | 'undercover' | 'mrwhite';
 
@@ -29,6 +29,7 @@ export default function UndercoverPage() {
   const [civilWord, setCivilWord] = useState<ListItem | null>(null);
   const [undercoverWord, setUndercoverWord] = useState<ListItem | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [revealOrder, setRevealOrder] = useState<Player[]>([]);
   const [revealIdx, setRevealIdx] = useState(0);
   const [cardShown, setCardShown] = useState(false);
 
@@ -94,6 +95,8 @@ export default function UndercoverPage() {
       alive: true,
     }));
     setPlayers(newPlayers);
+    // Ordre de révélation aléatoire : Mister White ne peut jamais démarrer le premier tour.
+    setRevealOrder(rotateRandomStart(newPlayers, (p) => p.role === 'mrwhite'));
     setRevealIdx(0);
     setCardShown(false);
     setWinner(null);
@@ -102,7 +105,7 @@ export default function UndercoverPage() {
 
   function nextReveal() {
     setCardShown(false);
-    if (revealIdx + 1 >= players.length) {
+    if (revealIdx + 1 >= revealOrder.length) {
       setPhase('game');
     } else {
       setRevealIdx(revealIdx + 1);
@@ -158,6 +161,7 @@ export default function UndercoverPage() {
   function resetAll() {
     setPhase('setup');
     setPlayers([]);
+    setRevealOrder([]);
     setCivilWord(null);
     setUndercoverWord(null);
     setWinner(null);
@@ -247,11 +251,11 @@ export default function UndercoverPage() {
 
   // ================= REVEAL (pass & play) =================
   if (phase === 'reveal') {
-    const p = players[revealIdx];
+    const p = revealOrder[revealIdx];
     const word = p.role === 'civil' ? civilWord : p.role === 'undercover' ? undercoverWord : null;
     return (
       <div className="flex flex-col items-center gap-6 mt-10">
-        <div className="eyebrow">Distribution — {revealIdx + 1} / {players.length}</div>
+        <div className="eyebrow">Distribution — {revealIdx + 1} / {revealOrder.length}</div>
         <h1 className="font-serif text-2xl text-center">
           Passe l'appareil à <span className="text-amber">{p.name}</span>
         </h1>

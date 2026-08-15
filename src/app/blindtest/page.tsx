@@ -3,22 +3,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { pickRandom } from '@/lib/utils';
+import { shuffle } from '@/lib/utils';
 
 type Phase = 'setup' | 'playing' | 'revealed' | 'end';
+
+interface ScorePlayer {
+  name: string;
+  score: number;
+}
 
 export default function BlindTestPage() {
   const [lists, setLists] = useState<GameList[]>([]);
   const [listId, setListId] = useState('');
-  const [count, setCount] = useState<5 | 10 | 20>(5);
   const [duration, setDuration] = useState<10 | 15 | 20 | 30>(15);
   const [loading, setLoading] = useState(true);
+
+  const [playerCount, setPlayerCount] = useState(2);
+  const [playerNames, setPlayerNames] = useState<string[]>(['Joueur 1', 'Joueur 2']);
+  const [winningScore, setWinningScore] = useState(10);
 
   const [pool, setPool] = useState<ListItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('setup');
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [listName, setListName] = useState('');
+  const [players, setPlayers] = useState<ScorePlayer[]>([]);
+  const [outOfTracks, setOutOfTracks] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -40,6 +50,16 @@ export default function BlindTestPage() {
     return () => clearTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function setCount(n: number) {
+    const clamped = Math.max(1, Math.min(30, n));
+    setPlayerCount(clamped);
+    setPlayerNames((prev) => {
+      const next = [...prev];
+      while (next.length < clamped) next.push(`Joueur ${next.length + 1}`);
+      return next.slice(0, clamped);
+    });
+  }
 
   function clearTimer() {
     if (intervalRef.current) {
@@ -86,22 +106,31 @@ export default function BlindTestPage() {
       alert('Il faut au moins 1 extrait dans cette base.');
       return;
     }
-    const n = Math.min(count, items.length);
-    const selected = pickRandom(items as ListItem[], n);
+    const shuffled = shuffle(items as ListItem[]);
     const list = lists.find((l) => l.id === listId);
     setListName(list?.name || '');
-    setPool(selected);
-    playTrack(0, selected);
+    setPool(shuffled);
+    setPlayers(playerNames.map((n, i) => ({ name: n.trim() || `Joueur ${i + 1}`, score: 0 })));
+    setOutOfTracks(false);
+    playTrack(0, shuffled);
   }
 
-  function nextTrack() {
-    if (currentIndex + 1 >= pool.length) {
-      const audio = audioRef.current;
-      if (audio) audio.pause();
+  // Attribue le point (ou aucun point) puis avance vers l'extrait suivant / la fin.
+  function awardPoint(playerIndex: number | null) {
+    const updated = players.map((p, i) => (i === playerIndex ? { ...p, score: p.score + 1 } : p));
+    setPlayers(updated);
+
+    const winnerFound = playerIndex !== null && updated[playerIndex].score >= winningScore;
+    if (winnerFound) {
       setPhase('end');
-    } else {
-      playTrack(currentIndex + 1, pool);
+      return;
     }
+    if (currentIndex + 1 >= pool.length) {
+      setOutOfTracks(true);
+      setPhase('end');
+      return;
+    }
+    playTrack(currentIndex + 1, pool);
   }
 
   function reset() {
@@ -109,6 +138,7 @@ export default function BlindTestPage() {
     const audio = audioRef.current;
     if (audio) audio.pause();
     setPool([]);
+    setPlayers([]);
     setPhase('setup');
   }
 
@@ -116,27 +146,41 @@ export default function BlindTestPage() {
 
   const audioEl = <audio ref={audioRef} onEnded={reveal} className="hidden" />;
 
+  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+  const champion = sortedPlayers.length > 0 && sortedPlayers[0].score >= winningScore ? sortedPlayers[0] : null;
+
   // -------- Fin --------
   if (phase === 'end') {
     return (
       <div>
         {audioEl}
         <button className="text-muted text-[13px] mb-4 hover:text-amber" onClick={reset}>← Recommencer</button>
-        <div className="mb-7">
+        <div className="mb-7 text-center">
           <div className="eyebrow">Terminé</div>
-          <h1 className="font-serif text-3xl">Blind Test — {listName}</h1>
-          <p className="text-muted mt-2 text-[14.5px]">{pool.length} extrait{pool.length > 1 ? 's' : ''} passé{pool.length > 1 ? 's' : ''}.</p>
+          <h1 className="font-serif text-3xl">
+            {champion ? <>🏆 <span className="text-amber">{champion.name}</span> gagne !</> : 'Blind Test terminé'}
+          </h1>
+          {!champion && outOfTracks && (
+            <p className="text-muted mt-2 text-[14.5px]">Plus d'extraits disponibles avant que quelqu'un atteigne {winningScore} points.</p>
+          )}
         </div>
-        <div className="flex flex-col gap-2.5">
-          {pool.map((it, i) => (
-            <div key={it.id} className="flex items-center gap-3.5 bg-surface border border-border rounded-lg px-4 py-3">
-              <div className="font-serif font-bold text-amber w-7 text-center shrink-0">{i + 1}</div>
-              {it.image_url && <img src={it.image_url} className="w-11 h-11 object-cover rounded-md" alt="" />}
-              <div className="text-[14.5px] font-medium">{it.name}</div>
+        <div className="flex flex-col gap-2.5 max-w-md mx-auto">
+          {sortedPlayers.map((p, i) => (
+            <div
+              key={p.name}
+              className={`flex items-center gap-3.5 bg-surface border rounded-lg px-4 py-3 ${
+                i === 0 ? 'border-amber' : 'border-border'
+              }`}
+            >
+              <div className="font-serif font-bold text-xl text-amber w-8 text-center shrink-0">{i + 1}</div>
+              <div className="flex-1 text-[14.5px] font-medium">{p.name}</div>
+              <div className="font-serif text-lg text-amber">{p.score}</div>
             </div>
           ))}
         </div>
-        <button className="btn mt-6" onClick={reset}>↺ Nouveau blind test</button>
+        <div className="flex justify-center">
+          <button className="btn mt-6" onClick={reset}>↺ Nouveau blind test</button>
+        </div>
       </div>
     );
   }
@@ -148,12 +192,20 @@ export default function BlindTestPage() {
       <div>
         {audioEl}
         <button className="text-muted text-[13px] mb-4 hover:text-amber" onClick={reset}>← Annuler</button>
-        <div className="mb-7">
-          <div className="eyebrow">{listName} — {currentIndex + 1} / {pool.length}</div>
-          <h1 className="font-serif text-3xl">{phase === 'playing' ? 'Devinez !' : 'C\'était...'}</h1>
+        <div className="mb-6">
+          <div className="eyebrow">{listName} — extrait {currentIndex + 1} / {pool.length}</div>
+          <h1 className="font-serif text-3xl">{phase === 'playing' ? 'Devinez !' : "C'était..."}</h1>
         </div>
 
-        <div className="flex flex-col items-center gap-6 mt-6">
+        <div className="flex flex-wrap gap-2 mb-6">
+          {players.map((p) => (
+            <div key={p.name} className="bg-surface2 border border-border rounded-lg px-3 py-1.5 text-[13px]">
+              {p.name} — <b className="text-amber">{p.score}</b>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col items-center gap-6 mt-4">
           {phase === 'playing' ? (
             <>
               <div className="w-[220px] h-[220px] rounded-full border-4 border-amber flex items-center justify-center relative">
@@ -168,9 +220,18 @@ export default function BlindTestPage() {
                 {current.image_url && <img src={current.image_url} className="w-full max-h-[140px] object-contain rounded-lg" alt="" />}
                 <div className="font-serif text-2xl font-semibold">{current.name}</div>
               </div>
-              <button className="btn" onClick={nextTrack}>
-                {currentIndex + 1 >= pool.length ? '🏁 Voir le récap' : '▶ Extrait suivant'}
-              </button>
+
+              <div className="w-full max-w-md">
+                <p className="text-muted text-[13px] text-center mb-3">Qui a trouvé le premier ?</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {players.map((p, i) => (
+                    <button key={p.name} className="btn-secondary btn-small" onClick={() => awardPoint(i)}>
+                      +1 {p.name}
+                    </button>
+                  ))}
+                  <button className="btn-ghost btn-small" onClick={() => awardPoint(null)}>Personne n'a trouvé</button>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -185,7 +246,7 @@ export default function BlindTestPage() {
         <div className="eyebrow">Mode</div>
         <h1 className="font-serif text-3xl">Blind Test</h1>
         <p className="text-muted mt-2 text-[14.5px] max-w-xl">
-          Un extrait audio est joué, minuté. Il se coupe automatiquement et révèle le titre à la fin du temps.
+          Un extrait audio minuté est joué puis révélé automatiquement. Le premier qui trouve marque un point ; premier au score gagnant remporte la partie.
         </p>
       </div>
 
@@ -194,48 +255,80 @@ export default function BlindTestPage() {
           Crée d'abord une base de type "Audio" dans "Mes bases" et ajoute-y des extraits.
         </p>
       ) : (
-        <div className="panel flex gap-3.5 flex-wrap items-end">
-          <div>
-            <label className="text-[12.5px] text-muted block mb-1.5">Base audio</label>
-            <select className="input" value={listId} onChange={(e) => setListId(e.target.value)}>
-              {lists.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
+        <div className="panel flex flex-col gap-6">
+          <div className="flex gap-3.5 flex-wrap items-end">
+            <div>
+              <label className="text-[12.5px] text-muted block mb-1.5">Base audio</label>
+              <select className="input" value={listId} onChange={(e) => setListId(e.target.value)}>
+                {lists.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[12.5px] text-muted block mb-1.5">Durée par extrait</label>
+              <div className="flex gap-2">
+                {[10, 15, 20, 30].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setDuration(s as 10 | 15 | 20 | 30)}
+                    className={`px-3.5 py-2.5 rounded-lg text-sm border ${
+                      duration === s ? 'border-amber text-amber' : 'border-border text-text bg-surface2'
+                    }`}
+                  >
+                    {s}s
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+
           <div>
-            <label className="text-[12.5px] text-muted block mb-1.5">Nombre d'extraits</label>
-            <div className="flex gap-2">
-              {[5, 10, 20].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setCount(n as 5 | 10 | 20)}
-                  className={`px-3.5 py-2.5 rounded-lg text-sm border ${
-                    count === n ? 'border-amber text-amber' : 'border-border text-text bg-surface2'
-                  }`}
-                >
-                  {n}
-                </button>
+            <label className="text-[12.5px] text-muted block mb-1.5">Nombre de joueurs</label>
+            <div className="flex items-center gap-3">
+              <button className="btn-secondary btn-small" onClick={() => setCount(playerCount - 1)}>−</button>
+              <span className="font-serif text-xl w-8 text-center">{playerCount}</span>
+              <button className="btn-secondary btn-small" onClick={() => setCount(playerCount + 1)}>+</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[12.5px] text-muted block mb-1.5">Noms des joueurs</label>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2">
+              {playerNames.map((name, i) => (
+                <input
+                  key={i}
+                  className="input"
+                  value={name}
+                  onChange={(e) => {
+                    const next = [...playerNames];
+                    next[i] = e.target.value;
+                    setPlayerNames(next);
+                  }}
+                />
               ))}
             </div>
           </div>
+
           <div>
-            <label className="text-[12.5px] text-muted block mb-1.5">Durée par extrait</label>
-            <div className="flex gap-2">
-              {[10, 15, 20, 30].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setDuration(s as 10 | 15 | 20 | 30)}
-                  className={`px-3.5 py-2.5 rounded-lg text-sm border ${
-                    duration === s ? 'border-amber text-amber' : 'border-border text-text bg-surface2'
-                  }`}
-                >
-                  {s}s
-                </button>
-              ))}
+            <label className="text-[12.5px] text-muted block mb-1.5">
+              Score gagnant : <b className="text-amber">{winningScore}</b> point{winningScore > 1 ? 's' : ''}
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={20}
+              value={winningScore}
+              onChange={(e) => setWinningScore(Number(e.target.value))}
+              className="w-full max-w-md accent-amber"
+            />
+            <div className="flex justify-between text-[11px] text-muted max-w-md">
+              <span>1</span>
+              <span>20</span>
             </div>
           </div>
-          <button className="btn" onClick={start} disabled={!listId}>▶ Démarrer</button>
+
+          <button className="btn w-fit" onClick={start} disabled={!listId}>▶ Démarrer</button>
         </div>
       )}
       {audioEl}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { pickRandom, shuffle } from '@/lib/utils';
+import { pickRandom, rotateRandomStart, shuffle } from '@/lib/utils';
 
 type Role = 'civil' | 'undercover';
 type Phase = 'setup' | 'reveal' | 'draw' | 'elim' | 'end';
@@ -30,6 +30,7 @@ export default function UndercoverArtistPage() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   // reveal (pass & play)
+  const [revealOrder, setRevealOrder] = useState<Player[]>([]);
   const [revealIdx, setRevealIdx] = useState(0);
   const [cardShown, setCardShown] = useState(false);
 
@@ -98,6 +99,7 @@ export default function UndercoverArtistPage() {
       alive: true,
     }));
     setPlayers(newPlayers);
+    setRevealOrder(rotateRandomStart(newPlayers));
     setRevealIdx(0);
     setCardShown(false);
     setWinner(null);
@@ -109,8 +111,8 @@ export default function UndercoverArtistPage() {
 
   function nextReveal() {
     setCardShown(false);
-    if (revealIdx + 1 >= players.length) {
-      const queue = players.filter((p) => p.alive);
+    if (revealIdx + 1 >= revealOrder.length) {
+      const queue = rotateRandomStart(players.filter((p) => p.alive));
       setDrawQueue(queue);
       setDrawIdx(0);
       setDrawerReady(false);
@@ -203,8 +205,8 @@ export default function UndercoverArtistPage() {
       setPhase('end');
       return;
     }
-    // manche suivante : les joueurs encore en vie redessinent, un trait chacun
-    const queue = next.filter((p) => p.alive);
+    // manche suivante : les joueurs encore en vie redessinent, un trait chacun, dans un ordre relancé au hasard
+    const queue = rotateRandomStart(next.filter((p) => p.alive));
     setDrawQueue(queue);
     setDrawIdx(0);
     setDrawerReady(false);
@@ -215,6 +217,7 @@ export default function UndercoverArtistPage() {
   function resetAll() {
     setPhase('setup');
     setPlayers([]);
+    setRevealOrder([]);
     setWord(null);
     setWinner(null);
     setLastReveal(null);
@@ -312,11 +315,11 @@ export default function UndercoverArtistPage() {
 
   // ================= REVEAL (pass & play) =================
   if (phase === 'reveal') {
-    const p = players[revealIdx];
+    const p = revealOrder[revealIdx];
     const hasWord = p.role === 'civil';
     return (
       <div className="flex flex-col items-center gap-6 mt-10">
-        <div className="eyebrow">Distribution — {revealIdx + 1} / {players.length}</div>
+        <div className="eyebrow">Distribution — {revealIdx + 1} / {revealOrder.length}</div>
         <h1 className="font-serif text-2xl text-center">
           Passe l'appareil à <span className="text-amber">{p.name}</span>
         </h1>

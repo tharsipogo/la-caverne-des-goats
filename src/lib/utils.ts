@@ -13,6 +13,22 @@ export function pickRandom<T>(arr: T[], n: number): T[] {
   return shuffle(arr).slice(0, n);
 }
 
+/**
+ * Renvoie le tableau dans le même ordre relatif (circulaire), mais en démarrant
+ * à un index choisi au hasard. Utile pour désigner un joueur de départ aléatoire
+ * tout en gardant un tour de jeu cohérent ensuite.
+ * `excludeStart` permet d'exclure certains indices comme point de départ possible
+ * (ex. ne jamais faire démarrer Mister White).
+ */
+export function rotateRandomStart<T>(arr: T[], excludeStart?: (item: T) => boolean): T[] {
+  const n = arr.length;
+  if (n <= 1) return [...arr];
+  const eligible = excludeStart ? arr.map((_, i) => i).filter((i) => !excludeStart(arr[i])) : arr.map((_, i) => i);
+  const candidates = eligible.length > 0 ? eligible : arr.map((_, i) => i);
+  const start = candidates[Math.floor(Math.random() * candidates.length)];
+  return arr.map((_, i) => arr[(start + i) % n]);
+}
+
 export const IMAGE_BUCKET = 'item-images';
 export const AUDIO_BUCKET = 'item-audio';
 
