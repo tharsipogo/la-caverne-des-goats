@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body className="font-sans min-h-screen flex flex-col md:flex-row">
         <Sidebar />
-        <main className="flex-1 px-4 py-6 md:px-11 md:py-9 max-w-[1200px] w-full overflow-y-auto md:h-screen pb-24 md:pb-9">
+        <main className="flex-1 px-4 py-6 md:px-11 md:py-9 w-full overflow-y-auto md:h-screen pb-24 md:pb-9">
           {children}
         </main>
       </body>

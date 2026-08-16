@@ -25,6 +25,7 @@ create table if not exists tier_assignments (
   list_id uuid not null references lists(id) on delete cascade,
   item_id uuid not null references items(id) on delete cascade,
   tier text not null,
+  position integer not null default 0,
   unique (list_id, item_id)
 );
 
