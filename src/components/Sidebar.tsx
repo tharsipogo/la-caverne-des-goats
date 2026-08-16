@@ -10,6 +10,7 @@ const NAV = [
   { href: '/tier', label: '🎯 Tier List', match: '/tier' },
   { href: '/undercover', label: '🐐 Undercover', match: '/undercover' },
   { href: '/undercover-artist', label: '🎨 Undercover Artist', match: '/undercover-artist' },
+  { href: '/versus', label: '⚔️ Versus', match: '/versus' },
 ];
 
 export default function Sidebar() {
