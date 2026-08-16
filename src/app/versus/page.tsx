@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { shuffle } from '@/lib/utils';
+import { pickRandom, shuffle } from '@/lib/utils';
 
 type Phase = 'setup' | 'round' | 'end';
 type RoundStage = 'open' | 'respond';
 type PIdx = 0 | 1;
+type CoachMode = 'random' | 'choice';
 
 const TEAM_SIZE = 5;
 
@@ -15,6 +16,20 @@ export default function VersusPage() {
   const [lists, setLists] = useState<GameList[]>([]);
   const [listId, setListId] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Coachs
+  const [coachLists, setCoachLists] = useState<GameList[]>([]);
+  const [coachListId, setCoachListId] = useState('');
+  const [coachItems, setCoachItems] = useState<ListItem[]>([]);
+  const [coachMode, setCoachMode] = useState<[CoachMode, CoachMode]>(['random', 'random']);
+  const [coachChoiceId, setCoachChoiceId] = useState<[string, string]>(['', '']);
+  const [coaches, setCoaches] = useState<[ListItem | null, ListItem | null]>([null, null]);
+
+  // Terrain
+  const [terrainLists, setTerrainLists] = useState<GameList[]>([]);
+  const [terrainListId, setTerrainListId] = useState('');
+  const [terrainItems, setTerrainItems] = useState<ListItem[]>([]);
+  const [terrain, setTerrain] = useState<ListItem | null>(null);
 
   const [names, setNames] = useState<[string, string]>(['Joueur 1', 'Joueur 2']);
   const [startBudget, setStartBudget] = useState(100);
@@ -34,18 +49,48 @@ export default function VersusPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('lists').select('*').order('created_at', { ascending: false });
-      const withEnough: GameList[] = [];
+      const forCards: GameList[] = [];
+      const forCoaches: GameList[] = [];
+      const forTerrains: GameList[] = [];
       if (data) {
         for (const l of data as GameList[]) {
           const { count } = await supabase.from('items').select('*', { count: 'exact', head: true }).eq('list_id', l.id);
-          if (count && count >= TEAM_SIZE * 2) withEnough.push(l);
+          if (count && count >= TEAM_SIZE * 2) forCards.push(l);
+          if (count && count >= 1) forCoaches.push(l);
+          if (count && count >= 1) forTerrains.push(l);
         }
       }
-      setLists(withEnough);
-      if (withEnough.length > 0) setListId(withEnough[0].id);
+      setLists(forCards);
+      setCoachLists(forCoaches);
+      setTerrainLists(forTerrains);
+      if (forCards.length > 0) setListId(forCards[0].id);
       setLoading(false);
     })();
   }, []);
+
+  // Charge les items de la base de coachs sélectionnée
+  useEffect(() => {
+    if (!coachListId) {
+      setCoachItems([]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase.from('items').select('*').eq('list_id', coachListId);
+      if (data) setCoachItems(data as ListItem[]);
+    })();
+  }, [coachListId]);
+
+  // Charge les items de la base de terrains sélectionnée
+  useEffect(() => {
+    if (!terrainListId) {
+      setTerrainItems([]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase.from('items').select('*').eq('list_id', terrainListId);
+      if (data) setTerrainItems(data as ListItem[]);
+    })();
+  }, [coachListId]);
 
   // Résout récursivement (en mémoire, sans re-render intermédiaire) les manches automatiques
   // — quand l'équipe d'un joueur est déjà pleine, l'autre reçoit la carte gratuitement —
@@ -66,7 +111,6 @@ export default function VersusPage() {
       return;
     }
     if (nextPool.length === 0) {
-      // Sécurité : ne devrait pas arriver (>=10 items exigés), mais on termine proprement si jamais.
       setBudgets(nextBudgets);
       setTeams(nextTeams);
       setPool(nextPool);
@@ -89,7 +133,6 @@ export default function VersusPage() {
       return;
     }
 
-    // Manche interactive : on commit l'état React.
     setBudgets(nextBudgets);
     setTeams(nextTeams);
     setPool(restPool);
@@ -112,6 +155,29 @@ export default function VersusPage() {
     }
     const cleanNames: [string, string] = [names[0].trim() || 'Joueur 1', names[1].trim() || 'Joueur 2'];
     setNames(cleanNames);
+
+    // Résolution des coachs (aléatoire ou choix manuel), si une base de coachs est sélectionnée.
+    if (coachListId && coachItems.length > 0) {
+      const resolved: [ListItem | null, ListItem | null] = [null, null];
+      for (const i of [0, 1] as PIdx[]) {
+        if (coachMode[i] === 'choice' && coachChoiceId[i]) {
+          resolved[i] = coachItems.find((c) => c.id === coachChoiceId[i]) || null;
+        } else {
+          resolved[i] = pickRandom(coachItems, 1)[0] || null;
+        }
+      }
+      setCoaches(resolved);
+    } else {
+      setCoaches([null, null]);
+    }
+
+    // Terrain tiré au hasard, si une base de terrains est sélectionnée.
+    if (terrainListId && terrainItems.length > 0) {
+      setTerrain(pickRandom(terrainItems, 1)[0] || null);
+    } else {
+      setTerrain(null);
+    }
+
     const shuffled = shuffle(items as ListItem[]);
     playRound(0, [startBudget, startBudget], [[], []], shuffled);
   }
@@ -164,6 +230,7 @@ export default function VersusPage() {
     setTeams([[], []]);
     setBudgets([0, 0]);
     setNotices([]);
+    setTerrain(null);
   }
 
   if (loading) return <p className="text-muted">Chargement...</p>;
@@ -230,6 +297,70 @@ export default function VersusPage() {
               </div>
             </div>
 
+            {/* ------- Coachs ------- */}
+            <div className="border-t border-border pt-5">
+              <label className="text-[12.5px] text-muted block mb-1.5">Base de coachs (optionnel)</label>
+              <select className="input" value={coachListId} onChange={(e) => setCoachListId(e.target.value)}>
+                <option value="">— Aucun coach —</option>
+                {coachLists.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+
+              {coachListId && coachItems.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4">
+                  {([0, 1] as PIdx[]).map((i) => (
+                    <div key={i} className="bg-surface2 border border-border rounded-lg p-3.5">
+                      <div className="text-[13px] font-medium mb-2.5">Coach de {names[i]}</div>
+                      <div className="flex gap-2 mb-2.5">
+                        <button
+                          onClick={() => setCoachMode((m) => (i === 0 ? [ 'random', m[1] ] : [ m[0], 'random' ]))}
+                          className={`flex-1 px-2.5 py-2 rounded-lg text-xs border ${
+                            coachMode[i] === 'random' ? 'border-amber text-amber' : 'border-border text-text bg-surface'
+                          }`}
+                        >
+                          🎲 Aléatoire
+                        </button>
+                        <button
+                          onClick={() => setCoachMode((m) => (i === 0 ? [ 'choice', m[1] ] : [ m[0], 'choice' ]))}
+                          className={`flex-1 px-2.5 py-2 rounded-lg text-xs border ${
+                            coachMode[i] === 'choice' ? 'border-amber text-amber' : 'border-border text-text bg-surface'
+                          }`}
+                        >
+                          🎯 Choisir
+                        </button>
+                      </div>
+                      {coachMode[i] === 'choice' && (
+                        <select
+                          className="input text-[13px]"
+                          value={coachChoiceId[i]}
+                          onChange={(e) =>
+                            setCoachChoiceId((c) => (i === 0 ? [e.target.value, c[1]] : [c[0], e.target.value]))
+                          }
+                        >
+                          <option value="">— Choisir un coach —</option>
+                          {coachItems.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ------- Terrain ------- */}
+            <div className="border-t border-border pt-5">
+              <label className="text-[12.5px] text-muted block mb-1.5">Base de terrains (optionnel — tiré au hasard)</label>
+              <select className="input" value={terrainListId} onChange={(e) => setTerrainListId(e.target.value)}>
+                <option value="">— Aucun terrain —</option>
+                {terrainLists.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+
             <button className="btn w-fit" onClick={start}>▶ Démarrer</button>
           </div>
         )}
@@ -251,6 +382,15 @@ export default function VersusPage() {
           <h1 className="font-serif text-3xl">Enchères</h1>
         </div>
 
+        {terrain && (
+          <div className="panel py-3 mb-4 flex items-center gap-3">
+            {terrain.image_url && <img src={terrain.image_url} className="w-10 h-10 rounded-lg object-cover" alt="" />}
+            <div className="text-[13px]">
+              <span className="text-muted">Terrain :</span> <b className="text-amber">{terrain.name}</b>
+            </div>
+          </div>
+        )}
+
         {notices.length > 0 && (
           <div className="panel py-3 border-amberDim mb-4 text-[13px] text-muted flex flex-col gap-1">
             {notices.map((n, i) => (
@@ -268,8 +408,16 @@ export default function VersusPage() {
                 highestBidder === i && roundStage === 'respond' ? 'border-amber' : 'border-border'
               } bg-surface`}
             >
-              <div className="font-serif text-lg">{names[i]}</div>
-              <div className="text-muted text-[13px] mt-1">
+              <div className="flex items-center gap-2.5">
+                {coaches[i]?.image_url && (
+                  <img src={coaches[i]!.image_url!} className="w-9 h-9 rounded-full object-cover border border-amberDim shrink-0" alt="" />
+                )}
+                <div>
+                  <div className="font-serif text-lg">{names[i]}</div>
+                  {coaches[i] && <div className="text-[11px] text-amber">Coach : {coaches[i]!.name}</div>}
+                </div>
+              </div>
+              <div className="text-muted text-[13px] mt-2">
                 💰 <b className="text-amber">{budgets[i]}</b> · 🧑‍🤝‍🧑 {teams[i].length}/{TEAM_SIZE}
               </div>
             </div>
@@ -349,8 +497,18 @@ export default function VersusPage() {
         <h1 className="font-serif text-3xl">Récap final</h1>
       </div>
 
+      {terrain && (
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-surface2 via-surface to-surface2 border border-amberDim rounded-full px-5 py-2.5">
+            {terrain.image_url && <img src={terrain.image_url} className="w-8 h-8 rounded-full object-cover" alt="" />}
+            <span className="text-[13px] text-muted">Terrain de la partie :</span>
+            <span className="font-serif text-amber font-semibold">{terrain.name}</span>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-6 items-start">
-        <PlayerColumn name={names[0]} budget={budgets[0]} team={teams[0]} accent="#e2645a" align="right" />
+        <PlayerColumn name={names[0]} coach={coaches[0]} budget={budgets[0]} team={teams[0]} accent="#e2645a" align="right" />
 
         <div className="flex md:flex-col items-center justify-center gap-2 py-4">
           <div className="relative">
@@ -361,7 +519,7 @@ export default function VersusPage() {
           <div className="hidden md:block w-px h-24 bg-border" />
         </div>
 
-        <PlayerColumn name={names[1]} budget={budgets[1]} team={teams[1]} accent="#4fc9c0" align="left" />
+        <PlayerColumn name={names[1]} coach={coaches[1]} budget={budgets[1]} team={teams[1]} accent="#4fc9c0" align="left" />
       </div>
 
       <div className="flex justify-center mt-8">
@@ -373,12 +531,14 @@ export default function VersusPage() {
 
 function PlayerColumn({
   name,
+  coach,
   budget,
   team,
   accent,
   align,
 }: {
   name: string;
+  coach: ListItem | null;
   budget: number;
   team: ListItem[];
   accent: string;
@@ -386,7 +546,22 @@ function PlayerColumn({
 }) {
   return (
     <div className={`flex flex-col gap-3 ${align === 'right' ? 'md:items-end' : 'md:items-start'}`}>
-      <div className={`text-center md:text-inherit ${align === 'right' ? 'md:text-right' : 'md:text-left'} w-full`}>
+      <div className={`flex flex-col items-center w-full ${align === 'right' ? 'md:items-end md:text-right' : 'md:items-start md:text-left'}`}>
+        {coach && (
+          <div className="flex items-center gap-2 mb-1.5">
+            {coach.image_url && (
+              <img
+                src={coach.image_url}
+                className="w-12 h-12 rounded-full object-cover border-2"
+                style={{ borderColor: accent }}
+                alt=""
+              />
+            )}
+            <div className="text-[12px] text-muted">
+              Coach<br /><span style={{ color: accent }}>{coach.name}</span>
+            </div>
+          </div>
+        )}
         <div className="font-serif text-2xl font-bold" style={{ color: accent }}>{name}</div>
         <div className="text-muted text-[13px] mt-1">💰 {budget} restant{budget > 1 ? 's' : ''}</div>
       </div>
