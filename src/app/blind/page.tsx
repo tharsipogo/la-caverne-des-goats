@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
 import { pickRandom } from '@/lib/utils';
 
 type Slot = ListItem | null;
+
+const AUDIO_CLIP_DURATION = 20; // secondes
 
 export default function BlindPage() {
   const [lists, setLists] = useState<GameList[]>([]);
@@ -17,6 +19,13 @@ export default function BlindPage() {
   const [revealedIndex, setRevealedIndex] = useState(0);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [listName, setListName] = useState('');
+  const [listType, setListType] = useState<'text' | 'image' | 'audio'>('text');
+
+  // Lecture audio (bases de type "Audio")
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -25,6 +34,53 @@ export default function BlindPage() {
       setLoading(false);
     })();
   }, []);
+
+  const inGame = pool.length > 0;
+  const done = inGame && revealedIndex >= pool.length;
+
+  function clearTimer() {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function stopClip() {
+    clearTimer();
+    const audio = audioRef.current;
+    if (audio) audio.pause();
+    setIsPlaying(false);
+  }
+
+  function playCurrentClip() {
+    const audio = audioRef.current;
+    const track = pool[revealedIndex];
+    if (!audio || !track?.audio_url) return;
+    clearTimer();
+    audio.src = track.audio_url;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+    setIsPlaying(true);
+    setSecondsLeft(AUDIO_CLIP_DURATION);
+    timerRef.current = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          stopClip();
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  }
+
+  // Lance automatiquement l'extrait à chaque nouvel item révélé, si la base est audio
+  useEffect(() => {
+    if (inGame && !done && listType === 'audio') {
+      playCurrentClip();
+    }
+    return () => stopClip();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealedIndex, inGame, done, listType]);
 
   async function start() {
     if (!selectedListId) return;
@@ -37,6 +93,7 @@ export default function BlindPage() {
     const selected = pickRandom(items as ListItem[], n);
     const list = lists.find((l) => l.id === selectedListId);
     setListName(list?.name || '');
+    setListType(list?.type || 'text');
     setPool(selected);
     setSlots(Array(n).fill(null));
     setRevealedIndex(0);
@@ -51,20 +108,21 @@ export default function BlindPage() {
   }
 
   function reset() {
+    stopClip();
     setPool([]);
     setSlots([]);
     setRevealedIndex(0);
   }
 
-  const inGame = pool.length > 0;
-  const done = inGame && revealedIndex >= pool.length;
-
   if (loading) return <p className="text-muted">Chargement...</p>;
+
+  const audioEl = <audio ref={audioRef} className="hidden" />;
 
   // -------- Résultats --------
   if (done) {
     return (
       <div>
+        {audioEl}
         <button className="text-muted text-[13px] mb-4 hover:text-amber" onClick={reset}>← Recommencer</button>
         <div className="mb-7">
           <div className="eyebrow">Résultat</div>
@@ -91,8 +149,10 @@ export default function BlindPage() {
   // -------- En cours --------
   if (inGame) {
     const current = pool[revealedIndex];
+    const isAudio = listType === 'audio' && !!current.audio_url;
     return (
       <div>
+        {audioEl}
         <button className="text-muted text-[13px] mb-4 hover:text-amber" onClick={reset}>← Annuler</button>
         <div className="mb-7">
           <div className="eyebrow">{listName}</div>
@@ -106,9 +166,21 @@ export default function BlindPage() {
               {current.image_url ? (
                 <img src={current.image_url} className="w-full max-h-[190px] object-contain rounded-lg" alt="" />
               ) : (
-                <div className="text-4xl">🎴</div>
+                <div className="text-4xl">{isAudio ? '🎧' : '🎴'}</div>
               )}
               <div className="font-serif text-xl font-semibold">{current.name}</div>
+
+              {isAudio && (
+                <div className="flex flex-col items-center gap-2 mt-1">
+                  {isPlaying ? (
+                    <div className="w-16 h-16 rounded-full border-4 border-amber flex items-center justify-center">
+                      <span className="font-serif text-xl font-bold text-amber">{secondsLeft}</span>
+                    </div>
+                  ) : (
+                    <button className="btn-secondary btn-small" onClick={playCurrentClip}>🔁 Réécouter</button>
+                  )}
+                </div>
+              )}
             </div>
             <div className="text-muted text-[12.5px]">
               <b className="text-amber">{revealedIndex + 1}</b> / {pool.length} révélés
@@ -146,7 +218,8 @@ export default function BlindPage() {
         <div className="eyebrow">Mode</div>
         <h1 className="font-serif text-3xl">Blind Ranking</h1>
         <p className="text-muted mt-2 text-[14.5px] max-w-xl">
-          On tire des items au hasard dans une base. Un par un, tu choisis directement leur rang.
+          On tire des items au hasard dans une base. Un par un, tu choisis directement leur rang. Pour une base audio,
+          un extrait de {AUDIO_CLIP_DURATION}s se lance automatiquement à chaque item.
         </p>
       </div>
       {validLists.length === 0 ? (
@@ -158,7 +231,7 @@ export default function BlindPage() {
             <select className="input" value={selectedListId} onChange={(e) => setSelectedListId(e.target.value)}>
               <option value="">— Choisir une base —</option>
               {validLists.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
+                <option key={l.id} value={l.id}>{l.name}{l.type === 'audio' ? ' 🎵' : ''}</option>
               ))}
             </select>
           </div>
@@ -181,6 +254,7 @@ export default function BlindPage() {
           <button className="btn" onClick={start} disabled={!selectedListId}>▶ Démarrer</button>
         </div>
       )}
+      {audioEl}
     </div>
   );
 }
