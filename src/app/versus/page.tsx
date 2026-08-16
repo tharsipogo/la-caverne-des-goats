@@ -90,7 +90,7 @@ export default function VersusPage() {
       const { data } = await supabase.from('items').select('*').eq('list_id', terrainListId);
       if (data) setTerrainItems(data as ListItem[]);
     })();
-  }, [coachListId]);
+  }, [terrainListId]);
 
   // Résout récursivement (en mémoire, sans re-render intermédiaire) les manches automatiques
   // — quand l'équipe d'un joueur est déjà pleine, l'autre reçoit la carte gratuitement —
