@@ -7,7 +7,7 @@ import { pickRandom } from '@/lib/utils';
 
 type Slot = ListItem | null;
 
-const AUDIO_CLIP_DURATION = 20; // secondes
+const AUDIO_CLIP_DURATION = 30;
 
 export default function BlindPage() {
   const [lists, setLists] = useState<GameList[]>([]);
