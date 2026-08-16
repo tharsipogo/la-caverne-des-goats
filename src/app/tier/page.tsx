@@ -166,7 +166,7 @@ function Chip({ item, onDragStart }: { item: ListItem; onDragStart: () => void }
       onDragStart={onDragStart}
       className="flex items-center gap-2 bg-surface2 border border-border rounded-lg pl-1.5 pr-2.5 py-1.5 text-[13px] cursor-grab select-none"
     >
-      {item.image_url && <img src={item.image_url} className="w-6.5 h-6.5 w-[26px] h-[26px] rounded object-cover" alt="" />}
+      {item.image_url && <img src={item.image_url} className="w-[70px] h-[70px] rounded object-cover" alt="" />}
       <span>{item.name}</span>
     </div>
   );
