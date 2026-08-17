@@ -396,21 +396,39 @@ export default function VersusPage() {
         }
       : {};
 
+    const activeIdx: PIdx = roundStage === 'open' ? starterIndex : responder;
+    const activeAccent = activeIdx === 0 ? '#e2645a' : '#4fc9c0';
+    const cardsDistributed = teams[0].length + teams[1].length;
+    const totalCards = TEAM_SIZE * 2;
+    const currentListName = lists.find((l) => l.id === listId)?.name || '';
+
     return (
       <div className="rounded-2xl -m-1 p-5 md:p-7" style={bgStyle}>
-        <div className="mb-6">
-          <div className="eyebrow">Manche {teams[0].length + teams[1].length + 1}</div>
-          <h1 className="font-serif text-3xl">Enchères</h1>
+        <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="eyebrow">Manche {cardsDistributed + 1}</div>
+            <h1 className="font-serif text-3xl">Enchères</h1>
+          </div>
+          {terrain && (
+            <div className="inline-flex items-center gap-2 bg-surface/85 border border-amberDim rounded-full px-3 py-1.5">
+              {terrain.image_url && <img src={terrain.image_url} className="w-5 h-5 rounded-full object-cover" alt="" />}
+              <span className="text-[12px] text-amber font-medium">{terrain.name}</span>
+            </div>
+          )}
         </div>
 
-        {terrain && (
-          <div className="panel py-3 mb-4 flex items-center gap-3">
-            {terrain.image_url && <img src={terrain.image_url} className="w-10 h-10 rounded-lg object-cover" alt="" />}
-            <div className="text-[13px]">
-              <span className="text-muted">Terrain :</span> <b className="text-amber">{terrain.name}</b>
-            </div>
+        <div className="mb-5">
+          <div className="flex justify-between text-[11px] text-muted mb-1.5">
+            <span>Progression</span>
+            <span>{cardsDistributed}/{totalCards} cartes distribuées</span>
           </div>
-        )}
+          <div className="w-full h-2 bg-surface2 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-amber rounded-full transition-all duration-500"
+              style={{ width: `${(cardsDistributed / totalCards) * 100}%` }}
+            />
+          </div>
+        </div>
 
         {notices.length > 0 && (
           <div className="panel py-3 border-amberDim mb-4 text-[13px] text-muted flex flex-col gap-1">
@@ -459,19 +477,27 @@ export default function VersusPage() {
         </div>
 
         {/* Carte en jeu */}
-        <div className="flex justify-center mb-6">
-          <div className="w-[260px] min-h-[220px] bg-gradient-to-br from-surface2 to-surface border border-amberDim rounded-2xl flex flex-col items-center justify-center p-6 text-center gap-3">
+        <div className="flex flex-col items-center mb-6">
+          {currentListName && <div className="text-[12px] text-muted mb-2">{currentListName}</div>}
+          <div
+            key={currentCard?.id}
+            className="card-enter w-[290px] md:w-[320px] min-h-[250px] bg-gradient-to-br from-surface2 to-surface border-2 border-amber rounded-2xl flex flex-col items-center justify-center p-7 text-center gap-4"
+            style={{ boxShadow: '0 0 34px rgba(232,171,79,0.28)' }}
+          >
             {currentCard?.image_url && (
-              <img src={currentCard.image_url} className="w-full max-h-[150px] object-contain rounded-lg" alt="" />
+              <img src={currentCard.image_url} className="w-full max-h-[170px] object-contain rounded-lg" alt="" />
             )}
-            <div className="font-serif text-xl font-semibold">{currentCard?.name}</div>
+            <div className="font-serif text-2xl font-bold">{currentCard?.name}</div>
           </div>
         </div>
 
         {roundStage === 'open' ? (
-          <div className="panel flex flex-col items-center gap-3 max-w-sm mx-auto text-center">
+          <div
+            className="panel flex flex-col items-center gap-3 max-w-sm mx-auto text-center"
+            style={{ borderColor: activeAccent }}
+          >
             <p className="text-[14.5px]">
-              <b className="text-amber">{names[starterIndex]}</b> ouvre les enchères
+              <b style={{ color: activeAccent }}>{names[starterIndex]}</b> ouvre les enchères
               {starterBudget === 0 && <> — plus d'argent, mise obligatoire à 0</>}.
             </p>
             {starterBudget > 0 ? (
@@ -494,10 +520,13 @@ export default function VersusPage() {
             )}
           </div>
         ) : (
-          <div className="panel flex flex-col items-center gap-3 max-w-sm mx-auto text-center">
+          <div
+            className="panel flex flex-col items-center gap-3 max-w-sm mx-auto text-center"
+            style={{ borderColor: activeAccent }}
+          >
             <p className="text-[14.5px]">
               <b className="text-amber">{names[highestBidder]}</b> a misé <b className="text-amber">{highestBid}</b>.
-              Au tour de <b className="text-amber">{names[responder]}</b>.
+              Au tour de <b style={{ color: activeAccent }}>{names[responder]}</b>.
             </p>
             <div className="flex gap-2 items-center flex-wrap justify-center">
               <button className="btn-ghost" onClick={respondPass}>🏳 Passer (laisser la carte)</button>
@@ -595,7 +624,7 @@ function CoachCard({
         <div className="w-full h-full bg-surface2 flex items-center justify-center text-2xl">🧑‍🏫</div>
       )}
       <div className="absolute inset-x-0 top-0 bg-black/75 backdrop-blur-[1px] px-1.5 py-1 text-center border-b" style={{ borderColor: accent }}>
-        <span className={`font-serif font-bold ${nameSize} leading-none`} style={{ color: accent }}>
+        <span className={`font-serif font-bold ${nameSize} leading-none text-text`}>
           {coach.name}
         </span>
       </div>
