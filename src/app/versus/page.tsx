@@ -431,14 +431,29 @@ export default function VersusPage() {
             >
               <div className="flex items-center gap-2.5">
                 <CoachCard coach={coaches[i]} accent={i === 0 ? '#e2645a' : '#4fc9c0'} size="sm" />
-                <div>
-                  <div className="font-serif text-lg">{names[i]}</div>
-                  {coaches[i] && <div className="text-[11px] text-amber">Coach : {coaches[i]!.name}</div>}
-                </div>
+                <div className="font-serif text-lg">{names[i]}</div>
               </div>
               <div className="text-muted text-[13px] mt-2">
                 💰 <b className="text-amber">{budgets[i]}</b> · 🧑‍🤝‍🧑 {teams[i].length}/{TEAM_SIZE}
               </div>
+              {teams[i].length > 0 && (
+                <div className="flex gap-1.5 mt-3 flex-wrap">
+                  {teams[i].map((it) => (
+                    <div
+                      key={it.id}
+                      className="card-enter w-9 h-9 rounded-md overflow-hidden border shrink-0"
+                      style={{ borderColor: (i === 0 ? '#e2645a' : '#4fc9c0') + '77' }}
+                      title={it.name}
+                    >
+                      {it.image_url ? (
+                        <img src={it.image_url} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <div className="w-full h-full bg-surface2 flex items-center justify-center text-[10px]">🎴</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -566,8 +581,8 @@ function CoachCard({
   size?: 'sm' | 'md' | 'lg';
 }) {
   if (!coach) return null;
-  const dims = size === 'lg' ? 'w-32 h-44 md:w-40 md:h-56' : size === 'md' ? 'w-24 h-32' : 'w-14 h-[70px]';
-  const nameSize = size === 'lg' ? 'text-sm' : size === 'md' ? 'text-[11px]' : 'text-[8px]';
+  const dims = size === 'lg' ? 'w-32 h-44 md:w-52 md:h-72 lg:w-60 lg:h-80' : size === 'md' ? 'w-24 h-32' : 'w-14 h-[70px]';
+  const nameSize = size === 'lg' ? 'text-sm md:text-base' : size === 'md' ? 'text-[11px]' : 'text-[8px]';
 
   return (
     <div
@@ -618,7 +633,7 @@ function PlayerColumn({
         {team.map((it) => (
           <div
             key={it.id}
-            className="bg-surface border rounded-lg p-2.5 flex flex-col items-center gap-1.5 text-center"
+            className="card-enter bg-surface border rounded-lg p-2.5 flex flex-col items-center gap-1.5 text-center"
             style={{ borderColor: accent + '55' }}
           >
             {it.image_url ? (
