@@ -610,24 +610,24 @@ function CoachCard({
   size?: 'sm' | 'md' | 'lg';
 }) {
   if (!coach) return null;
-  const dims = size === 'lg' ? 'w-32 h-44 md:w-52 md:h-72 lg:w-60 lg:h-80' : size === 'md' ? 'w-24 h-32' : 'w-14 h-[70px]';
-  const nameSize = size === 'lg' ? 'text-sm md:text-base' : size === 'md' ? 'text-[11px]' : 'text-[8px]';
+  const imgDims = size === 'lg' ? 'w-36 h-48 md:w-56 md:h-72 lg:w-64 lg:h-80' : size === 'md' ? 'w-28 h-36' : 'w-20 h-24';
+  const nameSize = size === 'lg' ? 'text-sm md:text-base' : size === 'md' ? 'text-[11px]' : 'text-[10px]';
 
   return (
-    <div
-      className={`relative ${dims} shrink-0 rounded-xl overflow-hidden`}
-      style={{ boxShadow: `0 0 0 2px #14151a, 0 0 0 4px ${accent}` }}
-    >
-      {coach.image_url ? (
-        <img src={coach.image_url} className="w-full h-full object-cover" alt="" />
-      ) : (
-        <div className="w-full h-full bg-surface2 flex items-center justify-center text-2xl">🧑‍🏫</div>
-      )}
-      <div className="absolute inset-x-0 top-0 bg-black/75 backdrop-blur-[1px] px-1.5 py-1 text-center border-b" style={{ borderColor: accent }}>
-        <span className={`font-serif font-bold ${nameSize} leading-none text-text`}>
-          {coach.name}
-        </span>
+    <div className="flex flex-col items-center gap-1.5 shrink-0">
+      <div
+        className={`${imgDims} rounded-xl overflow-hidden`}
+        style={{ boxShadow: `0 0 0 2px #14151a, 0 0 0 4px ${accent}` }}
+      >
+        {coach.image_url ? (
+          <img src={coach.image_url} className="w-full h-full object-cover" alt="" />
+        ) : (
+          <div className="w-full h-full bg-surface2 flex items-center justify-center text-2xl">🧑‍🏫</div>
+        )}
       </div>
+      <span className={`font-serif font-bold ${nameSize} leading-none text-text text-center`}>
+        {coach.name}
+      </span>
     </div>
   );
 }
