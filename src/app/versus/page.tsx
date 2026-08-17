@@ -157,13 +157,26 @@ export default function VersusPage() {
     setNames(cleanNames);
 
     // Résolution des coachs (aléatoire ou choix manuel), si une base de coachs est sélectionnée.
+    // On garantit deux coachs distincts quand au moins un des deux est tiré au hasard.
     if (coachListId && coachItems.length > 0) {
       const resolved: [ListItem | null, ListItem | null] = [null, null];
-      for (const i of [0, 1] as PIdx[]) {
-        if (coachMode[i] === 'choice' && coachChoiceId[i]) {
-          resolved[i] = coachItems.find((c) => c.id === coachChoiceId[i]) || null;
+
+      if (coachMode[0] === 'random' && coachMode[1] === 'random') {
+        const two = pickRandom(coachItems, Math.min(2, coachItems.length));
+        resolved[0] = two[0] || null;
+        resolved[1] = two[1] || two[0] || null;
+      } else {
+        resolved[0] =
+          coachMode[0] === 'choice' && coachChoiceId[0]
+            ? coachItems.find((c) => c.id === coachChoiceId[0]) || null
+            : pickRandom(coachItems, 1)[0] || null;
+
+        if (coachMode[1] === 'choice' && coachChoiceId[1]) {
+          resolved[1] = coachItems.find((c) => c.id === coachChoiceId[1]) || null;
         } else {
-          resolved[i] = pickRandom(coachItems, 1)[0] || null;
+          const remaining = coachItems.filter((c) => c.id !== resolved[0]?.id);
+          const candidates = remaining.length > 0 ? remaining : coachItems;
+          resolved[1] = pickRandom(candidates, 1)[0] || null;
         }
       }
       setCoaches(resolved);
@@ -375,8 +388,16 @@ export default function VersusPage() {
     const responderBudget = budgets[responder];
     const canRaise = roundStage === 'respond' && responderBudget > highestBid;
 
+    const bgStyle: React.CSSProperties = terrain?.image_url
+      ? {
+          backgroundImage: `linear-gradient(rgba(10,10,14,0.85), rgba(10,10,14,0.92)), url(${terrain.image_url})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }
+      : {};
+
     return (
-      <div>
+      <div className="rounded-2xl -m-1 p-5 md:p-7" style={bgStyle}>
         <div className="mb-6">
           <div className="eyebrow">Manche {teams[0].length + teams[1].length + 1}</div>
           <h1 className="font-serif text-3xl">Enchères</h1>
@@ -409,9 +430,7 @@ export default function VersusPage() {
               } bg-surface`}
             >
               <div className="flex items-center gap-2.5">
-                {coaches[i]?.image_url && (
-                  <img src={coaches[i]!.image_url!} className="w-9 h-9 rounded-full object-cover border border-amberDim shrink-0" alt="" />
-                )}
+                <CoachCard coach={coaches[i]} accent={i === 0 ? '#e2645a' : '#4fc9c0'} size="sm" />
                 <div>
                   <div className="font-serif text-lg">{names[i]}</div>
                   {coaches[i] && <div className="text-[11px] text-amber">Coach : {coaches[i]!.name}</div>}
@@ -490,8 +509,16 @@ export default function VersusPage() {
   }
 
   // ================= END : récap façon "versus" =================
+  const endBgStyle: React.CSSProperties = terrain?.image_url
+    ? {
+        backgroundImage: `linear-gradient(rgba(10,10,14,0.85), rgba(10,10,14,0.92)), url(${terrain.image_url})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : {};
+
   return (
-    <div>
+    <div className="rounded-2xl -m-1 p-5 md:p-8" style={endBgStyle}>
       <div className="mb-8 text-center">
         <div className="eyebrow">Terminé</div>
         <h1 className="font-serif text-3xl">Récap final</h1>
@@ -529,6 +556,38 @@ export default function VersusPage() {
   );
 }
 
+function CoachCard({
+  coach,
+  accent,
+  size = 'md',
+}: {
+  coach: ListItem | null;
+  accent: string;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  if (!coach) return null;
+  const dims = size === 'lg' ? 'w-32 h-44 md:w-40 md:h-56' : size === 'md' ? 'w-24 h-32' : 'w-14 h-[70px]';
+  const nameSize = size === 'lg' ? 'text-sm' : size === 'md' ? 'text-[11px]' : 'text-[8px]';
+
+  return (
+    <div
+      className={`relative ${dims} shrink-0 rounded-xl overflow-hidden`}
+      style={{ boxShadow: `0 0 0 2px #14151a, 0 0 0 4px ${accent}` }}
+    >
+      {coach.image_url ? (
+        <img src={coach.image_url} className="w-full h-full object-cover" alt="" />
+      ) : (
+        <div className="w-full h-full bg-surface2 flex items-center justify-center text-2xl">🧑‍🏫</div>
+      )}
+      <div className="absolute inset-x-0 top-0 bg-black/75 backdrop-blur-[1px] px-1.5 py-1 text-center border-b" style={{ borderColor: accent }}>
+        <span className={`font-serif font-bold ${nameSize} leading-none`} style={{ color: accent }}>
+          {coach.name}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function PlayerColumn({
   name,
   coach,
@@ -548,18 +607,8 @@ function PlayerColumn({
     <div className={`flex flex-col gap-3 ${align === 'right' ? 'md:items-end' : 'md:items-start'}`}>
       <div className={`flex flex-col items-center w-full ${align === 'right' ? 'md:items-end md:text-right' : 'md:items-start md:text-left'}`}>
         {coach && (
-          <div className="flex items-center gap-2 mb-1.5">
-            {coach.image_url && (
-              <img
-                src={coach.image_url}
-                className="w-12 h-12 rounded-full object-cover border-2"
-                style={{ borderColor: accent }}
-                alt=""
-              />
-            )}
-            <div className="text-[12px] text-muted">
-              Coach<br /><span style={{ color: accent }}>{coach.name}</span>
-            </div>
+          <div className="mb-2">
+            <CoachCard coach={coach} accent={accent} size="lg" />
           </div>
         )}
         <div className="font-serif text-2xl font-bold" style={{ color: accent }}>{name}</div>
