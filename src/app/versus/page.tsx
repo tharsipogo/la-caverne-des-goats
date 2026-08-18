@@ -440,40 +440,60 @@ export default function VersusPage() {
 
         {/* Bandeau des deux joueurs */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          {[0, 1].map((i) => (
-            <div
-              key={i}
-              className={`border rounded-card p-4 ${
-                highestBidder === i && roundStage === 'respond' ? 'border-amber' : 'border-border'
-              } bg-surface`}
-            >
-              <div className="flex items-center gap-2.5">
-                <CoachCard coach={coaches[i]} accent={i === 0 ? '#e2645a' : '#4fc9c0'} size="sm" />
-                <div className="font-serif text-lg">{names[i]}</div>
-              </div>
-              <div className="text-muted text-[13px] mt-2">
-                💰 <b className="text-amber">{budgets[i]}</b> · 🧑‍🤝‍🧑 {teams[i].length}/{TEAM_SIZE}
-              </div>
-              {teams[i].length > 0 && (
-                <div className="flex gap-1.5 mt-3 flex-wrap">
-                  {teams[i].map((it) => (
-                    <div
-                      key={it.id}
-                      className="card-enter w-9 h-9 rounded-md overflow-hidden border shrink-0"
-                      style={{ borderColor: (i === 0 ? '#e2645a' : '#4fc9c0') + '77' }}
-                      title={it.name}
-                    >
-                      {it.image_url ? (
-                        <img src={it.image_url} className="w-full h-full object-cover" alt="" />
-                      ) : (
-                        <div className="w-full h-full bg-surface2 flex items-center justify-center text-[10px]">🎴</div>
-                      )}
-                    </div>
-                  ))}
+          {[0, 1].map((i) => {
+            const accent = i === 0 ? '#e2645a' : '#4fc9c0';
+            const isActive = highestBidder === i && roundStage === 'respond';
+            return (
+              <div
+                key={i}
+                className="p-4 pr-6"
+                style={{
+                  background: `linear-gradient(135deg, ${accent}2e, #1c1e26 70%)`,
+                  border: `1px solid ${isActive ? accent : accent + '40'}`,
+                  borderRadius: '10px',
+                  clipPath:
+                    i === 0
+                      ? 'polygon(0 0, 100% 0, 94% 100%, 0% 100%)'
+                      : 'polygon(6% 0, 100% 0, 100% 100%, 0% 100%)',
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <CoachCard coach={coaches[i]} accent={accent} size="sm" />
+                  <div className="font-serif text-lg">{names[i]}</div>
                 </div>
-              )}
-            </div>
-          ))}
+                <div className="flex gap-6 mt-3">
+                  <div>
+                    <div className="text-[9.5px] uppercase tracking-wider text-muted">Budget</div>
+                    <div className="font-serif text-lg font-bold" style={{ color: accent }}>💰 {budgets[i]}</div>
+                  </div>
+                  <div>
+                    <div className="text-[9.5px] uppercase tracking-wider text-muted">Cartes</div>
+                    <div className="font-serif text-lg font-bold" style={{ color: accent }}>
+                      {teams[i].length}/{TEAM_SIZE}
+                    </div>
+                  </div>
+                </div>
+                {teams[i].length > 0 && (
+                  <div className="flex gap-1.5 mt-3 flex-wrap">
+                    {teams[i].map((it) => (
+                      <div
+                        key={it.id}
+                        className="card-enter w-9 h-9 rounded-md overflow-hidden border shrink-0"
+                        style={{ borderColor: accent + '77' }}
+                        title={it.name}
+                      >
+                        {it.image_url ? (
+                          <img src={it.image_url} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <div className="w-full h-full bg-surface2 flex items-center justify-center text-[10px]">🎴</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Carte en jeu */}
@@ -614,9 +634,9 @@ function CoachCard({
   const nameSize = size === 'lg' ? 'text-sm md:text-base' : size === 'md' ? 'text-[11px]' : 'text-[10px]';
 
   return (
-    <div className="flex flex-col items-center gap-1.5 shrink-0">
+    <div className="flex flex-col items-center gap-0 shrink-0">
       <div
-        className={`${imgDims} rounded-xl overflow-hidden`}
+        className={`${imgDims} rounded-t-xl overflow-hidden`}
         style={{ boxShadow: `0 0 0 2px #14151a, 0 0 0 4px ${accent}` }}
       >
         {coach.image_url ? (
@@ -625,9 +645,14 @@ function CoachCard({
           <div className="w-full h-full bg-surface2 flex items-center justify-center text-2xl">🧑‍🏫</div>
         )}
       </div>
-      <span className={`font-serif font-bold ${nameSize} leading-none text-text text-center`}>
-        {coach.name}
-      </span>
+      <div
+        className="w-full rounded-b-xl px-2 py-1 text-center"
+        style={{ background: accent }}
+      >
+        <span className={`font-serif font-bold ${nameSize} leading-tight text-[#14151a]`}>
+          {coach.name}
+        </span>
+      </div>
     </div>
   );
 }
