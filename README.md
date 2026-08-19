@@ -51,6 +51,10 @@ Si tu avais déjà exécuté `supabase/schema.sql` avant l'ajout du mode Blind T
 
 Exécute aussi, une seule fois, `supabase/migration_tier_position.sql` dans le SQL Editor — il ajoute la colonne nécessaire pour mémoriser l'ordre des items dans chaque ligne de la Tier List.
 
+## 4quater. Déjà une base Supabase existante ? Ajoute l'image de couverture personnalisée
+
+Exécute aussi, une seule fois, `supabase/migration_cover_image.sql` dans le SQL Editor — il ajoute la colonne nécessaire pour stocker l'image de couverture de chaque base, indépendamment de son contenu.
+
 ## 5. Accès mobile — déployer en ligne gratuitement (Vercel)
 
 L'appli est déjà adaptée aux petits écrans (barre de navigation en bas sur mobile). Pour y accéder depuis ton téléphone n'importe où (même PC éteint), déploie-la sur Vercel — gratuit, et connecté à la **même base Supabase** :
@@ -88,7 +92,7 @@ supabase/
 
 ## Modes de jeu, en bref
 
-- **Mes bases** : crée une base texte ou image ; pour une base image, tu peux sélectionner **plusieurs fichiers en une fois** (le nom de fichier devient le nom de l'item, modifiable ensuite dans Supabase). Pour une base texte, tu peux aussi coller une liste de noms (un par ligne) pour tout ajouter d'un coup.
+- **Mes bases** : interface en grille de cartes avec recherche, filtres par type, et compteurs (nombre de collections / éléments). Crée une base texte, image ou audio via la modale "+ Nouvelle base" (avec dépôt de fichiers par glisser-déposer). Chaque base peut avoir sa propre **image de couverture personnalisée** (indépendante de son contenu — change-la à tout moment en survolant une carte et en cliquant sur l'icône 📷). Pour une base image/audio, tu peux sélectionner **plusieurs fichiers en une fois** (le nom de fichier devient le nom de l'item, modifiable ensuite dans Supabase). Pour une base texte, tu peux aussi coller une liste de noms (un par ligne) pour tout ajouter d'un coup.
 - **Blind Ranking** : choisis une base, un nombre (5 / 10 / 20), puis pour chaque item révélé tu cliques directement sur sa position finale (1 à N). Si la base choisie est de type "Audio", un extrait de 20 secondes se lance automatiquement à chaque item révélé (avec un bouton "Réécouter"), pour classer en te fiant au son plutôt qu'au seul titre.
 - **Tier List** : glisse-dépose les items dans les rangées, ou dépose-les directement sur un autre item pour choisir leur place exacte dans la ligne. Clique sur le nom d'une ligne pour le renommer (texte libre, plus de limite à 4 caractères). Une pastille à côté de chaque ligne permet de changer sa couleur, et un bouton "✕" la supprime (les items repassent en "Non classés"). Un bouton "+ Ajouter une ligne" permet d'en créer autant que voulu. Tout est sauvegardé automatiquement par base.
 - **Undercover** : choisis une base de mots/images, le nombre de joueurs, leurs noms, le nombre d'undercover, et active Mister White à partir de 5 joueurs. Le joueur qui commence la distribution des cartes est tiré au hasard à chaque partie (jamais Mister White). Chaque joueur voit sa carte seul (mode "passe l'appareil"). Ensuite, à chaque tour, on élimine un joueur en cliquant dessus : son rôle est révélé, jamais son mot. Si Mister White est éliminé, il peut tenter de deviner le mot des civils pour gagner.

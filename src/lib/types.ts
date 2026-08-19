@@ -5,6 +5,7 @@ export interface GameList {
   name: string;
   type: ListType;
   tier_labels: any; // string[] (ancien format) ou TierRow[] (nouveau, normalisé à la lecture)
+  cover_image_url: string | null;
   created_at: string;
 }
 

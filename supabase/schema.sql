@@ -8,6 +8,7 @@ create table if not exists lists (
   name text not null,
   type text not null check (type in ('text','image','audio')),
   tier_labels jsonb not null default '["S","A","B","C","D","E"]',
+  cover_image_url text,
   created_at timestamptz not null default now()
 );
 

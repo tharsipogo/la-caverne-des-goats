@@ -92,6 +92,54 @@ export default function VersusPage() {
     })();
   }, [terrainListId]);
 
+  // Tire (ou retire selon les modes choisis) les coachs des deux joueurs.
+  // Garantit deux coachs distincts quand au moins un des deux est en mode aléatoire.
+  function rerollCoaches() {
+    if (coachItems.length === 0) {
+      setCoaches([null, null]);
+      return;
+    }
+    const resolved: [ListItem | null, ListItem | null] = [null, null];
+    if (coachMode[0] === 'random' && coachMode[1] === 'random') {
+      const two = pickRandom(coachItems, Math.min(2, coachItems.length));
+      resolved[0] = two[0] || null;
+      resolved[1] = two[1] || two[0] || null;
+    } else {
+      resolved[0] =
+        coachMode[0] === 'choice' && coachChoiceId[0]
+          ? coachItems.find((c) => c.id === coachChoiceId[0]) || null
+          : pickRandom(coachItems, 1)[0] || null;
+      if (coachMode[1] === 'choice' && coachChoiceId[1]) {
+        resolved[1] = coachItems.find((c) => c.id === coachChoiceId[1]) || null;
+      } else {
+        const remaining = coachItems.filter((c) => c.id !== resolved[0]?.id);
+        const candidates = remaining.length > 0 ? remaining : coachItems;
+        resolved[1] = pickRandom(candidates, 1)[0] || null;
+      }
+    }
+    setCoaches(resolved);
+  }
+
+  // Retire un nouveau terrain au hasard.
+  function rerollTerrain() {
+    if (terrainItems.length === 0) {
+      setTerrain(null);
+      return;
+    }
+    setTerrain(pickRandom(terrainItems, 1)[0] || null);
+  }
+
+  // Aperçu automatique dès qu'une base coach/terrain est chargée ou que les modes changent.
+  useEffect(() => {
+    rerollCoaches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coachItems, coachMode, coachChoiceId]);
+
+  useEffect(() => {
+    rerollTerrain();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terrainItems]);
+
   // Résout récursivement (en mémoire, sans re-render intermédiaire) les manches automatiques
   // — quand l'équipe d'un joueur est déjà pleine, l'autre reçoit la carte gratuitement —
   // jusqu'à retomber sur une manche où les deux joueurs doivent réellement enchérir, ou la fin de partie.
@@ -156,40 +204,8 @@ export default function VersusPage() {
     const cleanNames: [string, string] = [names[0].trim() || 'Joueur 1', names[1].trim() || 'Joueur 2'];
     setNames(cleanNames);
 
-    // Résolution des coachs (aléatoire ou choix manuel), si une base de coachs est sélectionnée.
-    // On garantit deux coachs distincts quand au moins un des deux est tiré au hasard.
-    if (coachListId && coachItems.length > 0) {
-      const resolved: [ListItem | null, ListItem | null] = [null, null];
-
-      if (coachMode[0] === 'random' && coachMode[1] === 'random') {
-        const two = pickRandom(coachItems, Math.min(2, coachItems.length));
-        resolved[0] = two[0] || null;
-        resolved[1] = two[1] || two[0] || null;
-      } else {
-        resolved[0] =
-          coachMode[0] === 'choice' && coachChoiceId[0]
-            ? coachItems.find((c) => c.id === coachChoiceId[0]) || null
-            : pickRandom(coachItems, 1)[0] || null;
-
-        if (coachMode[1] === 'choice' && coachChoiceId[1]) {
-          resolved[1] = coachItems.find((c) => c.id === coachChoiceId[1]) || null;
-        } else {
-          const remaining = coachItems.filter((c) => c.id !== resolved[0]?.id);
-          const candidates = remaining.length > 0 ? remaining : coachItems;
-          resolved[1] = pickRandom(candidates, 1)[0] || null;
-        }
-      }
-      setCoaches(resolved);
-    } else {
-      setCoaches([null, null]);
-    }
-
-    // Terrain tiré au hasard, si une base de terrains est sélectionnée.
-    if (terrainListId && terrainItems.length > 0) {
-      setTerrain(pickRandom(terrainItems, 1)[0] || null);
-    } else {
-      setTerrain(null);
-    }
+    // Coachs et terrain : on garde ce qui a déjà été tiré/choisi en aperçu (via les boutons
+    // "🎲 Relancer"), pas besoin de re-tirer ici — ça évite de perdre un choix qui convenait.
 
     const shuffled = shuffle(items as ListItem[]);
     playRound(0, [startBudget, startBudget], [[], []], shuffled);
@@ -243,7 +259,6 @@ export default function VersusPage() {
     setTeams([[], []]);
     setBudgets([0, 0]);
     setNotices([]);
-    setTerrain(null);
   }
 
   if (loading) return <p className="text-muted">Chargement...</p>;
@@ -357,9 +372,20 @@ export default function VersusPage() {
                           ))}
                         </select>
                       )}
+                      {coaches[i] && (
+                        <div className="flex items-center gap-2.5 mt-3">
+                          <CoachCard coach={coaches[i]} accent={i === 0 ? '#e2645a' : '#4fc9c0'} size="sm" />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+              )}
+
+              {coachListId && coachItems.length > 0 && (
+                <button className="btn-ghost btn-small mt-3" onClick={rerollCoaches}>
+                  🎲 Relancer le tirage des coachs
+                </button>
               )}
             </div>
 
@@ -372,6 +398,17 @@ export default function VersusPage() {
                   <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
+              {terrain && (
+                <div className="flex items-center gap-3 mt-3">
+                  {terrain.image_url && <img src={terrain.image_url} className="w-10 h-10 rounded-lg object-cover" alt="" />}
+                  <span className="text-[13px] text-amber font-medium">{terrain.name}</span>
+                </div>
+              )}
+              {terrainListId && terrainItems.length > 0 && (
+                <button className="btn-ghost btn-small mt-3" onClick={rerollTerrain}>
+                  🎲 Relancer le tirage du terrain
+                </button>
+              )}
             </div>
 
             <button className="btn w-fit" onClick={start}>▶ Démarrer</button>
@@ -413,6 +450,13 @@ export default function VersusPage() {
             <div className="inline-flex items-center gap-2 bg-surface/85 border border-amberDim rounded-full px-3 py-1.5">
               {terrain.image_url && <img src={terrain.image_url} className="w-5 h-5 rounded-full object-cover" alt="" />}
               <span className="text-[12px] text-amber font-medium">{terrain.name}</span>
+              <button
+                onClick={rerollTerrain}
+                title="Relancer le terrain"
+                className="text-muted hover:text-amber text-[13px] leading-none ml-0.5"
+              >
+                🎲
+              </button>
             </div>
           )}
         </div>
