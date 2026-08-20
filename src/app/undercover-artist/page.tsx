@@ -9,9 +9,11 @@ type Role = 'civil' | 'undercover';
 type Phase = 'setup' | 'reveal' | 'draw' | 'elim' | 'end';
 
 interface Player {
+  id: number;
   name: string;
   role: Role;
   alive: boolean;
+  seen: boolean;
 }
 
 const CANVAS_W = 640;
@@ -28,11 +30,8 @@ export default function UndercoverArtistPage() {
   const [phase, setPhase] = useState<Phase>('setup');
   const [word, setWord] = useState<ListItem | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-
-  // reveal (pass & play)
-  const [revealOrder, setRevealOrder] = useState<Player[]>([]);
-  const [revealIdx, setRevealIdx] = useState(0);
-  const [cardShown, setCardShown] = useState(false);
+  const [activePlayerId, setActivePlayerId] = useState<number | null>(null);
+  const [firstPlayer, setFirstPlayer] = useState<Player | null>(null);
 
   // drawing round
   const [drawQueue, setDrawQueue] = useState<Player[]>([]);
@@ -94,14 +93,20 @@ export default function UndercoverArtistPage() {
     const roles: Role[] = [...Array(civilCount).fill('civil'), ...Array(undercoverCount).fill('undercover')];
     const shuffledRoles = shuffle(roles);
     const newPlayers: Player[] = playerNames.map((name, i) => ({
+      id: i,
       name: name.trim() || `Joueur ${i + 1}`,
       role: shuffledRoles[i],
       alive: true,
+      seen: false,
     }));
+
     setPlayers(newPlayers);
-    setRevealOrder(rotateRandomStart(newPlayers));
-    setRevealIdx(0);
-    setCardShown(false);
+    setActivePlayerId(null);
+
+    // Choix aléatoire du premier joueur pour la phase de dessin
+    const randomStarter = newPlayers[Math.floor(Math.random() * newPlayers.length)];
+    setFirstPlayer(randomStarter);
+
     setWinner(null);
     setLastReveal(null);
     canvasInitRef.current = false;
@@ -109,20 +114,33 @@ export default function UndercoverArtistPage() {
     setPhase('reveal');
   }
 
-  function nextReveal() {
-    setCardShown(false);
-    if (revealIdx + 1 >= revealOrder.length) {
-      const queue = rotateRandomStart(players.filter((p) => p.alive));
-      setDrawQueue(queue);
-      setDrawIdx(0);
-      setDrawerReady(false);
-      setPhase('draw');
-    } else {
-      setRevealIdx(revealIdx + 1);
+  function toggleCard(p: Player) {
+    if (p.seen) return;
+    if (activePlayerId === p.id) {
+      setPlayers((prev) => prev.map((item) => (item.id === p.id ? { ...item, seen: true } : item)));
+      setActivePlayerId(null);
+    } else if (activePlayerId === null) {
+      setActivePlayerId(p.id);
     }
   }
 
-  // ---- Canvas init (une seule fois, le buffer persiste ensuite entre les manches) ----
+  const seenCount = players.filter((p) => p.seen).length;
+  const allSeen = players.length > 0 && seenCount === players.length;
+
+  function startDrawingPhase() {
+    if (!firstPlayer) return;
+    // La file de dessin commence par le premier joueur tiré au sort
+    const queue = rotateRandomStart(
+      players.filter((p) => p.alive),
+      (p) => p.id !== firstPlayer.id
+    );
+    setDrawQueue(queue);
+    setDrawIdx(0);
+    setDrawerReady(false);
+    setPhase('draw');
+  }
+
+  // ---- Canvas init ----
   function ensureCanvasInit() {
     if (canvasInitRef.current) return;
     const canvas = canvasRef.current;
@@ -177,7 +195,6 @@ export default function UndercoverArtistPage() {
     isDrawingRef.current = false;
     setDrawerReady(false);
     if (drawIdx + 1 >= drawQueue.length) {
-      // manche de dessin terminée -> passage à l'élimination
       setPhase('elim');
     } else {
       setDrawIdx(drawIdx + 1);
@@ -194,7 +211,7 @@ export default function UndercoverArtistPage() {
 
   function confirmElimination() {
     if (!eliminationTarget) return;
-    const next = players.map((p) => (p.name === eliminationTarget.name ? { ...p, alive: false } : p));
+    const next = players.map((p) => (p.id === eliminationTarget.id ? { ...p, alive: false } : p));
     setPlayers(next);
     setLastReveal({ name: eliminationTarget.name, role: eliminationTarget.role });
     setEliminationTarget(null);
@@ -205,7 +222,7 @@ export default function UndercoverArtistPage() {
       setPhase('end');
       return;
     }
-    // manche suivante : les joueurs encore en vie redessinent, un trait chacun, dans un ordre relancé au hasard
+
     const queue = rotateRandomStart(next.filter((p) => p.alive));
     setDrawQueue(queue);
     setDrawIdx(0);
@@ -217,7 +234,8 @@ export default function UndercoverArtistPage() {
   function resetAll() {
     setPhase('setup');
     setPlayers([]);
-    setRevealOrder([]);
+    setActivePlayerId(null);
+    setFirstPlayer(null);
     setWord(null);
     setWinner(null);
     setLastReveal(null);
@@ -255,7 +273,7 @@ export default function UndercoverArtistPage() {
         {lists.length === 0 ? (
           <p className="text-muted text-sm py-8 text-center">Crée d'abord une base d'au moins 1 item dans "Mes bases".</p>
         ) : (
-          <div className="panel flex flex-col gap-5">
+          <div className="panel flex flex-col gap-5 max-w-2xl">
             <div>
               <label className="text-[12.5px] text-muted block mb-1.5">Base de mots</label>
               <select className="input" value={listId} onChange={(e) => setListId(e.target.value)}>
@@ -313,31 +331,115 @@ export default function UndercoverArtistPage() {
     );
   }
 
-  // ================= REVEAL (pass & play) =================
+  // ================= REVEAL (Interactive Grid) =================
   if (phase === 'reveal') {
-    const p = revealOrder[revealIdx];
-    const hasWord = p.role === 'civil';
     return (
-      <div className="flex flex-col items-center gap-6 mt-10">
-        <div className="eyebrow">Distribution — {revealIdx + 1} / {revealOrder.length}</div>
-        <h1 className="font-serif text-2xl text-center">
-          Passe l'appareil à <span className="text-amber">{p.name}</span>
-        </h1>
+      <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[75vh] gap-6 text-center py-6">
+        <div className="text-amber font-bold text-xs tracking-widest uppercase">
+          DISTRIBUTION
+        </div>
 
-        {!cardShown ? (
-          <button className="btn" onClick={() => setCardShown(true)}>🎴 Révéler ma carte</button>
-        ) : (
-          <div className="flex flex-col items-center gap-5">
-            <div className="w-[260px] min-h-[180px] bg-gradient-to-br from-surface2 to-surface border border-amberDim rounded-2xl flex flex-col items-center justify-center p-6 text-center gap-4">
-              {hasWord ? (
-                <div className="font-serif text-xl font-semibold">{word?.name}</div>
-              ) : (
-                <div className="text-muted text-sm">
-                  Carte vide — tu es <b className="text-amber">Undercover</b>.<br />Dessine comme si tu savais !
+        <div>
+          <h1 className="text-3xl font-black text-white">Chacun tape sa carte</h1>
+          <p className="text-muted text-sm mt-1">Ne montre pas ton mot aux autres !</p>
+        </div>
+
+        {/* Grille des cartes */}
+        <div className="flex flex-wrap justify-center gap-4 max-w-3xl my-4">
+          {players.map((p) => {
+            const isBeingViewed = activePlayerId === p.id;
+            const isCivil = p.role === 'civil';
+
+            if (p.seen) {
+              return (
+                <div
+                  key={p.id}
+                  className="w-36 h-48 sm:w-40 sm:h-52 bg-[#12141f] border border-[#1d2133] rounded-2xl flex flex-col items-center justify-center text-slate-600 select-none opacity-60"
+                >
+                  <span className="text-3xl font-bold">✓</span>
                 </div>
-              )}
+              );
+            }
+
+            if (isBeingViewed) {
+              return (
+                <div
+                  key={p.id}
+                  className="w-36 h-48 sm:w-40 sm:h-52 bg-[#171a29] border-2 border-amber shadow-[0_0_20px_rgba(245,158,11,0.25)] rounded-2xl flex flex-col justify-between overflow-hidden p-2.5 transition-all"
+                >
+                  <div className="text-amber font-bold text-xs pt-1 truncate w-full">
+                    {p.name}
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1.5 my-auto px-1">
+                    <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">
+                      {isCivil ? 'CIVIL' : 'UNDERCOVER'}
+                    </span>
+                    {isCivil && word ? (
+                      <>
+                        {word.image_url && (
+                          <img src={word.image_url} className="w-full max-h-20 object-contain rounded-md" alt="" />
+                        )}
+                        <span className="text-white font-black text-sm sm:text-base leading-tight break-words max-w-full">
+                          {word.name}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-300 text-xs italic">Tu n'as pas de mot</span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => toggleCard(p)}
+                    className="w-full bg-[#202538] hover:bg-[#2a314a] text-amber font-bold text-xs py-1.5 rounded-lg border border-amber/30 transition"
+                  >
+                    J'ai vu ✓
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={p.id}
+                onClick={() => toggleCard(p)}
+                className={`w-36 h-48 sm:w-40 sm:h-52 rounded-2xl border flex flex-col items-center justify-center p-3 gap-2 cursor-pointer transition-all ${
+                  activePlayerId !== null
+                    ? 'bg-[#12141f] border-[#1e2235] opacity-40 cursor-not-allowed'
+                    : 'bg-[#171a2b] border-[#252a42] hover:border-amber/60 hover:bg-[#1d2138]'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-full bg-[#252a42] flex items-center justify-center text-amber font-extrabold text-sm">
+                  ?
+                </div>
+                <span className="text-amber font-semibold text-xs mt-1">
+                  {activePlayerId !== null ? 'En attente...' : 'Tap pour voir'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Compteur de cartes vues */}
+        <div className="text-muted text-xs font-medium">
+          {seenCount} / {players.length} cartes vues
+        </div>
+
+        {/* Carte du premier joueur désigné aléatoirement */}
+        {allSeen && firstPlayer && (
+          <div className="flex flex-col items-center gap-4 mt-4 animate-fade-in">
+            <div className="bg-[#171a2b] border border-amber/70 rounded-2xl p-5 text-center min-w-[260px] shadow-lg">
+              <span className="text-muted text-xs block mb-1 font-semibold">C'est</span>
+              <span className="text-amber font-black text-2xl block mb-1">{firstPlayer.name}</span>
+              <span className="text-slate-300 text-xs">qui commence à dessiner son trait !</span>
             </div>
-            <button className="btn-secondary" onClick={nextReveal}>J'ai vu — carte suivante →</button>
+
+            <button
+              className="bg-amber hover:brightness-105 active:scale-95 text-[#101118] font-bold text-sm px-8 py-3.5 rounded-xl shadow-[0_4px_16px_rgba(245,158,11,0.3)] transition"
+              onClick={startDrawingPhase}
+            >
+              Commencer le dessin →
+            </button>
           </div>
         )}
       </div>
@@ -398,7 +500,7 @@ export default function UndercoverArtistPage() {
         <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 mt-6">
           {players.map((p) => (
             <div
-              key={p.name}
+              key={p.id}
               onClick={() => p.alive && setEliminationTarget(p)}
               className={`border rounded-card p-4 text-center transition ${
                 p.alive ? 'bg-surface border-border cursor-pointer hover:border-red' : 'bg-surface2 border-border opacity-40'
