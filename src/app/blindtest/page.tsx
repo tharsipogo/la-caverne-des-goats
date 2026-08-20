@@ -187,7 +187,7 @@ export default function BlindTestPage() {
   // -------- En cours (playing / revealed) --------
   if (phase === 'playing' || phase === 'revealed') {
     const current = pool[currentIndex];
-    const radius = 70;
+    const radius = 52;
     const circumference = 2 * Math.PI * radius;
     const progress = (secondsLeft / duration) * circumference;
 
@@ -223,22 +223,45 @@ export default function BlindTestPage() {
               {/* Carte noire centrale */}
               <div className="w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-[#141622] border border-[#222638] rounded-3xl flex flex-col items-center justify-center p-6 shadow-2xl relative">
                 
-                {/* Chrono circulaire SVG */}
-                <div className="relative w-44 h-44 flex items-center justify-center">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
-                    {/* Anneau de fond */}
+                {/* Chrono circulaire SVG avec les 2 cercles fins d'arrière-plan */}
+                <div className="relative w-56 h-56 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                    {/* Grand cercle extérieur très fin */}
                     <circle
-                      cx="80"
-                      cy="80"
+                      cx="100"
+                      cy="100"
+                      r="82"
+                      stroke="#f59e0b"
+                      strokeWidth="1"
+                      strokeOpacity="0.25"
+                      fill="transparent"
+                    />
+
+                    {/* Petit cercle intérieur très fin */}
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="40"
+                      stroke="#f59e0b"
+                      strokeWidth="1"
+                      strokeOpacity="0.2"
+                      fill="transparent"
+                    />
+
+                    {/* Anneau de fond principal (sombre) */}
+                    <circle
+                      cx="100"
+                      cy="100"
                       r={radius}
                       stroke="#222638"
                       strokeWidth="6"
                       fill="transparent"
                     />
-                    {/* Anneau de progression */}
+
+                    {/* Anneau de progression principal (jaune ambre) */}
                     <circle
-                      cx="80"
-                      cy="80"
+                      cx="100"
+                      cy="100"
                       r={radius}
                       stroke="#f59e0b"
                       strokeWidth="6"
@@ -249,13 +272,14 @@ export default function BlindTestPage() {
                       className="transition-all duration-1000 ease-linear"
                     />
                   </svg>
+
                   {/* Temps restant au centre */}
                   <span className="absolute font-serif text-5xl font-black text-white">
                     {secondsLeft}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-indigo-300/60 text-xs font-semibold mt-6">
+                <div className="flex items-center gap-2 text-indigo-300/60 text-xs font-semibold mt-4">
                   <span>🎵</span> en cours...
                 </div>
               </div>
@@ -271,32 +295,35 @@ export default function BlindTestPage() {
           ) : (
             /* Phase Révélée */
             <div className="flex flex-col items-center gap-6 w-full max-w-md">
-              <div className="w-[300px] sm:w-[340px] min-h-[220px] bg-[#141622] border-2 border-amber shadow-[0_0_25px_rgba(245,158,11,0.25)] rounded-3xl flex flex-col items-center justify-center p-6 text-center gap-4">
+              <div className="relative w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-[#141622] border-2 border-amber/80 shadow-[0_0_30px_rgba(245,158,11,0.25)] rounded-3xl overflow-hidden flex flex-col items-center justify-center p-4">
                 {current.image_url ? (
-                  <img src={current.image_url} className="w-full max-h-[160px] object-contain rounded-xl" alt="" />
+                  <img src={current.image_url} className="w-full h-full object-cover rounded-2xl" alt="" />
                 ) : (
-                  <div className="text-5xl">🎵</div>
+                  <div className="text-6xl">🎵</div>
                 )}
-                <div className="font-serif text-2xl font-bold text-white">{current.name}</div>
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 text-center">
+                  <div className="font-serif text-2xl font-bold text-white">{current.name}</div>
+                </div>
               </div>
 
-              <div className="w-full text-center">
-                <p className="text-muted text-sm mb-4">Qui a trouvé le premier ?</p>
-                <div className="flex flex-wrap justify-center gap-2">
+              {/* Nouveau design des boutons "Qui a trouvé ?" */}
+              <div className="w-full text-center flex flex-col items-center gap-4">
+                <p className="text-slate-300 text-sm font-semibold">Qui a trouvé ?</p>
+                <div className="flex items-center justify-center gap-3 flex-wrap">
                   {players.map((p, i) => (
                     <button
                       key={p.name}
-                      className="btn-secondary btn-small"
                       onClick={() => awardPoint(i)}
+                      className="bg-amber hover:brightness-105 active:scale-95 text-[#101118] font-bold text-sm px-6 py-3 rounded-xl shadow-[0_4px_14px_rgba(245,158,11,0.3)] transition"
                     >
-                      +1 {p.name}
+                      {p.name}
                     </button>
                   ))}
                   <button
-                    className="btn-ghost btn-small"
                     onClick={() => awardPoint(null)}
+                    className="bg-[#1a1d2d] hover:bg-[#23273c] active:scale-95 text-slate-300 font-semibold text-sm px-6 py-3 rounded-xl border border-[#2d334a] transition"
                   >
-                    Personne n'a trouvé
+                    Personne
                   </button>
                 </div>
               </div>
