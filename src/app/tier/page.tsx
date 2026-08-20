@@ -81,7 +81,11 @@ export default function TierPage() {
 
   async function saveTierRows(rows: TierRow[]) {
     setTierRows(rows);
-    await supabase.from('lists').update({ tier_labels: rows }).eq('id', listId);
+    const { error } = await supabase.from('lists').update({ tier_labels: rows }).eq('id', listId);
+    if (error) {
+      console.error('Erreur saveTierRows :', error);
+      alert("Erreur lors de la sauvegarde des lignes : " + error.message);
+    }
   }
 
   function itemsByTier(tier: string): ListItem[] {
@@ -125,9 +129,21 @@ export default function TierPage() {
   async function removeTierRow(index: number) {
     const row = tierRows[index];
     if (!confirm(`Supprimer la ligne "${row.label}" ? Les items qu'elle contient repasseront en "Non classés".`)) return;
-    await supabase.from('tier_assignments').delete().eq('list_id', listId).eq('tier', row.label);
+
+    const { error: delErr } = await supabase.from('tier_assignments').delete().eq('list_id', listId).eq('tier', row.label);
+    if (delErr) {
+      console.error('Erreur suppression assignments :', delErr);
+      alert('Erreur lors du retrait des items de la ligne : ' + delErr.message);
+      return;
+    }
+
     const next = tierRows.filter((_, i) => i !== index);
-    await saveTierRows(next);
+    setTierRows(next); // mise à jour immédiate de l'affichage
+    const { error: updErr } = await supabase.from('lists').update({ tier_labels: next }).eq('id', listId);
+    if (updErr) {
+      console.error('Erreur sauvegarde tier_labels :', updErr);
+      alert('Erreur lors de la sauvegarde : ' + updErr.message);
+    }
     loadListData(listId);
   }
 
@@ -180,9 +196,9 @@ export default function TierPage() {
             {tierRows.map((row, i) => {
               const isDropTarget = dropTarget === row.label && draggedItemId !== null;
               return (
-                <div key={i} className="group flex border border-border rounded-xl mb-2.5 overflow-hidden min-h-[88px] shrink-0">
+                <div key={i} className="group flex border border-border rounded-xl mb-2.5 min-h-[88px] shrink-0">
                   <div
-                    className="relative w-[104px] shrink-0 flex flex-col items-center justify-center text-center px-2 py-2"
+                    className="relative w-[104px] shrink-0 flex flex-col items-center justify-center text-center px-2 py-2 rounded-l-xl"
                     style={{ background: row.color }}
                   >
                     {editingLabelIdx === i ? (
@@ -251,7 +267,7 @@ export default function TierPage() {
                   </div>
 
                   <div
-                    className="flex-1 flex flex-wrap gap-2 p-2.5 items-center content-start"
+                    className="flex-1 flex flex-wrap gap-2 p-2.5 items-center content-start rounded-r-xl"
                     style={{
                       background: isDropTarget ? row.color + '14' : '#161822',
                       outline: isDropTarget ? `1px dashed ${row.color}88` : 'none',
