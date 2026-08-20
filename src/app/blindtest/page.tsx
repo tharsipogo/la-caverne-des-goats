@@ -223,28 +223,28 @@ export default function BlindTestPage() {
               {/* Carte noire centrale */}
               <div className="w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-[#141622] border border-[#222638] rounded-3xl flex flex-col items-center justify-center p-6 shadow-2xl relative">
                 
-                {/* Chrono circulaire SVG avec les 2 cercles fins d'arrière-plan */}
+                {/* Chrono circulaire SVG avec 2 cercles fins EXTÉRIEURS */}
                 <div className="relative w-56 h-56 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
-                    {/* Grand cercle extérieur très fin */}
+                    {/* Premier cercle extérieur fin (moyen) */}
                     <circle
                       cx="100"
                       cy="100"
-                      r="82"
-                      stroke="#f59e0b"
-                      strokeWidth="1"
-                      strokeOpacity="0.25"
-                      fill="transparent"
-                    />
-
-                    {/* Petit cercle intérieur très fin */}
-                    <circle
-                      cx="100"
-                      cy="100"
-                      r="40"
+                      r="68"
                       stroke="#f59e0b"
                       strokeWidth="1"
                       strokeOpacity="0.2"
+                      fill="transparent"
+                    />
+
+                    {/* Second cercle extérieur fin (grand) */}
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="84"
+                      stroke="#f59e0b"
+                      strokeWidth="1"
+                      strokeOpacity="0.15"
                       fill="transparent"
                     />
 
@@ -306,7 +306,7 @@ export default function BlindTestPage() {
                 </div>
               </div>
 
-              {/* Nouveau design des boutons "Qui a trouvé ?" */}
+              {/* Boutons "Qui a trouvé ?" */}
               <div className="w-full text-center flex flex-col items-center gap-4">
                 <p className="text-slate-300 text-sm font-semibold">Qui a trouvé ?</p>
                 <div className="flex items-center justify-center gap-3 flex-wrap">
