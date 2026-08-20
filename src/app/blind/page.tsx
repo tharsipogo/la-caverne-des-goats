@@ -127,7 +127,7 @@ export default function BlindPage() {
       <div className="flex flex-col items-center w-full max-w-4xl mx-auto pb-12">
         {audioEl}
 
-        {/* Barre supérieure : Annuler & Badges */}
+        {/* Barre supérieure : Annuler & Nom de la catégorie */}
         <div className="w-full flex items-center justify-between mb-2">
           <button
             className="text-muted text-sm hover:text-amber transition flex items-center gap-1"
@@ -136,7 +136,7 @@ export default function BlindPage() {
             ← Annuler
           </button>
           <span className="bg-[#1b2236] text-[#5b8bf7] text-xs font-bold px-3 py-1 rounded uppercase tracking-wider">
-            COACH
+            {listName}
           </span>
         </div>
 
