@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 const NAV = [
@@ -20,10 +21,23 @@ export default function Sidebar() {
     <>
       {/* Desktop : colonne fixe à gauche */}
       <div className="hidden md:flex w-[210px] shrink-0 bg-bg border-r border-border py-6 px-2.5 flex-col gap-1">
-        <div className="flex flex-col gap-1 mb-6 px-2.5">
-          <p className="font-sans font-bold text-text text-[17px] leading-tight">La Caverne des</p>
-          <p className="font-sans font-black text-amber text-[20px] leading-tight">Goats</p>
-        </div>
+        {/* En-tête avec Logo */}
+        <Link href="/" className="flex items-center gap-3 mb-6 px-1.5 group select-none">
+          <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-amber/40 shadow-[0_0_15px_rgba(245,158,11,0.25)] group-hover:scale-105 transition-transform duration-200 shrink-0">
+            <Image
+              src="/logo.jpg"
+              alt="Logo La Caverne des Goats"
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="font-sans font-bold text-text text-[15px] leading-tight">La Caverne des</p>
+            <p className="font-sans font-black text-amber text-[18px] leading-tight">Goats</p>
+          </div>
+        </Link>
+
         {NAV.map((item) => {
           const active = pathname === item.href;
           const [icon, ...rest] = item.label.split(' ');
@@ -48,8 +62,17 @@ export default function Sidebar() {
       </div>
 
       {/* Mobile : en-tête + barre de nav fixée en bas */}
-      <div className="md:hidden sticky top-0 z-40 bg-bg border-b border-border px-4 py-3.5">
-        <div className="font-sans text-lg font-bold">
+      <div className="md:hidden sticky top-0 z-40 bg-bg border-b border-border px-4 py-3 flex items-center gap-3">
+        <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-amber/40 shrink-0">
+          <Image
+            src="/logo.jpg"
+            alt="Logo La Caverne des Goats"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+        <div className="font-sans text-base font-bold">
           La Caverne des <span className="text-amber font-black">Goats</span>
         </div>
       </div>
