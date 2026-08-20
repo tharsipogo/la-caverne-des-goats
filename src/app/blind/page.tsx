@@ -120,27 +120,149 @@ export default function BlindPage() {
 
   // -------- Résultats --------
   if (done) {
+    const top3 = slots.slice(0, 3);
+    const rest = slots.slice(3);
+
     return (
-      <div>
+      <div className="flex flex-col items-center w-full max-w-4xl mx-auto pb-12">
         {audioEl}
-        <button className="text-muted text-[13px] mb-4 hover:text-amber" onClick={reset}>← Recommencer</button>
-        <div className="mb-7">
-          <div className="eyebrow">Résultat</div>
-          <h1 className="font-serif text-3xl">Ton classement — {listName}</h1>
+
+        {/* Barre supérieure : Annuler & Badges */}
+        <div className="w-full flex items-center justify-between mb-2">
+          <button
+            className="text-muted text-sm hover:text-amber transition flex items-center gap-1"
+            onClick={reset}
+          >
+            ← Annuler
+          </button>
+          <span className="bg-[#1b2236] text-[#5b8bf7] text-xs font-bold px-3 py-1 rounded uppercase tracking-wider">
+            COACH
+          </span>
         </div>
-        <div className="flex flex-col gap-2.5">
-          {slots.map((it, i) => (
-            <div
-              key={it?.id || i}
-              className={`flex items-center gap-3.5 bg-surface border rounded-lg px-4 py-3 ${
-                i === 0 ? 'border-amber bg-gradient-to-r from-amber/10 to-transparent' : 'border-border'
-              }`}
-            >
-              <div className="font-serif font-bold text-xl text-amber w-8 text-center shrink-0">{i + 1}</div>
-              {it?.image_url && <img src={it.image_url} className="w-11 h-11 object-cover rounded-md" alt="" />}
-              <div className="text-[14.5px] font-medium">{it?.name}</div>
+
+        {/* En-tête du résultat */}
+        <div className="w-full flex items-center justify-between border-b-2 border-amber/80 pb-3 mb-8">
+          <h1 className="text-2xl md:text-3xl font-black text-white">
+            Classement terminé !
+          </h1>
+          <span className="text-amber font-bold text-lg">
+            {pool.length} / {pool.length}
+          </span>
+        </div>
+
+        <h2 className="text-xl font-bold text-white mb-6">Ton classement</h2>
+
+        {/* Podium Top 3 */}
+        <div className="flex items-end justify-center gap-3 md:gap-5 mb-10 w-full">
+          {/* #2 */}
+          {top3[1] && (
+            <div className="flex flex-col items-center">
+              <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border border-white/20 shadow-lg bg-surface2">
+                {top3[1].image_url ? (
+                  <img
+                    src={top3[1].image_url}
+                    alt={top3[1].name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl">🎴</div>
+                )}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2 text-center">
+                  <p className="text-white text-xs md:text-sm font-bold truncate">
+                    {top3[1].name}
+                  </p>
+                </div>
+              </div>
+              <span className="text-amber font-extrabold text-base md:text-lg mt-2">#2</span>
             </div>
-          ))}
+          )}
+
+          {/* #1 (Mise en avant au centre) */}
+          {top3[0] && (
+            <div className="flex flex-col items-center -translate-y-3">
+              <div className="relative w-36 h-40 md:w-44 md:h-48 rounded-2xl overflow-hidden border-2 border-amber shadow-[0_0_25px_rgba(245,158,11,0.35)] bg-surface2">
+                {top3[0].image_url ? (
+                  <img
+                    src={top3[0].image_url}
+                    alt={top3[0].name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-4xl">🎴</div>
+                )}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2 text-center">
+                  <p className="text-white text-sm md:text-base font-bold truncate">
+                    {top3[0].name}
+                  </p>
+                </div>
+              </div>
+              <span className="text-amber font-extrabold text-lg md:text-xl mt-2">#1</span>
+            </div>
+          )}
+
+          {/* #3 */}
+          {top3[2] && (
+            <div className="flex flex-col items-center">
+              <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border border-white/20 shadow-lg bg-surface2">
+                {top3[2].image_url ? (
+                  <img
+                    src={top3[2].image_url}
+                    alt={top3[2].name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl">🎴</div>
+                )}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2 text-center">
+                  <p className="text-white text-xs md:text-sm font-bold truncate">
+                    {top3[2].name}
+                  </p>
+                </div>
+              </div>
+              <span className="text-amber font-extrabold text-base md:text-lg mt-2">#3</span>
+            </div>
+          )}
+        </div>
+
+        {/* Grille du reste du classement (4 à X) */}
+        {rest.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl mb-10">
+            {rest.map((it, idx) => {
+              const rank = idx + 4;
+              return (
+                <div
+                  key={it?.id || rank}
+                  className="flex items-center gap-3 bg-[#151824] border border-[#232738] rounded-xl p-2.5"
+                >
+                  <span className="text-indigo-300/60 font-bold text-sm w-6 text-center">
+                    {rank}
+                  </span>
+                  {it?.image_url ? (
+                    <img
+                      src={it.image_url}
+                      className="w-10 h-10 object-cover rounded-lg shrink-0"
+                      alt=""
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-surface2 rounded-lg border border-white/10 shrink-0" />
+                  )}
+                  <span className="text-white font-semibold text-sm truncate">
+                    {it?.name || ''}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Boutons d'action bas de page */}
+        <div className="flex items-center gap-3">
+          <button className="btn" onClick={start}>
+            Recommencer
+          </button>
+          <button className="btn-secondary" onClick={reset}>
+            Nouvelle partie
+          </button>
         </div>
       </div>
     );
