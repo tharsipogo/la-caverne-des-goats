@@ -82,9 +82,7 @@ export default function BlindTestPage() {
     clearTimer();
     audio.src = track.audio_url;
     audio.currentTime = 0;
-    audio.play().catch(() => {
-      /* lecture bloquée par le navigateur : le bouton "Réessayer" gère ce cas */
-    });
+    audio.play().catch(() => {});
     setCurrentIndex(index);
     setPhase('playing');
     setSecondsLeft(duration);
@@ -115,7 +113,6 @@ export default function BlindTestPage() {
     playTrack(0, shuffled);
   }
 
-  // Attribue le point (ou aucun point) puis avance vers l'extrait suivant / la fin.
   function awardPoint(playerIndex: number | null) {
     const updated = players.map((p, i) => (i === playerIndex ? { ...p, score: p.score + 1 } : p));
     setPlayers(updated);
@@ -152,12 +149,14 @@ export default function BlindTestPage() {
   // -------- Fin --------
   if (phase === 'end') {
     return (
-      <div>
+      <div className="max-w-3xl mx-auto py-8">
         {audioEl}
-        <button className="text-muted text-[13px] mb-4 hover:text-amber" onClick={reset}>← Recommencer</button>
+        <button className="text-muted text-[13px] mb-4 hover:text-amber transition" onClick={reset}>
+          ← Recommencer
+        </button>
         <div className="mb-7 text-center">
           <div className="eyebrow">Terminé</div>
-          <h1 className="font-serif text-3xl">
+          <h1 className="font-serif text-3xl font-bold">
             {champion ? <>🏆 <span className="text-amber">{champion.name}</span> gagne !</> : 'Blind Test terminé'}
           </h1>
           {!champion && outOfTracks && (
@@ -168,13 +167,13 @@ export default function BlindTestPage() {
           {sortedPlayers.map((p, i) => (
             <div
               key={p.name}
-              className={`flex items-center gap-3.5 bg-surface border rounded-lg px-4 py-3 ${
-                i === 0 ? 'border-amber' : 'border-border'
+              className={`flex items-center gap-3.5 bg-surface border rounded-xl px-4 py-3 ${
+                i === 0 ? 'border-amber shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'border-border'
               }`}
             >
               <div className="font-serif font-bold text-xl text-amber w-8 text-center shrink-0">{i + 1}</div>
               <div className="flex-1 text-[14.5px] font-medium">{p.name}</div>
-              <div className="font-serif text-lg text-amber">{p.score}</div>
+              <div className="font-serif text-lg text-amber font-bold">{p.score} pts</div>
             </div>
           ))}
         </div>
@@ -188,52 +187,128 @@ export default function BlindTestPage() {
   // -------- En cours (playing / revealed) --------
   if (phase === 'playing' || phase === 'revealed') {
     const current = pool[currentIndex];
+    const radius = 70;
+    const circumference = 2 * Math.PI * radius;
+    const progress = (secondsLeft / duration) * circumference;
+
     return (
-      <div>
+      <div className="w-full max-w-5xl mx-auto flex flex-col min-h-[80vh] justify-between pb-8">
         {audioEl}
-        <button className="text-muted text-[13px] mb-4 hover:text-amber" onClick={reset}>← Annuler</button>
-        <div className="mb-6">
-          <div className="eyebrow">{listName} — extrait {currentIndex + 1} / {pool.length}</div>
-          <h1 className="font-serif text-3xl">{phase === 'playing' ? 'Devinez !' : "C'était..."}</h1>
+
+        {/* Barre supérieure */}
+        <div className="w-full flex items-center justify-between pt-2">
+          {/* Joueurs et scores à gauche */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {players.map((p) => (
+              <div
+                key={p.name}
+                className="bg-[#151824] border border-[#232a3f] rounded-full px-4 py-1.5 text-xs md:text-sm font-medium flex items-center gap-2"
+              >
+                <span className="text-white/80">{p.name}</span>
+                <span className="text-amber font-extrabold">{p.score}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Avancement à droite */}
+          <div className="text-indigo-200/50 text-xs md:text-sm font-medium">
+            Extrait {currentIndex + 1} / {pool.length} • objectif {winningScore} pts
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-6">
-          {players.map((p) => (
-            <div key={p.name} className="bg-surface2 border border-border rounded-lg px-3 py-1.5 text-[13px]">
-              {p.name} — <b className="text-amber">{p.score}</b>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col items-center gap-6 mt-4">
+        {/* Zone centrale */}
+        <div className="flex flex-col items-center justify-center my-auto py-8">
           {phase === 'playing' ? (
-            <>
-              <div className="w-[220px] h-[220px] rounded-full border-4 border-amber flex items-center justify-center relative">
-                <div className="font-serif text-5xl font-bold text-amber">{secondsLeft}</div>
-              </div>
-              <p className="text-muted text-sm">🔊 Extrait en cours de lecture...</p>
-              <button className="btn-secondary" onClick={reveal}>⏭ Couper et révéler maintenant</button>
-            </>
-          ) : (
-            <>
-              <div className="w-[260px] min-h-[180px] bg-gradient-to-br from-surface2 to-surface border border-amberDim rounded-2xl flex flex-col items-center justify-center p-6 text-center gap-4">
-                {current.image_url && <img src={current.image_url} className="w-full max-h-[140px] object-contain rounded-lg" alt="" />}
-                <div className="font-serif text-2xl font-semibold">{current.name}</div>
+            <div className="flex flex-col items-center gap-6">
+              {/* Carte noire centrale */}
+              <div className="w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-[#141622] border border-[#222638] rounded-3xl flex flex-col items-center justify-center p-6 shadow-2xl relative">
+                
+                {/* Chrono circulaire SVG */}
+                <div className="relative w-44 h-44 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
+                    {/* Anneau de fond */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r={radius}
+                      stroke="#222638"
+                      strokeWidth="6"
+                      fill="transparent"
+                    />
+                    {/* Anneau de progression */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r={radius}
+                      stroke="#f59e0b"
+                      strokeWidth="6"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={circumference - progress}
+                      strokeLinecap="round"
+                      fill="transparent"
+                      className="transition-all duration-1000 ease-linear"
+                    />
+                  </svg>
+                  {/* Temps restant au centre */}
+                  <span className="absolute font-serif text-5xl font-black text-white">
+                    {secondsLeft}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-indigo-300/60 text-xs font-semibold mt-6">
+                  <span>🎵</span> en cours...
+                </div>
               </div>
 
-              <div className="w-full max-w-md">
-                <p className="text-muted text-[13px] text-center mb-3">Qui a trouvé le premier ?</p>
+              {/* Bouton pour révéler */}
+              <button
+                className="bg-[#202538] hover:bg-[#2a314a] text-white font-semibold text-sm px-6 py-3 rounded-xl border border-white/10 transition shadow-md"
+                onClick={reveal}
+              >
+                Révéler maintenant
+              </button>
+            </div>
+          ) : (
+            /* Phase Révélée */
+            <div className="flex flex-col items-center gap-6 w-full max-w-md">
+              <div className="w-[300px] sm:w-[340px] min-h-[220px] bg-[#141622] border-2 border-amber shadow-[0_0_25px_rgba(245,158,11,0.25)] rounded-3xl flex flex-col items-center justify-center p-6 text-center gap-4">
+                {current.image_url ? (
+                  <img src={current.image_url} className="w-full max-h-[160px] object-contain rounded-xl" alt="" />
+                ) : (
+                  <div className="text-5xl">🎵</div>
+                )}
+                <div className="font-serif text-2xl font-bold text-white">{current.name}</div>
+              </div>
+
+              <div className="w-full text-center">
+                <p className="text-muted text-sm mb-4">Qui a trouvé le premier ?</p>
                 <div className="flex flex-wrap justify-center gap-2">
                   {players.map((p, i) => (
-                    <button key={p.name} className="btn-secondary btn-small" onClick={() => awardPoint(i)}>
+                    <button
+                      key={p.name}
+                      className="btn-secondary btn-small"
+                      onClick={() => awardPoint(i)}
+                    >
                       +1 {p.name}
                     </button>
                   ))}
-                  <button className="btn-ghost btn-small" onClick={() => awardPoint(null)}>Personne n'a trouvé</button>
+                  <button
+                    className="btn-ghost btn-small"
+                    onClick={() => awardPoint(null)}
+                  >
+                    Personne n'a trouvé
+                  </button>
                 </div>
               </div>
-            </>
+            </div>
           )}
+        </div>
+
+        {/* Footer avec bouton Annuler */}
+        <div className="flex justify-start">
+          <button className="text-muted text-sm hover:text-amber transition" onClick={reset}>
+            ← Annuler
+          </button>
         </div>
       </div>
     );
@@ -255,9 +330,9 @@ export default function BlindTestPage() {
           Crée d'abord une base de type "Audio" dans "Mes bases" et ajoute-y des extraits.
         </p>
       ) : (
-        <div className="panel flex flex-col gap-6">
+        <div className="panel flex flex-col gap-6 max-w-2xl">
           <div className="flex gap-3.5 flex-wrap items-end">
-            <div>
+            <div className="flex-1 min-w-[200px]">
               <label className="text-[12.5px] text-muted block mb-1.5">Base audio</label>
               <select className="input" value={listId} onChange={(e) => setListId(e.target.value)}>
                 {lists.map((l) => (
