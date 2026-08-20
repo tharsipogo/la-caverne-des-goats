@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { pickRandom, rotateRandomStart, shuffle } from '@/lib/utils';
+import { pickRandom, shuffle } from '@/lib/utils';
 
 type Role = 'civil' | 'undercover' | 'mrwhite';
 
 interface Player {
+  id: number;
   name: string;
   role: Role;
   alive: boolean;
-  eliminatedRoleShown?: boolean;
+  seen: boolean;
 }
 
 type Phase = 'setup' | 'reveal' | 'game' | 'end';
@@ -29,9 +30,8 @@ export default function UndercoverPage() {
   const [civilWord, setCivilWord] = useState<ListItem | null>(null);
   const [undercoverWord, setUndercoverWord] = useState<ListItem | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [revealOrder, setRevealOrder] = useState<Player[]>([]);
-  const [revealIdx, setRevealIdx] = useState(0);
-  const [cardShown, setCardShown] = useState(false);
+  const [activePlayerId, setActivePlayerId] = useState<number | null>(null);
+  const [firstPlayer, setFirstPlayer] = useState<Player | null>(null);
 
   const [eliminationTarget, setEliminationTarget] = useState<Player | null>(null);
   const [mrWhiteGuessOpen, setMrWhiteGuessOpen] = useState(false);
@@ -66,7 +66,7 @@ export default function UndercoverPage() {
   }
 
   const civilCount = playerCount - undercoverCount - (mrWhiteEnabled ? 1 : 0);
-  const maxUndercover = Math.max(1, Math.floor((playerCount - (mrWhiteEnabled ? 1 : 0)) / 2) - (playerCount <= 3 ? 0 : 0));
+  const maxUndercover = Math.max(1, Math.floor((playerCount - (mrWhiteEnabled ? 1 : 0)) / 2));
 
   async function startGame() {
     if (!listId) return;
@@ -90,27 +90,42 @@ export default function UndercoverPage() {
     ];
     const shuffledRoles = shuffle(roles);
     const newPlayers: Player[] = playerNames.map((name, i) => ({
+      id: i,
       name: name.trim() || `Joueur ${i + 1}`,
       role: shuffledRoles[i],
       alive: true,
+      seen: false,
     }));
+
     setPlayers(newPlayers);
-    // Ordre de révélation aléatoire : Mister White ne peut jamais démarrer le premier tour.
-    setRevealOrder(rotateRandomStart(newPlayers, (p) => p.role === 'mrwhite'));
-    setRevealIdx(0);
-    setCardShown(false);
+    setActivePlayerId(null);
+
+    // Tirer au sort le premier joueur (hors Mister White de préférence s'il y a d'autres joueurs)
+    const validFirstCandidates = newPlayers.filter((p) => p.role !== 'mrwhite');
+    const candidates = validFirstCandidates.length > 0 ? validFirstCandidates : newPlayers;
+    const randomStarter = candidates[Math.floor(Math.random() * candidates.length)];
+    setFirstPlayer(randomStarter);
+
     setWinner(null);
     setPhase('reveal');
   }
 
-  function nextReveal() {
-    setCardShown(false);
-    if (revealIdx + 1 >= revealOrder.length) {
-      setPhase('game');
-    } else {
-      setRevealIdx(revealIdx + 1);
+  function toggleCard(p: Player) {
+    if (p.seen) return;
+    if (activePlayerId === p.id) {
+      // Masquer et valider la vue
+      setPlayers((prev) =>
+        prev.map((item) => (item.id === p.id ? { ...item, seen: true } : item))
+      );
+      setActivePlayerId(null);
+    } else if (activePlayerId === null) {
+      // Révéler la carte
+      setActivePlayerId(p.id);
     }
   }
+
+  const seenCount = players.filter((p) => p.seen).length;
+  const allSeen = players.length > 0 && seenCount === players.length;
 
   function checkWinner(currentPlayers: Player[]) {
     const aliveCivils = currentPlayers.filter((p) => p.alive && p.role === 'civil').length;
@@ -126,7 +141,7 @@ export default function UndercoverPage() {
 
   function confirmElimination() {
     if (!eliminationTarget) return;
-    const next = players.map((p) => (p.name === eliminationTarget.name ? { ...p, alive: false } : p));
+    const next = players.map((p) => (p.id === eliminationTarget.id ? { ...p, alive: false } : p));
     setPlayers(next);
     setLastReveal({ name: eliminationTarget.name, role: eliminationTarget.role });
     setEliminationTarget(null);
@@ -161,7 +176,8 @@ export default function UndercoverPage() {
   function resetAll() {
     setPhase('setup');
     setPlayers([]);
-    setRevealOrder([]);
+    setActivePlayerId(null);
+    setFirstPlayer(null);
     setCivilWord(null);
     setUndercoverWord(null);
     setWinner(null);
@@ -183,7 +199,7 @@ export default function UndercoverPage() {
         {lists.length === 0 ? (
           <p className="text-muted text-sm py-8 text-center">Crée d'abord une base d'au moins 2 items dans "Mes bases".</p>
         ) : (
-          <div className="panel flex flex-col gap-5">
+          <div className="panel flex flex-col gap-5 max-w-2xl">
             <div>
               <label className="text-[12.5px] text-muted block mb-1.5">Base de mots / images</label>
               <select className="input" value={listId} onChange={(e) => setListId(e.target.value)}>
@@ -249,35 +265,117 @@ export default function UndercoverPage() {
     );
   }
 
-  // ================= REVEAL (pass & play) =================
+  // ================= REVEAL (Interactive Grid) =================
   if (phase === 'reveal') {
-    const p = revealOrder[revealIdx];
-    const word = p.role === 'civil' ? civilWord : p.role === 'undercover' ? undercoverWord : null;
     return (
-      <div className="flex flex-col items-center gap-6 mt-10">
-        <div className="eyebrow">Distribution — {revealIdx + 1} / {revealOrder.length}</div>
-        <h1 className="font-serif text-2xl text-center">
-          Passe l'appareil à <span className="text-amber">{p.name}</span>
-        </h1>
+      <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[75vh] gap-6 text-center py-6">
+        <div className="text-amber font-bold text-xs tracking-widest uppercase">
+          DISTRIBUTION
+        </div>
 
-        {!cardShown ? (
-          <button className="btn" onClick={() => setCardShown(true)}>🎴 Révéler ma carte</button>
-        ) : (
-          <div className="flex flex-col items-center gap-5">
-            <div className="w-[260px] min-h-[220px] bg-gradient-to-br from-surface2 to-surface border border-amberDim rounded-2xl flex flex-col items-center justify-center p-6 text-center gap-4">
-              {word ? (
-                <>
-                  {word.image_url && <img src={word.image_url} className="w-full max-h-[160px] object-contain rounded-lg" alt="" />}
-                  <div className="font-serif text-xl font-semibold">{word.name}</div>
-                </>
-              ) : (
-                <div className="text-muted text-sm">
-                  Carte vide — tu es <b className="text-amber">Mister White</b>.<br />Improvise !
+        <div>
+          <h1 className="text-3xl font-black text-white">Chacun tape sa carte</h1>
+          <p className="text-muted text-sm mt-1">Ne montre pas ton mot aux autres !</p>
+        </div>
+
+        {/* Grille des cartes */}
+        <div className="flex flex-wrap justify-center gap-4 max-w-3xl my-4">
+          {players.map((p) => {
+            const isBeingViewed = activePlayerId === p.id;
+            const word = p.role === 'civil' ? civilWord : p.role === 'undercover' ? undercoverWord : null;
+
+            if (p.seen) {
+              // Carte déjà vue (Cochée)
+              return (
+                <div
+                  key={p.id}
+                  className="w-36 h-48 sm:w-40 sm:h-52 bg-[#12141f] border border-[#1d2133] rounded-2xl flex flex-col items-center justify-center text-slate-600 select-none opacity-60"
+                >
+                  <span className="text-3xl font-bold">✓</span>
                 </div>
-              )}
+              );
+            }
+
+            if (isBeingViewed) {
+              // Carte retournée (Révélée)
+              return (
+                <div
+                  key={p.id}
+                  className="w-36 h-48 sm:w-40 sm:h-52 bg-[#171a29] border-2 border-amber shadow-[0_0_20px_rgba(245,158,11,0.25)] rounded-2xl flex flex-col justify-between overflow-hidden p-2.5 transition-all"
+                >
+                  <div className="text-amber font-bold text-xs pt-1 truncate w-full">
+                    {p.name}
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1.5 my-auto px-1">
+                    <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">
+                      {p.role === 'civil' ? 'CIVIL' : p.role === 'undercover' ? 'UNDERCOVER' : 'MR. WHITE'}
+                    </span>
+                    {word ? (
+                      <>
+                        {word.image_url && (
+                          <img src={word.image_url} className="w-full max-h-20 object-contain rounded-md" alt="" />
+                        )}
+                        <span className="text-white font-black text-sm sm:text-base leading-tight break-words max-w-full">
+                          {word.name}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-300 text-xs italic">Tu n'as pas de mot</span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => toggleCard(p)}
+                    className="w-full bg-[#202538] hover:bg-[#2a314a] text-amber font-bold text-xs py-1.5 rounded-lg border border-amber/30 transition"
+                  >
+                    J'ai vu ✓
+                  </button>
+                </div>
+              );
+            }
+
+            // Carte masquée (Tap pour voir / En attente...)
+            return (
+              <div
+                key={p.id}
+                onClick={() => toggleCard(p)}
+                className={`w-36 h-48 sm:w-40 sm:h-52 rounded-2xl border flex flex-col items-center justify-center p-3 gap-2 cursor-pointer transition-all ${
+                  activePlayerId !== null
+                    ? 'bg-[#12141f] border-[#1e2235] opacity-40 cursor-not-allowed'
+                    : 'bg-[#171a2b] border-[#252a42] hover:border-amber/60 hover:bg-[#1d2138]'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-full bg-[#252a42] flex items-center justify-center text-amber font-extrabold text-sm">
+                  ?
+                </div>
+                <span className="text-amber font-semibold text-xs mt-1">
+                  {activePlayerId !== null ? 'En attente...' : 'Tap pour voir'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Compteur de cartes vues */}
+        <div className="text-muted text-xs font-medium">
+          {seenCount} / {players.length} cartes vues
+        </div>
+
+        {/* Carte du premier joueur désigné une fois toutes les cartes vues */}
+        {allSeen && firstPlayer && (
+          <div className="flex flex-col items-center gap-4 mt-4 animate-fade-in">
+            <div className="bg-[#171a2b] border border-amber/70 rounded-2xl p-5 text-center min-w-[260px] shadow-lg">
+              <span className="text-muted text-xs block mb-1 font-semibold">C'est</span>
+              <span className="text-amber font-black text-2xl block mb-1">{firstPlayer.name}</span>
+              <span className="text-slate-300 text-xs">qui commence à décrire son mot !</span>
             </div>
-            <button className="btn-secondary" onClick={nextReveal}>
-              J'ai vu — carte suivante →
+
+            <button
+              className="bg-amber hover:brightness-105 active:scale-95 text-[#101118] font-bold text-sm px-8 py-3.5 rounded-xl shadow-[0_4px_16px_rgba(245,158,11,0.3)] transition"
+              onClick={() => setPhase('game')}
+            >
+              Commencer la partie →
             </button>
           </div>
         )}
@@ -289,36 +387,36 @@ export default function UndercoverPage() {
   if (phase === 'game') {
     const alive = players.filter((p) => p.alive);
     return (
-      <div>
-        <div className="mb-7">
-          <div className="eyebrow">Manche en cours</div>
-          <h1 className="font-serif text-3xl">Discutez, puis éliminez un joueur</h1>
-          <p className="text-muted mt-2 text-[14.5px]">Cliquez sur un joueur pour l'éliminer et révéler son rôle (pas son mot).</p>
+      <div className="max-w-4xl mx-auto py-4">
+        <div className="mb-6">
+          <div className="eyebrow">MANCHE EN COURS</div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mt-1">Discutez, puis éliminez un joueur</h1>
+          <p className="text-muted mt-2 text-sm">Cliquez sur un joueur pour l'éliminer et révéler son rôle (pas son mot).</p>
         </div>
 
         {lastReveal && (
-          <div className="panel py-4 border-amberDim">
+          <div className="bg-[#151824] border border-amber/40 rounded-xl p-4 mb-6 text-sm">
             <b>{lastReveal.name}</b> était :{' '}
-            <span className="text-amber">
+            <span className="text-amber font-bold">
               {lastReveal.role === 'civil' ? 'Civil' : lastReveal.role === 'undercover' ? 'Undercover' : 'Mister White'}
             </span>
           </div>
         )}
 
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 mt-6">
+        <div className="flex flex-wrap gap-3 mt-6">
           {players.map((p) => (
             <div
-              key={p.name}
+              key={p.id}
               onClick={() => p.alive && eliminate(p)}
-              className={`border rounded-card p-4 text-center transition ${
+              className={`min-w-[130px] flex-1 sm:flex-none border rounded-xl p-4 text-center transition ${
                 p.alive
-                  ? 'bg-surface border-border cursor-pointer hover:border-red'
-                  : 'bg-surface2 border-border opacity-40'
+                  ? 'bg-[#151824] border-[#232738] cursor-pointer hover:border-red-500/60 hover:bg-[#1a1d2d]'
+                  : 'bg-[#11131c] border-[#1b1e2b] opacity-35 cursor-not-allowed'
               }`}
             >
-              <div className="font-serif text-lg">{p.name}</div>
+              <div className="font-semibold text-base text-white">{p.name}</div>
               {!p.alive && (
-                <div className="text-[11px] text-muted mt-1">
+                <div className="text-[11px] text-muted mt-1 font-medium">
                   {p.role === 'civil' ? 'Civil' : p.role === 'undercover' ? 'Undercover' : 'Mister White'}
                 </div>
               )}
@@ -326,12 +424,12 @@ export default function UndercoverPage() {
           ))}
         </div>
 
-        <div className="text-muted text-[13px] mt-6">{alive.length} joueur{alive.length > 1 ? 's' : ''} en jeu.</div>
+        <div className="text-muted text-xs mt-6">{alive.length} joueurs en jeu.</div>
 
         {eliminationTarget && (
           <Modal onClose={() => setEliminationTarget(null)}>
-            <p className="mb-4">Éliminer <b className="text-amber">{eliminationTarget.name}</b> et révéler son rôle ?</p>
-            <div className="flex gap-3">
+            <p className="mb-5 text-sm">Éliminer <b className="text-amber">{eliminationTarget.name}</b> et révéler son rôle ?</p>
+            <div className="flex gap-3 justify-end">
               <button className="btn-danger" onClick={confirmElimination}>Confirmer</button>
               <button className="btn-ghost" onClick={() => setEliminationTarget(null)}>Annuler</button>
             </div>
@@ -340,10 +438,10 @@ export default function UndercoverPage() {
 
         {mrWhiteGuessOpen && (
           <Modal onClose={() => setMrWhiteGuessOpen(false)}>
-            <p className="mb-3">Mister White a été éliminé. Veut-il tenter de deviner le mot des civils ?</p>
-            <input className="input mb-3" value={mrWhiteGuess} onChange={(e) => setMrWhiteGuess(e.target.value)} placeholder="Sa proposition..." />
-            <div className="flex gap-3">
-              <button className="btn" onClick={submitMrWhiteGuess}>Valider la proposition</button>
+            <p className="mb-3 text-sm">Mister White a été éliminé. Veut-il tenter de deviner le mot des civils ?</p>
+            <input className="input mb-4" value={mrWhiteGuess} onChange={(e) => setMrWhiteGuess(e.target.value)} placeholder="Sa proposition..." />
+            <div className="flex gap-3 justify-end">
+              <button className="btn" onClick={submitMrWhiteGuess}>Valider</button>
               <button
                 className="btn-ghost"
                 onClick={() => {
@@ -366,26 +464,26 @@ export default function UndercoverPage() {
 
   // ================= END =================
   return (
-    <div className="flex flex-col items-center gap-6 mt-16 text-center">
+    <div className="flex flex-col items-center justify-center gap-6 min-h-[70vh] text-center max-w-xl mx-auto">
       <div className="eyebrow">Partie terminée</div>
-      <h1 className="font-serif text-3xl">
+      <h1 className="text-2xl md:text-3xl font-bold text-white">
         {winner === 'civils' && 'Les civils gagnent 🎉'}
         {winner === 'undercovers' && 'Les undercover gagnent 🕵️'}
         {winner === 'mrwhite' && 'Mister White gagne en devinant le mot ! 🤍'}
       </h1>
-      <p className="text-muted">
+      <p className="text-muted text-sm leading-relaxed">
         Le mot civil était <b className="text-amber">{civilWord?.name}</b>, le mot undercover était{' '}
         <b className="text-amber">{undercoverWord?.name}</b>.
       </p>
-      <button className="btn" onClick={resetAll}>↺ Nouvelle partie</button>
+      <button className="btn mt-2" onClick={resetAll}>↺ Nouvelle partie</button>
     </div>
   );
 }
 
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface border border-border rounded-card p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-[#141622] border border-[#232738] rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
