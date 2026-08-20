@@ -157,7 +157,7 @@ export default function BlindPage() {
           {/* #2 ARGENT */}
           {top3[1] && (
             <div className="flex flex-col items-center">
-              <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border-2 border-slate-300 shadow-[0_0_20px_rgba(203,213,225,0.25)] bg-surface2">
+              <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border-2 border-slate-300 shadow-[0_0_30px_rgba(203,213,225,0.4)] bg-surface2">
                 {top3[1].image_url ? (
                   <img
                     src={top3[1].image_url}
@@ -180,7 +180,7 @@ export default function BlindPage() {
           {/* #1 OR / AMBRE (Mise en avant au centre) */}
           {top3[0] && (
             <div className="flex flex-col items-center -translate-y-3">
-              <div className="relative w-36 h-40 md:w-44 md:h-48 rounded-2xl overflow-hidden border-2 border-amber shadow-[0_0_25px_rgba(245,158,11,0.35)] bg-surface2">
+              <div className="relative w-36 h-40 md:w-44 md:h-48 rounded-2xl overflow-hidden border-2 border-amber shadow-[0_0_40px_rgba(245,158,11,0.5)] bg-surface2">
                 {top3[0].image_url ? (
                   <img
                     src={top3[0].image_url}
@@ -203,7 +203,7 @@ export default function BlindPage() {
           {/* #3 BRONZE */}
           {top3[2] && (
             <div className="flex flex-col items-center">
-              <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border-2 border-[#cd7f32] shadow-[0_0_20px_rgba(205,127,50,0.25)] bg-surface2">
+              <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border-2 border-[#cd7f32] shadow-[0_0_30px_rgba(205,127,50,0.4)] bg-surface2">
                 {top3[2].image_url ? (
                   <img
                     src={top3[2].image_url}
@@ -232,7 +232,7 @@ export default function BlindPage() {
               return (
                 <div
                   key={it?.id || rank}
-                  className="flex items-center gap-3 bg-[#151824] border border-[#232738] rounded-xl p-2.5"
+                  className="flex items-center gap-3 bg-[#151824] border border-[#232738] rounded-xl p-2.5 shadow-md"
                 >
                   <span className="text-indigo-300/60 font-bold text-sm w-6 text-center">
                     {rank}
