@@ -7,22 +7,31 @@ import { pickRandom } from '@/lib/utils';
 
 type Phase = 'setup' | 'draft' | 'end';
 type GameMode = 'classic' | 'sabotage';
-
-type CategoryKey = 'ninjutsu' | 'taijutsu' | 'chakra' | 'heredite' | 'vitesse';
+type Theme = 'naruto' | 'onepiece';
 
 interface CategoryConfig {
-  key: CategoryKey;
+  key: string;
   label: string;
   icon: string;
 }
 
-const CATEGORIES: CategoryConfig[] = [
-  { key: 'ninjutsu', label: 'Ninjutsu', icon: '🌀' },
-  { key: 'taijutsu', label: 'Taijutsu', icon: '👊' },
-  { key: 'chakra', label: 'Chakra', icon: '⚡' },
-  { key: 'heredite', label: 'Hérédité', icon: '👁️' },
-  { key: 'vitesse', label: 'Vitesse', icon: '🍃' },
-];
+const THEME_CATEGORIES: Record<Theme, CategoryConfig[]> = {
+  naruto: [
+    { key: 'cat1', label: 'Ninjutsu', icon: '🌀' },
+    { key: 'cat2', label: 'Taijutsu', icon: '👊' },
+    { key: 'cat3', label: 'Chakra', icon: '⚡' },
+    { key: 'cat4', label: 'Hérédité', icon: '👁️' },
+    { key: 'cat5', label: 'Vitesse', icon: '🍃' },
+  ],
+  onepiece: [
+    { key: 'cat1', label: 'Personnage', icon: '☠️' },
+    { key: 'cat2', label: 'Fruit du Démon', icon: '🍊' },
+    { key: 'cat3', label: 'Haki', icon: '👑' },
+    { key: 'cat4', label: 'Arme', icon: '⚔️' },
+    { key: 'cat5', label: 'Battle IQ', icon: '🧠' },
+    { key: 'cat6', label: 'Vitesse', icon: '⚡' },
+  ],
+};
 
 const PLAYER_COLORS = [
   { border: 'border-[#e2645a]', text: 'text-[#e2645a]', bg: 'bg-[#e2645a]', hex: '#e2645a' },
@@ -33,15 +42,16 @@ const PLAYER_COLORS = [
 
 interface PlayerBoard {
   name: string;
-  cards: Record<CategoryKey, ListItem | null>;
+  cards: Record<string, ListItem | null>;
 }
 
-export default function NarutoDraftPage() {
+export default function AnimeDraftPage() {
   const [lists, setLists] = useState<GameList[]>([]);
   const [listId, setListId] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Configuration
+  const [theme, setTheme] = useState<Theme>('naruto');
   const [playerCount, setPlayerCount] = useState<number>(2);
   const [playerNames, setPlayerNames] = useState<string[]>(['Joueur 1', 'Joueur 2', 'Joueur 3', 'Joueur 4']);
   const [gameMode, setGameMode] = useState<GameMode>('classic');
@@ -54,8 +64,10 @@ export default function NarutoDraftPage() {
   const [currentPlayerIdx, setCurrentPlayerIdx] = useState<number>(0);
   const [drawnCard, setDrawnCard] = useState<ListItem | null>(null);
 
-  // Pour le mode sabotage : sélection du joueur cible
+  // Pour le mode sabotage
   const [selectedTargetPlayerIdx, setSelectedTargetPlayerIdx] = useState<number>(0);
+
+  const activeCategories = THEME_CATEGORIES[theme];
 
   useEffect(() => {
     (async () => {
@@ -77,21 +89,20 @@ export default function NarutoDraftPage() {
   }, [listId]);
 
   function startGame() {
-    const requiredCards = playerCount * 5;
+    const requiredCards = playerCount * activeCategories.length;
     if (allItems.length < requiredCards) {
-      alert(`Il faut au moins ${requiredCards} personnages dans la base pour ${playerCount} joueurs.`);
+      alert(`Il faut au moins ${requiredCards} cartes dans la base pour ${playerCount} joueurs.`);
       return;
     }
 
+    const emptyCards: Record<string, ListItem | null> = {};
+    activeCategories.forEach((cat) => {
+      emptyCards[cat.key] = null;
+    });
+
     const initialBoards: PlayerBoard[] = playerNames.slice(0, playerCount).map((name) => ({
       name: name.trim() || 'Joueur',
-      cards: {
-        ninjutsu: null,
-        taijutsu: null,
-        chakra: null,
-        heredite: null,
-        vitesse: null,
-      },
+      cards: { ...emptyCards },
     }));
 
     const deck = pickRandom(allItems, allItems.length);
@@ -105,18 +116,15 @@ export default function NarutoDraftPage() {
     setPhase('draft');
   }
 
-  // Place la carte piochée sur le plateau du joueur cible dans la catégorie choisie
-  function placeCard(targetPlayerIdx: number, catKey: CategoryKey) {
+  function placeCard(targetPlayerIdx: number, catKey: string) {
     if (!drawnCard) return;
 
-    // Mise à jour du plateau du joueur cible
     const updatedBoards = [...boards];
     updatedBoards[targetPlayerIdx].cards[catKey] = drawnCard;
     setBoards(updatedBoards);
 
-    // Vérification : La partie est-elle terminée ? (Chaque joueur a rempli ses 5 catégories)
     const isFinished = updatedBoards.every((b) =>
-      CATEGORIES.every((cat) => b.cards[cat.key] !== null)
+      activeCategories.every((cat) => b.cards[cat.key] !== null)
     );
 
     if (isFinished) {
@@ -124,14 +132,12 @@ export default function NarutoDraftPage() {
       return;
     }
 
-    // Passage au joueur suivant qui piochera une nouvelle carte
     let nextPlayer = (currentPlayerIdx + 1) % playerCount;
 
-    // En mode classique ou sabotage, si le joueur suivant a déjà rempli toutes ses cases, on passe au suivant
     let attempts = 0;
     while (
       attempts < playerCount &&
-      CATEGORIES.every((cat) => updatedBoards[nextPlayer].cards[cat.key] !== null)
+      activeCategories.every((cat) => updatedBoards[nextPlayer].cards[cat.key] !== null)
     ) {
       nextPlayer = (nextPlayer + 1) % playerCount;
       attempts++;
@@ -143,24 +149,50 @@ export default function NarutoDraftPage() {
     setAvailableDeck(nextDeck);
     setDrawnCard(newCard);
     setCurrentPlayerIdx(nextPlayer);
-    setSelectedTargetPlayerIdx(nextPlayer); // Par défaut, on cible soi-même
+    setSelectedTargetPlayerIdx(nextPlayer);
   }
 
-  if (loading) return <p className="text-muted p-8">Chargement du jeu Naruto...</p>;
+  if (loading) return <p className="text-muted p-8">Chargement du jeu...</p>;
 
   // ================= 1. SETUP =================
   if (phase === 'setup') {
     return (
       <div>
         <div className="mb-7">
-          <div className="eyebrow">Mode Spécial Naruto</div>
-          <h1 className="font-serif text-3xl font-black text-amber">Naruto Draft & Sabotage</h1>
+          <div className="eyebrow">Draft & Sabotage</div>
+          <h1 className="font-serif text-3xl font-black text-amber">Anime Draft (Naruto & One Piece)</h1>
           <p className="text-muted mt-2 text-[14.5px] max-w-xl">
-            Complétez vos 5 catégories ninja (Ninjutsu, Taijutsu, Chakra, Hérédité, Vitesse) et créez l'équipe suprême.
+            Complétez vos catégories d'équipe et composez le meilleur équipage ou clan !
           </p>
         </div>
 
         <div className="panel flex flex-col gap-6">
+          <div>
+            <label className="text-[12.5px] text-muted block mb-1.5">Choix du Thème</label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTheme('naruto')}
+                className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                  theme === 'naruto'
+                    ? 'border-amber text-amber bg-amber/10 shadow-md'
+                    : 'border-border text-text bg-surface2 opacity-60'
+                }`}
+              >
+                🍃 Thème Naruto (5 catégories)
+              </button>
+              <button
+                onClick={() => setTheme('onepiece')}
+                className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                  theme === 'onepiece'
+                    ? 'border-red-400 text-red-400 bg-red-400/10 shadow-md'
+                    : 'border-border text-text bg-surface2 opacity-60'
+                }`}
+              >
+                ☠️ Thème One Piece (6 catégories)
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="text-[12.5px] text-muted block mb-1.5">Base de données</label>
             <select className="input" value={listId} onChange={(e) => setListId(e.target.value)}>
@@ -193,7 +225,7 @@ export default function NarutoDraftPage() {
                 }`}
               >
                 🗡️ Mode Sabotage
-                <span className="block text-[11px] font-normal text-muted mt-0.5">Offre ou plie un personnage à n'importe quel joueur !</span>
+                <span className="block text-[11px] font-normal text-muted mt-0.5">Place tes cartes chez toi ou chez un adversaire !</span>
               </button>
             </div>
           </div>
@@ -238,7 +270,7 @@ export default function NarutoDraftPage() {
           </div>
 
           <button className="btn mt-2 w-fit" onClick={startGame}>
-            🍃 Lancer le Draft Ninja
+            ▶ Lancer le Draft
           </button>
         </div>
       </div>
@@ -250,14 +282,10 @@ export default function NarutoDraftPage() {
     const activePlayer = boards[currentPlayerIdx];
     const activeColor = PLAYER_COLORS[currentPlayerIdx];
 
-    // Cible active en mode sabotage
     const targetPlayerIdx = gameMode === 'sabotage' ? selectedTargetPlayerIdx : currentPlayerIdx;
-    const targetBoard = boards[targetPlayerIdx];
-    const targetColor = PLAYER_COLORS[targetPlayerIdx];
 
     return (
       <div className="flex flex-col gap-6 max-w-6xl mx-auto">
-        {/* En-tête Tour & Carte Piochée */}
         <div
           className="bg-[#121420] border-2 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl"
           style={{ borderColor: activeColor.hex }}
@@ -272,31 +300,29 @@ export default function NarutoDraftPage() {
             </div>
           </div>
 
-          {/* Carte piochée */}
           {drawnCard && (
             <div className="flex items-center gap-3 bg-[#181a28] p-2.5 px-4 rounded-xl border border-white/10">
               <div className="w-12 h-14 rounded-lg overflow-hidden bg-surface2 border border-white/10 shrink-0">
                 {drawnCard.image_url ? (
                   <img src={drawnCard.image_url} className="w-full h-full object-cover" alt="" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs">🥷</div>
+                  <div className="w-full h-full flex items-center justify-center text-xs">🃏</div>
                 )}
               </div>
               <div>
                 <span className="text-sm font-extrabold text-amber block">{drawnCard.name}</span>
-                <span className="text-[11px] text-muted">Où souhaitez-vous placer ce ninja ?</span>
+                <span className="text-[11px] text-muted">Où souhaitez-vous placer cette carte ?</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Sélecteur de Cible en Mode Sabotage */}
         {gameMode === 'sabotage' && (
           <div className="bg-[#181a28] border border-white/10 rounded-xl p-3 flex items-center gap-3">
             <span className="text-xs font-bold text-amber shrink-0">🎯 Choisir le joueur à cibler :</span>
             <div className="flex gap-2 flex-wrap">
               {boards.map((b, pIdx) => {
-                const isFull = CATEGORIES.every((cat) => b.cards[cat.key] !== null);
+                const isFull = activeCategories.every((cat) => b.cards[cat.key] !== null);
                 return (
                   <button
                     key={pIdx}
@@ -316,7 +342,6 @@ export default function NarutoDraftPage() {
           </div>
         )}
 
-        {/* Plateaux des joueurs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {boards.map((b, pIdx) => {
             const isTarget = pIdx === targetPlayerIdx;
@@ -342,9 +367,8 @@ export default function NarutoDraftPage() {
                   )}
                 </div>
 
-                {/* 5 Catégories */}
                 <div className="flex flex-col gap-2">
-                  {CATEGORIES.map((cat) => {
+                  {activeCategories.map((cat) => {
                     const cardInCat = b.cards[cat.key];
                     const canPlace = isTarget && cardInCat === null;
 
@@ -372,13 +396,12 @@ export default function NarutoDraftPage() {
                           </div>
                         </div>
 
-                        {/* Visuel miniature du Ninja posé */}
                         {cardInCat ? (
                           <div className="w-8 h-8 rounded overflow-hidden bg-surface border border-white/10 shrink-0">
                             {cardInCat.image_url ? (
                               <img src={cardInCat.image_url} className="w-full h-full object-cover" alt="" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[10px]">🥷</div>
+                              <div className="w-full h-full flex items-center justify-center text-[10px]">🃏</div>
                             )}
                           </div>
                         ) : (
@@ -406,11 +429,12 @@ export default function NarutoDraftPage() {
     <div className="flex flex-col h-full max-h-[calc(100vh-2rem)] justify-between rounded-2xl p-2 md:p-4 overflow-hidden">
       <div className="text-center">
         <div className="text-[10px] font-bold text-amber uppercase tracking-wider">DRAFT TERMINÉ</div>
-        <h1 className="font-serif text-2xl md:text-3xl font-black text-amber">Naruto Draft & Sabotage</h1>
-        <p className="text-xs text-slate-300 mt-1">Évaluez les compositions et choisissez ensemble l'équipe gagnante !</p>
+        <h1 className="font-serif text-2xl md:text-3xl font-black text-amber">
+          Anime Draft ({theme === 'naruto' ? 'Naruto' : 'One Piece'})
+        </h1>
+        <p className="text-xs text-slate-300 mt-1">Évaluez les équipes finales et désignez le vainqueur !</p>
       </div>
 
-      {/* Cartes finales des joueurs */}
       <div className={`grid ${gridColsClass} gap-3 my-auto w-full max-w-7xl mx-auto`}>
         {boards.map((b, idx) => {
           const pColor = PLAYER_COLORS[idx];
@@ -425,13 +449,13 @@ export default function NarutoDraftPage() {
             >
               <div className="text-center pb-1.5 border-b border-white/10">
                 <span className="text-[9px] uppercase font-black tracking-widest block" style={{ color: pColor.hex }}>
-                  Équipe Ninja {idx + 1}
+                  Équipe {idx + 1}
                 </span>
                 <h2 className="text-lg font-black text-white truncate">{b.name}</h2>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                {CATEGORIES.map((cat) => {
+                {activeCategories.map((cat) => {
                   const card = b.cards[cat.key];
                   return (
                     <div key={cat.key} className="flex items-center gap-2 bg-[#181a28] p-1.5 rounded-lg border border-white/5">
