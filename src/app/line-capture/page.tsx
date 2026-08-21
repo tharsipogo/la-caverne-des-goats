@@ -535,7 +535,7 @@ export default function LineCapturePage() {
               <button
                 key={edge.id}
                 onClick={() => handleEdgeClick(edge)}
-                disabled={movesLeft === 0 || (isEraserMode ? edge.owner === null : edge.owner !== null)}
+                disabled={Boolean(movesLeft === 0 || (isEraserMode ? edge.owner === null : edge.owner !== null))}
                 className={`absolute -translate-y-1/2 -translate-x-1/2 h-6 flex items-center justify-center z-20 ${
                   movesLeft > 0 ? 'hover:brightness-150 cursor-pointer group' : ''
                 }`}
@@ -561,7 +561,7 @@ export default function LineCapturePage() {
               <button
                 key={edge.id}
                 onClick={() => handleEdgeClick(edge)}
-                disabled={movesLeft === 0 || (isEraserMode ? edge.owner === null : edge.owner !== null)}
+                disabled={Boolean(movesLeft === 0 || (isEraserMode ? edge.owner === null : edge.owner !== null))}
                 className={`absolute -translate-y-1/2 -translate-x-1/2 w-6 flex items-center justify-center z-20 ${
                   movesLeft > 0 ? 'hover:brightness-150 cursor-pointer group' : ''
                 }`}
@@ -611,8 +611,8 @@ export default function LineCapturePage() {
     const oppTeam = underdogPlayer === 0 ? finalTeam2 : finalTeam1;
     const oppName = names[underdogPlayer === 0 ? 1 : 0];
 
-    const needsMyCard = selectedEventCard && ['discard_cross', 'swap_weak', 'swap_strong', 'heist'].includes(selectedEventCard.type);
-    const needsOppCard = selectedEventCard && ['discard_target', 'discard_cross', 'swap_weak', 'swap_strong', 'heist'].includes(selectedEventCard.type);
+    const needsMyCard = Boolean(selectedEventCard && ['discard_cross', 'swap_weak', 'swap_strong', 'heist'].includes(selectedEventCard.type));
+    const needsOppCard = Boolean(selectedEventCard && ['discard_target', 'discard_cross', 'swap_weak', 'swap_strong', 'heist'].includes(selectedEventCard.type));
 
     return (
       <div className="flex flex-col h-full max-h-[calc(100vh-2rem)] justify-between rounded-2xl p-4 overflow-y-auto">
@@ -632,7 +632,7 @@ export default function LineCapturePage() {
             return (
               <button
                 key={card.id}
-                disabled={selectedEventCard !== null}
+                disabled={Boolean(selectedEventCard !== null)}
                 onClick={() => applyEventCard(card)}
                 className={`h-60 rounded-2xl border-2 p-5 flex flex-col items-center justify-between text-center transition-all duration-500 shadow-2xl relative overflow-hidden ${
                   selectedEventCard === null
@@ -715,9 +715,7 @@ export default function LineCapturePage() {
 
             <button
               className="btn py-2 px-6 text-xs mx-auto disabled:opacity-50"
-              disabled={
-                (needsMyCard && !myCardToSwap) || (needsOppCard && !oppCardToSwap)
-              }
+              disabled={Boolean((needsMyCard && !myCardToSwap) || (needsOppCard && !oppCardToSwap))}
               onClick={executeManualSwap}
             >
               Confirmé le choix de carte

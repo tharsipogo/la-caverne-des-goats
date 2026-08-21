@@ -13,6 +13,7 @@ const NAV = [
   { href: '/versus', label: '⚔️ Versus', match: '/versus' },
   { href: '/absolute-cinema', label: '🎬 Absolute Cinema', match: '/absolute-cinema' },
   { href: '/line-capture', label: '📐 Line Capture', match: '/line-capture' },
+  { href: '/naruto-draft', label: '🍃 Naruto Draft', match: '/naruto-draft' },
 ];
 
 export default function Sidebar() {
