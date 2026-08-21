@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { pickRandom, shuffle } from '@/lib/utils';
+import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 
 type Role = 'civil' | 'undercover' | 'mrwhite';
 
@@ -42,13 +42,8 @@ export default function UndercoverPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('lists').select('*').order('created_at', { ascending: false });
-      const withEnough: GameList[] = [];
-      if (data) {
-        for (const l of data as GameList[]) {
-          const { count } = await supabase.from('items').select('*', { count: 'exact', head: true }).eq('list_id', l.id);
-          if (count && count >= 2) withEnough.push(l);
-        }
-      }
+      const { counts } = await fetchListItemMeta();
+      const withEnough = ((data as GameList[]) || []).filter((l) => (counts.get(l.id) || 0) >= 2);
       setLists(withEnough);
       if (withEnough.length > 0) setListId(withEnough[0].id);
     })();

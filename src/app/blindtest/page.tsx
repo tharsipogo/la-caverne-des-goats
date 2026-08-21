@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { shuffle } from '@/lib/utils';
+import { fetchListItemMeta, shuffle } from '@/lib/utils';
 
 type Phase = 'setup' | 'playing' | 'revealed' | 'end';
 
@@ -36,13 +36,8 @@ export default function BlindTestPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('lists').select('*').eq('type', 'audio').order('created_at', { ascending: false });
-      const withEnough: GameList[] = [];
-      if (data) {
-        for (const l of data as GameList[]) {
-          const { count: c } = await supabase.from('items').select('*', { count: 'exact', head: true }).eq('list_id', l.id);
-          if (c && c > 0) withEnough.push(l);
-        }
-      }
+      const { counts } = await fetchListItemMeta();
+      const withEnough = ((data as GameList[]) || []).filter((l) => (counts.get(l.id) || 0) > 0);
       setLists(withEnough);
       if (withEnough.length > 0) setListId(withEnough[0].id);
       setLoading(false);

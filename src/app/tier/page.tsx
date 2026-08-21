@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_TIER_LABELS, GameList, ListItem, TierAssignment, TierRow, TIER_COLOR_PALETTE } from '@/lib/types';
+import { fetchListItemMeta } from '@/lib/utils';
 
 const POPOVER_PALETTE = [
   '#ef5350', '#ff7043', '#ffa726', '#ffca28', '#d4e157',
@@ -48,13 +49,8 @@ export default function TierPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('lists').select('*').order('created_at', { ascending: false });
-      const withItems: GameList[] = [];
-      if (data) {
-        for (const l of data as GameList[]) {
-          const { count } = await supabase.from('items').select('*', { count: 'exact', head: true }).eq('list_id', l.id);
-          if (count && count > 0) withItems.push(l);
-        }
-      }
+      const { counts } = await fetchListItemMeta();
+      const withItems = ((data as GameList[]) || []).filter((l) => (counts.get(l.id) || 0) > 0);
       setLists(withItems);
       if (withItems.length > 0) setListId(withItems[0].id);
     })();

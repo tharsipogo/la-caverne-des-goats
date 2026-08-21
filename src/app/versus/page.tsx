@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { pickRandom, shuffle } from '@/lib/utils';
+import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 
 type Phase = 'setup' | 'round' | 'end';
 type RoundStage = 'open' | 'respond';
@@ -49,17 +49,11 @@ export default function VersusPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('lists').select('*').order('created_at', { ascending: false });
-      const forCards: GameList[] = [];
-      const forCoaches: GameList[] = [];
-      const forTerrains: GameList[] = [];
-      if (data) {
-        for (const l of data as GameList[]) {
-          const { count } = await supabase.from('items').select('*', { count: 'exact', head: true }).eq('list_id', l.id);
-          if (count && count >= TEAM_SIZE * 2) forCards.push(l);
-          if (count && count >= 1) forCoaches.push(l);
-          if (count && count >= 1) forTerrains.push(l);
-        }
-      }
+      const { counts } = await fetchListItemMeta();
+      const all = (data as GameList[]) || [];
+      const forCards = all.filter((l) => (counts.get(l.id) || 0) >= TEAM_SIZE * 2);
+      const forCoaches = all.filter((l) => (counts.get(l.id) || 0) >= 1);
+      const forTerrains = forCoaches;
       setLists(forCards);
       setCoachLists(forCoaches);
       setTerrainLists(forTerrains);

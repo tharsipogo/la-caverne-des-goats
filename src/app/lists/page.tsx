@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem, ListType } from '@/lib/types';
-import { nameFromFilename, uploadItemAudio, uploadItemImage } from '@/lib/utils';
+import { fetchListItemMeta, nameFromFilename, uploadItemAudio, uploadItemImage } from '@/lib/utils';
 
 interface ListMeta extends GameList {
   itemCount: number;
@@ -32,23 +32,12 @@ export default function ListsPage() {
     setLoading(true);
     const { data, error } = await supabase.from('lists').select('*').order('created_at', { ascending: false });
     if (!error && data) {
-      const withMeta: ListMeta[] = [];
-      for (const l of data as GameList[]) {
-        const { count } = await supabase.from('items').select('*', { count: 'exact', head: true }).eq('list_id', l.id);
-        let thumbnailUrl: string | null = null;
-        if (l.type === 'image') {
-          const { data: thumb } = await supabase
-            .from('items')
-            .select('image_url')
-            .eq('list_id', l.id)
-            .not('image_url', 'is', null)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          thumbnailUrl = (thumb as any)?.image_url || null;
-        }
-        withMeta.push({ ...l, itemCount: count || 0, thumbnailUrl });
-      }
+      const { counts, firstImages } = await fetchListItemMeta();
+      const withMeta: ListMeta[] = (data as GameList[]).map((l) => ({
+        ...l,
+        itemCount: counts.get(l.id) || 0,
+        thumbnailUrl: l.type === 'image' ? firstImages.get(l.id) || null : null,
+      }));
       setLists(withMeta);
     }
     setLoading(false);

@@ -85,10 +85,12 @@ export default function AbsoluteCinemaPage() {
     const itemMap: Record<string, ListItem[]> = {};
     const listIdsToFetch = Array.from(new Set(Object.values(bases).filter(Boolean)));
 
-    for (const id of listIdsToFetch) {
-      const { data } = await supabase.from('items').select('*').eq('list_id', id);
-      if (data) itemMap[id] = data as ListItem[];
-    }
+    const results = await Promise.all(
+      listIdsToFetch.map((id) => supabase.from('items').select('*').eq('list_id', id))
+    );
+    listIdsToFetch.forEach((id, i) => {
+      if (results[i].data) itemMap[id] = results[i].data as ListItem[];
+    });
 
     setLoadedItems(itemMap);
     

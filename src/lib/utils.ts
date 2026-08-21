@@ -68,3 +68,30 @@ export async function uploadItemAudio(file: File): Promise<string> {
 export function nameFromFilename(filename: string): string {
   return filename.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').trim();
 }
+
+export interface ListItemMeta {
+  counts: Map<string, number>;
+  firstImages: Map<string, string>;
+}
+
+/**
+ * Récupère en UNE seule requête le nombre d'items et la première image de chaque base,
+ * plutôt qu'une requête par base (ce qui devient très lent dès qu'on a beaucoup de bases —
+ * ex. 15 bases = 15 à 30 allers-retours réseau au lieu d'un seul).
+ * À utiliser à la place d'une boucle `for (const l of lists) { await supabase... }`.
+ */
+export async function fetchListItemMeta(): Promise<ListItemMeta> {
+  const counts = new Map<string, number>();
+  const firstImages = new Map<string, string>();
+  const { data } = await supabase
+    .from('items')
+    .select('list_id, image_url')
+    .order('created_at', { ascending: true });
+  for (const it of (data as { list_id: string; image_url: string | null }[]) || []) {
+    counts.set(it.list_id, (counts.get(it.list_id) || 0) + 1);
+    if (it.image_url && !firstImages.has(it.list_id)) {
+      firstImages.set(it.list_id, it.image_url);
+    }
+  }
+  return { counts, firstImages };
+}
