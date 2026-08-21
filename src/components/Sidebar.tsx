@@ -11,7 +11,8 @@ const NAV = [
   { href: '/undercover', label: '🐐 Undercover', match: '/undercover' },
   { href: '/undercover-artist', label: '🎨 Undercover Artist', match: '/undercover-artist' },
   { href: '/versus', label: '⚔️ Versus', match: '/versus' },
-  { href: '/absolute-cinema', label: '🎬 Absolute Cinema', match: '/absolute-cinema' }, // <-- Ajouté ici
+  { href: '/absolute-cinema', label: '🎬 Absolute Cinema', match: '/absolute-cinema' },
+  { href: '/line-capture', label: '📐 Line Capture', match: '/line-capture' },
 ];
 
 export default function Sidebar() {
