@@ -14,6 +14,7 @@ const NAV = [
   { href: '/absolute-cinema', label: '🎬 Absolute Cinema', match: '/absolute-cinema' },
   { href: '/line-capture', label: '📐 Line Capture', match: '/line-capture' },
   { href: '/draft-anime', label: '🥷 Anime Draft', match: '/draft-anime' },
+  { href: '/le-five', label: '⚽ Le Five', match: '/le-five' },
 ];
 
 export default function Sidebar() {
