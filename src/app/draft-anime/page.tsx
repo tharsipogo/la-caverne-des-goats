@@ -163,23 +163,21 @@ export default function AnimeDraftPage() {
     setSelectedTargetPlayerIdx(nextPlayer);
   }
 
-  if (loading) return <p className="text-[#FF6600] p-8 text-center font-bold">Convocation des Shinobis et Pirates...</p>;
+  if (loading) return <p className="text-[#FF6600] p-8 text-center font-bold">Chargement...</p>;
 
-  // Styles dynamiques selon le thème
   const isNaruto = theme === 'naruto';
 
-  // ================= 1. SETUP (ACCUEIL HYBRIDE SHINOBI X GRAND LINE) =================
+  // ================= 1. SETUP =================
   if (phase === 'setup') {
     return (
-      <div className="bg-[#0B0F19] min-h-[calc(100vh-2rem)] rounded-2xl p-4 md:p-8 text-[#E2E8F0] border border-white/10 shadow-2xl overflow-hidden relative font-sans">
-        {/* En-tête Dual Theme */}
+      <div className="bg-[#0B0F19] min-h-[calc(100vh-2rem)] rounded-2xl p-4 md:p-8 text-[#E2E8F0] border border-white/10 shadow-2xl relative font-sans">
         <div className="mb-8 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-gradient-to-r from-[#FF6600]/20 to-[#00B4D8]/20 border border-white/20 mb-3">
-            <span className="text-xs font-black text-[#FF6600]">🍃 KONOHA</span>
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-white/5 border border-white/10 mb-3">
+            <span className="text-xs font-black text-[#FF6600]">🍃 NARUTO</span>
             <span className="text-xs text-slate-400">X</span>
-            <span className="text-xs font-black text-[#00B4D8]">GRAND LINE ☠️</span>
+            <span className="text-xs font-black text-[#00B4D8]">ONE PIECE ☠️</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FF6600] via-[#FACC15] to-[#00B4D8]">
+          <h1 className="text-3xl md:text-5xl font-black text-white">
             ANIME DRAFT ARENA
           </h1>
           <p className="text-slate-400 mt-2 text-sm max-w-xl mx-auto italic">
@@ -187,8 +185,8 @@ export default function AnimeDraftPage() {
           </p>
         </div>
 
-        <div className="bg-[#131B2E]/90 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col gap-6 shadow-2xl max-w-4xl mx-auto relative z-10">
-          {/* Choix du Thème (Design Dual Kart) */}
+        <div className="bg-[#131B2E] border border-white/10 rounded-2xl p-6 flex flex-col gap-6 shadow-2xl max-w-4xl mx-auto relative z-10">
+          {/* Choix du Thème */}
           <div>
             <label className="text-xs uppercase tracking-widest font-extrabold text-[#FACC15] block mb-2">
               1. Choix de l'Univers
@@ -196,31 +194,31 @@ export default function AnimeDraftPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={() => handleThemeChange('naruto')}
-                className={`p-4 rounded-xl border-2 text-left transition-all duration-300 relative overflow-hidden flex items-center gap-4 ${
+                className={`p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${
                   theme === 'naruto'
-                    ? 'border-[#FF6600] bg-gradient-to-r from-[#FF6600]/20 to-[#131B2E] shadow-[0_0_20px_rgba(255,102,0,0.3)]'
+                    ? 'border-[#FF6600] bg-[#FF6600]/10'
                     : 'border-white/10 bg-white/5 hover:border-[#FF6600]/50'
                 }`}
               >
                 <div className="text-4xl shrink-0">🌀</div>
                 <div>
                   <h3 className="font-extrabold text-white text-base">Thème Naruto</h3>
-                  <p className="text-xs text-slate-400">6 Catégories Ninja (Ninjutsu, Taijutsu, Chakra...)</p>
+                  <p className="text-xs text-slate-400">6 Catégories Ninja (Ninjutsu, Taijutsu...)</p>
                 </div>
               </button>
 
               <button
                 onClick={() => handleThemeChange('onepiece')}
-                className={`p-4 rounded-xl border-2 text-left transition-all duration-300 relative overflow-hidden flex items-center gap-4 ${
+                className={`p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${
                   theme === 'onepiece'
-                    ? 'border-[#00B4D8] bg-gradient-to-r from-[#00B4D8]/20 to-[#131B2E] shadow-[0_0_20px_rgba(0,180,216,0.3)]'
+                    ? 'border-[#00B4D8] bg-[#00B4D8]/10'
                     : 'border-white/10 bg-white/5 hover:border-[#00B4D8]/50'
                 }`}
               >
                 <div className="text-4xl shrink-0">☠️</div>
                 <div>
                   <h3 className="font-extrabold text-white text-base">Thème One Piece</h3>
-                  <p className="text-xs text-slate-400">6 Catégories Pirate (Haki, Fruit du Démon...)</p>
+                  <p className="text-xs text-slate-400">6 Catégories Pirate (Haki, Fruit...)</p>
                 </div>
               </button>
             </div>
@@ -318,10 +316,8 @@ export default function AnimeDraftPage() {
 
           <button
             onClick={startGame}
-            className={`w-fit mx-auto mt-2 px-8 py-3.5 rounded-xl font-extrabold text-xs uppercase tracking-widest text-black hover:scale-105 transition-all duration-300 shadow-xl ${
-              isNaruto
-                ? 'bg-gradient-to-r from-[#FF6600] via-[#FF9900] to-[#FACC15] shadow-[0_0_20px_rgba(255,102,0,0.4)]'
-                : 'bg-gradient-to-r from-[#00B4D8] via-[#90E0EF] to-[#FACC15] shadow-[0_0_20px_rgba(0,180,216,0.4)]'
+            className={`w-fit mx-auto mt-2 px-8 py-3.5 rounded-xl font-extrabold text-xs uppercase tracking-widest text-black transition-all ${
+              isNaruto ? 'bg-[#FF6600] text-white' : 'bg-[#00B4D8] text-black'
             }`}
           >
             🚀 Lancer l'Édition {isNaruto ? 'Ninja' : 'Pirate'}
@@ -331,7 +327,7 @@ export default function AnimeDraftPage() {
     );
   }
 
-  // ================= 2. DRAFT & SABOTAGE (THEME IMMERSIF) =================
+  // ================= 2. DRAFT & SABOTAGE =================
   if (phase === 'draft') {
     const activePlayer = boards[currentPlayerIdx];
     const activeColor = PLAYER_COLORS[currentPlayerIdx];
@@ -339,11 +335,10 @@ export default function AnimeDraftPage() {
 
     return (
       <div
-        className={`min-h-[calc(100vh-2rem)] rounded-2xl p-4 md:p-6 text-[#E2E8F0] max-w-6xl mx-auto flex flex-col gap-6 border-2 shadow-2xl transition-colors duration-500 ${
+        className={`min-h-[calc(100vh-2rem)] rounded-2xl p-4 md:p-6 text-[#E2E8F0] max-w-6xl mx-auto flex flex-col gap-6 border-2 shadow-2xl ${
           isNaruto ? 'bg-[#120B05] border-[#FF6600]/40' : 'bg-[#05101A] border-[#00B4D8]/40'
         }`}
       >
-        {/* En-tête de Tour */}
         <div
           className={`border-2 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl relative ${
             isNaruto ? 'bg-[#1D1209]' : 'bg-[#0A1A2A]'
@@ -381,7 +376,6 @@ export default function AnimeDraftPage() {
           )}
         </div>
 
-        {/* Sélection Cible Sabotage */}
         {gameMode === 'sabotage' && (
           <div className="bg-black/30 border border-white/10 rounded-xl p-3 flex items-center gap-3">
             <span className="text-xs font-bold text-[#FACC15] shrink-0">🎯 Cible du Sabotage :</span>
@@ -407,7 +401,6 @@ export default function AnimeDraftPage() {
           </div>
         )}
 
-        {/* Grille des Plateaux */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {boards.map((b, pIdx) => {
             const isTarget = pIdx === targetPlayerIdx;
@@ -472,7 +465,7 @@ export default function AnimeDraftPage() {
                           </div>
                         ) : (
                           canPlace && (
-                            <button className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#FACC15] text-black hover:scale-105 transition-transform">
+                            <button className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#FACC15] text-black">
                               Placer ➕
                             </button>
                           )
@@ -489,7 +482,7 @@ export default function AnimeDraftPage() {
     );
   }
 
-  // ================= 3. END / RÉCAPITULATIF THÉMATIQUE =================
+  // ================= 3. END =================
   const gridColsClass =
     playerCount === 2 ? 'grid-cols-2' : playerCount === 3 ? 'grid-cols-3' : 'grid-cols-4';
 
@@ -503,7 +496,7 @@ export default function AnimeDraftPage() {
         <div className="text-[10px] font-black text-[#FACC15] uppercase tracking-[0.3em] mb-1">
           {isNaruto ? '🍃 RITUEL DES SHINOBIS 🍃' : '☠️ LE TRÉSOR DU PIRATE ☠️'}
         </div>
-        <h1 className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FF6600] via-[#FACC15] to-[#00B4D8]">
+        <h1 className="text-2xl md:text-4xl font-black text-white">
           RÉSULTATS DU DRAFT
         </h1>
       </div>
@@ -517,10 +510,7 @@ export default function AnimeDraftPage() {
               className={`border-2 rounded-2xl p-3 flex flex-col gap-2.5 shadow-2xl relative ${
                 isNaruto ? 'bg-[#1C140C]' : 'bg-[#0E1E2E]'
               }`}
-              style={{
-                borderColor: pColor.hex,
-                boxShadow: `0 0 20px ${pColor.hex}25`,
-              }}
+              style={{ borderColor: pColor.hex }}
             >
               <div className="text-center pb-2 border-b border-white/10">
                 <span className="text-[9px] font-black uppercase tracking-widest block" style={{ color: pColor.hex }}>
@@ -561,8 +551,8 @@ export default function AnimeDraftPage() {
       <div className="flex justify-center mt-4">
         <button
           onClick={() => setPhase('setup')}
-          className={`px-6 py-2.5 rounded-xl text-black font-extrabold text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-lg ${
-            isNaruto ? 'bg-[#FF6600]' : 'bg-[#00B4D8]'
+          className={`px-6 py-2.5 rounded-xl text-black font-extrabold text-xs uppercase tracking-widest ${
+            isNaruto ? 'bg-[#FF6600] text-white' : 'bg-[#00B4D8] text-black'
           }`}
         >
           ↺ Recommencer une aventure
