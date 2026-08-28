@@ -57,7 +57,7 @@ export default function Sidebar() {
           La Caverne des <span className="text-amber font-black">Goats</span>
         </div>
       </div>
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg border-t border-border flex justify-around px-1 py-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg border-t border-border flex overflow-x-auto gap-1 px-2 py-2">
         {NAV.map((item) => {
           const active = pathname === item.href;
           const [icon, ...rest] = item.label.split(' ');
@@ -65,7 +65,7 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[10.5px] font-semibold min-w-[64px] ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[10.5px] font-semibold min-w-[64px] shrink-0 ${
                 active ? 'text-amber' : 'text-muted'
               }`}
             >
