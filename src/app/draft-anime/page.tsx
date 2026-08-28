@@ -22,6 +22,7 @@ const THEME_CATEGORIES: Record<Theme, CategoryConfig[]> = {
     { key: 'cat3', label: 'Chakra', icon: '⚡' },
     { key: 'cat4', label: 'Hérédité', icon: '👁️' },
     { key: 'cat5', label: 'Vitesse', icon: '🍃' },
+    { key: 'cat6', label: 'Invocation', icon: '🐸'},
   ],
   onepiece: [
     { key: 'cat1', label: 'Personnage', icon: '☠️' },
@@ -64,7 +65,6 @@ export default function AnimeDraftPage() {
   const [currentPlayerIdx, setCurrentPlayerIdx] = useState<number>(0);
   const [drawnCard, setDrawnCard] = useState<ListItem | null>(null);
 
-  // Pour le mode sabotage
   const [selectedTargetPlayerIdx, setSelectedTargetPlayerIdx] = useState<number>(0);
 
   const activeCategories = THEME_CATEGORIES[theme];
@@ -72,13 +72,26 @@ export default function AnimeDraftPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('lists').select('*').order('created_at', { ascending: false });
-      if (data) {
-        setLists(data as GameList[]);
-        if (data.length > 0) setListId(data[0].id);
+      if (data && data.length > 0) {
+        const fetchedLists = data as GameList[];
+        setLists(fetchedLists);
+
+        // Pré-sélection au lancement selon le thème par défaut (Naruto)
+        const matchedList = fetchedLists.find((l) => l.game_type === 'naruto');
+        setListId(matchedList ? matchedList.id : fetchedLists[0].id);
       }
       setLoading(false);
     })();
   }, []);
+
+  // auto-switch lors du changement de thème
+  function handleThemeChange(newTheme: Theme) {
+    setTheme(newTheme);
+    const matchedList = lists.find((l) => l.game_type === newTheme);
+    if (matchedList) {
+      setListId(matchedList.id);
+    }
+  }
 
   useEffect(() => {
     if (!listId) return;
@@ -171,7 +184,7 @@ export default function AnimeDraftPage() {
             <label className="text-[12.5px] text-muted block mb-1.5">Choix du Thème</label>
             <div className="flex gap-3">
               <button
-                onClick={() => setTheme('naruto')}
+                onClick={() => handleThemeChange('naruto')}
                 className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
                   theme === 'naruto'
                     ? 'border-amber text-amber bg-amber/10 shadow-md'
@@ -181,7 +194,7 @@ export default function AnimeDraftPage() {
                 🍃 Thème Naruto (5 catégories)
               </button>
               <button
-                onClick={() => setTheme('onepiece')}
+                onClick={() => handleThemeChange('onepiece')}
                 className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
                   theme === 'onepiece'
                     ? 'border-red-400 text-red-400 bg-red-400/10 shadow-md'
@@ -194,10 +207,12 @@ export default function AnimeDraftPage() {
           </div>
 
           <div>
-            <label className="text-[12.5px] text-muted block mb-1.5">Base de données</label>
+            <label className="text-[12.5px] text-muted block mb-1.5">Base de données des cartes</label>
             <select className="input" value={listId} onChange={(e) => setListId(e.target.value)}>
               {lists.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
+                <option key={l.id} value={l.id}>
+                  {l.name} {l.game_type === theme ? '★ (Pré-sélectionnée)' : ''}
+                </option>
               ))}
             </select>
           </div>

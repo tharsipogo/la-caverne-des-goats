@@ -7,6 +7,7 @@ export interface GameList {
   tier_labels: any; // string[] (ancien format) ou TierRow[] (nouveau, normalisé à la lecture)
   cover_image_url: string | null;
   created_at: string;
+  game_type?: string;
 }
 
 export interface TierRow {

@@ -12,7 +12,6 @@ interface Slot {
   id: string;
   label: string;
   role: Role;
-  // Positionnement sur le terrain virtuel (pourcentage top/left)
   pos: { top: string; left: string };
 }
 
@@ -153,11 +152,19 @@ export default function LeFivePage() {
     (async () => {
       const { data } = await supabase.from('lists').select('*').order('created_at', { ascending: false });
       if (data && data.length > 0) {
-        setLists(data as GameList[]);
-        setGListId(data[0].id);
-        setDefListId(data[0].id);
-        setMilListId(data[0].id);
-        setAttListId(data[0].id);
+        const fetchedLists = data as GameList[];
+        setLists(fetchedLists);
+
+        // Détection et pré-sélection selon game_type
+        const gTag = fetchedLists.find((l) => l.game_type === 'five_g');
+        const defTag = fetchedLists.find((l) => l.game_type === 'five_def');
+        const milTag = fetchedLists.find((l) => l.game_type === 'five_mil');
+        const attTag = fetchedLists.find((l) => l.game_type === 'five_att');
+
+        setGListId(gTag ? gTag.id : fetchedLists[0].id);
+        setDefListId(defTag ? defTag.id : fetchedLists[0].id);
+        setMilListId(milTag ? milTag.id : fetchedLists[0].id);
+        setAttListId(attTag ? attTag.id : fetchedLists[0].id);
       }
       setLoading(false);
     })();
@@ -187,14 +194,12 @@ export default function LeFivePage() {
       return;
     }
 
-    const loadedPools: Record<Role, ListItem[]> = {
+    setRolePools({
       G: gItems,
       DEF: defItems,
       MIL: milItems,
       ATT: attItems,
-    };
-
-    setRolePools(loadedPools);
+    });
 
     const initialTeams: PlayerTeam[] = playerNames.slice(0, playerCount).map((name) => ({
       name: name.trim() || 'Joueur',
@@ -295,7 +300,7 @@ export default function LeFivePage() {
           <div className="eyebrow">Mode Foot / Five</div>
           <h1 className="font-serif text-3xl font-black text-amber">Le Five</h1>
           <p className="text-muted mt-2 text-[14.5px] max-w-xl">
-            Sélectionnez vos 4 bases (G, DEF, MIL, ATT), choisissez votre tactique et constituez votre 5 majeur.
+            Les bases pré-configurées sont sélectionnées automatiquement. Vous pouvez toujours les modifier ci-dessous.
           </p>
         </div>
 
@@ -305,7 +310,9 @@ export default function LeFivePage() {
               <label className="text-[12.5px] font-bold text-amber block mb-1.5">🧤 Base Gardiens (G)</label>
               <select className="input" value={gListId} onChange={(e) => setGListId(e.target.value)}>
                 {lists.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
+                  <option key={l.id} value={l.id}>
+                    {l.name} {l.game_type === 'five_g' ? '★ (Auto)' : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -314,7 +321,9 @@ export default function LeFivePage() {
               <label className="text-[12.5px] font-bold text-amber block mb-1.5">🛡️ Base Défenseurs (DEF)</label>
               <select className="input" value={defListId} onChange={(e) => setDefListId(e.target.value)}>
                 {lists.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
+                  <option key={l.id} value={l.id}>
+                    {l.name} {l.game_type === 'five_def' ? '★ (Auto)' : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -323,7 +332,9 @@ export default function LeFivePage() {
               <label className="text-[12.5px] font-bold text-amber block mb-1.5">🎯 Base Milieux (MIL)</label>
               <select className="input" value={milListId} onChange={(e) => setMilListId(e.target.value)}>
                 {lists.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
+                  <option key={l.id} value={l.id}>
+                    {l.name} {l.game_type === 'five_mil' ? '★ (Auto)' : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -332,7 +343,9 @@ export default function LeFivePage() {
               <label className="text-[12.5px] font-bold text-amber block mb-1.5">🔥 Base Attaquants (ATT)</label>
               <select className="input" value={attListId} onChange={(e) => setAttListId(e.target.value)}>
                 {lists.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
+                  <option key={l.id} value={l.id}>
+                    {l.name} {l.game_type === 'five_att' ? '★ (Auto)' : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -413,8 +426,8 @@ export default function LeFivePage() {
               key={form.id}
               onClick={() => selectFormation(form)}
               className="group bg-[#141622] hover:bg-[#1a1d2e] border-2 border-white/10 rounded-2xl p-5 flex flex-col items-center justify-between gap-4 transition-all duration-300 text-center hover:scale-105"
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = currentColor.hex}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentColor.hex)}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
             >
               <div className="text-5xl my-2">{form.icon}</div>
               <div>
@@ -471,8 +484,8 @@ export default function LeFivePage() {
               key={item.id}
               onClick={() => selectPlayer(item)}
               className="group bg-[#141622] hover:bg-[#1a1d2e] border-2 border-white/10 rounded-2xl p-3.5 flex flex-col items-center gap-3 transition-all duration-300 text-center"
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = activeColor.hex}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = activeColor.hex)}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
             >
               <div className="w-full h-52 bg-surface2 rounded-xl overflow-hidden relative border border-white/5">
                 {item.image_url ? (
@@ -491,7 +504,7 @@ export default function LeFivePage() {
     );
   }
 
-  // ================= 4. END / TERRAIN TACTIQUE RÉALISTE =================
+  // ================= 4. END / TERRAIN TACTIQUE =================
   const gridColsClass =
     playerCount === 1 ? 'grid-cols-1' :
     playerCount === 2 ? 'grid-cols-1 md:grid-cols-2' :
@@ -519,7 +532,6 @@ export default function LeFivePage() {
                 boxShadow: `0 0 20px ${pColor.hex}25`,
               }}
             >
-              {/* En-tête Équipe */}
               <div className="text-center pb-2 border-b border-white/10">
                 <span className="text-[9px] uppercase font-black tracking-widest block" style={{ color: pColor.hex }}>
                   Five {idx + 1} ({team.formation?.icon})
@@ -528,16 +540,13 @@ export default function LeFivePage() {
                 <span className="text-[11px] font-bold text-amber block">{team.formation?.name}</span>
               </div>
 
-              {/* TERRAIN TACTIQUE 2D */}
               <div className="relative w-full aspect-[3/4] max-w-[320px] mx-auto bg-gradient-to-b from-emerald-900 via-emerald-800 to-emerald-950 border-2 border-white/30 rounded-2xl overflow-hidden shadow-inner select-none">
-                {/* Lignes du terrain */}
                 <div className="absolute inset-2 border border-white/20 rounded-xl pointer-events-none" />
                 <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-white/20 pointer-events-none" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-white/20 rounded-full pointer-events-none" />
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-28 h-12 border-t border-x border-white/20 rounded-t-xl pointer-events-none" />
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-12 border-b border-x border-white/20 rounded-b-xl pointer-events-none" />
 
-                {/* Joueurs placés tactiquement */}
                 {team.formation?.slots.map((slot) => {
                   const card = team.squad[slot.id];
                   return (
@@ -546,7 +555,6 @@ export default function LeFivePage() {
                       className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 z-10 w-16"
                       style={{ top: slot.pos.top, left: slot.pos.left }}
                     >
-                      {/* Avatar / Carte */}
                       <div className="w-9 h-9 rounded-full border-2 border-amber bg-[#181a28] shadow-lg overflow-hidden flex items-center justify-center shrink-0">
                         {card?.image_url ? (
                           <img src={card.image_url} className="w-full h-full object-cover" alt="" />
@@ -555,7 +563,6 @@ export default function LeFivePage() {
                         )}
                       </div>
 
-                      {/* Libellé du Poste & Nom */}
                       <div className="bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded-md border border-white/10 text-center w-full">
                         <span className="text-[8px] font-black uppercase text-amber block leading-tight">
                           {slot.label}
