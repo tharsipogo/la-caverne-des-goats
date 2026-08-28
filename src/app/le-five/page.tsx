@@ -105,12 +105,12 @@ const FORMATIONS: Formation[] = [
 ];
 
 const PLAYER_COLORS = [
-  { border: 'border-[#e2645a]', text: 'text-[#e2645a]', bg: 'bg-[#e2645a]', hex: '#e2645a' },
-  { border: 'border-[#4fc9c0]', text: 'text-[#4fc9c0]', bg: 'bg-[#4fc9c0]', hex: '#4fc9c0' },
-  { border: 'border-[#10b981]', text: 'text-[#10b981]', bg: 'bg-[#10b981]', hex: '#10b981' },
-  { border: 'border-[#a855f7]', text: 'text-[#a855f7]', bg: 'bg-[#a855f7]', hex: '#a855f7' },
-  { border: 'border-[#f59e0b]', text: 'text-[#f59e0b]', bg: 'bg-[#f59e0b]', hex: '#f59e0b' },
-  { border: 'border-[#ec4899]', text: 'text-[#ec4899]', bg: 'bg-[#ec4899]', hex: '#ec4899' },
+  { border: 'border-[#FF5500]', text: 'text-[#FF5500]', bg: 'bg-[#FF5500]', hex: '#FF5500', label: 'Équipe Orange' },
+  { border: 'border-[#38BDF8]', text: 'text-[#38BDF8]', bg: 'bg-[#38BDF8]', hex: '#38BDF8', label: 'Équipe Bleue' },
+  { border: 'border-[#FACC15]', text: 'text-[#FACC15]', bg: 'bg-[#FACC15]', hex: '#FACC15', label: 'Équipe Jaune' },
+  { border: 'border-[#A855F7]', text: 'text-[#A855F7]', bg: 'bg-[#A855F7]', hex: '#A855F7', label: 'Équipe Violette' },
+  { border: 'border-[#4ADE80]', text: 'text-[#4ADE80]', bg: 'bg-[#4ADE80]', hex: '#4ADE80', label: 'Équipe Verte' },
+  { border: 'border-[#F43F5E]', text: 'text-[#F43F5E]', bg: 'bg-[#F43F5E]', hex: '#F43F5E', label: 'Équipe Rouge' },
 ];
 
 interface PlayerTeam {
@@ -155,7 +155,6 @@ export default function LeFivePage() {
         const fetchedLists = data as GameList[];
         setLists(fetchedLists);
 
-        // Détection et pré-sélection selon game_type
         const gTag = fetchedLists.find((l) => l.game_type === 'five_g');
         const defTag = fetchedLists.find((l) => l.game_type === 'five_def');
         const milTag = fetchedLists.find((l) => l.game_type === 'five_mil');
@@ -290,25 +289,31 @@ export default function LeFivePage() {
     generatePlayerChoices(nextPlayerIdx, nextSlotIdx, updatedTeams);
   }
 
-  if (loading) return <p className="text-muted p-8">Chargement de Le Five...</p>;
+  if (loading) return <p className="text-[#FF5500] p-8 text-center font-mono font-extrabold">Préparation de l'ardoise...</p>;
 
-  // ================= 1. SETUP =================
+  // ================= 1. SETUP (VESTIAIRE ET ARDOISE DU COACH) =================
   if (phase === 'setup') {
     return (
-      <div>
-        <div className="mb-7">
-          <div className="eyebrow">Mode Foot / Five</div>
-          <h1 className="font-serif text-3xl font-black text-amber">Le Five</h1>
-          <p className="text-muted mt-2 text-[14.5px] max-w-xl">
-            Les bases pré-configurées sont sélectionnées automatiquement. Vous pouvez toujours les modifier ci-dessous.
+      <div className="bg-[#0D1B14] min-h-[calc(100vh-2rem)] rounded-2xl p-4 md:p-8 text-[#E2E8F0] border-4 border-[#1E3A2B] shadow-2xl relative font-sans">
+        {/* En-tête Tableau */}
+        <div className="mb-8 text-center border-b-2 border-dashed border-[#2D5A40] pb-6">
+          <div className="text-xs uppercase tracking-[0.3em] font-mono font-bold text-[#FF5500] mb-1">
+            📋 CONSIGNES DE VESTIAIRE 📋
+          </div>
+          <h1 className="font-mono text-3xl md:text-5xl font-black text-[#F8FAFC] tracking-tight">
+            LE FIVE
+          </h1>
+          <p className="text-slate-400 mt-2 text-sm max-w-xl mx-auto italic">
+            Fixez vos bases tactiques sur l'ardoise et préparez votre composition.
           </p>
         </div>
 
-        <div className="panel flex flex-col gap-6">
+        <div className="bg-[#13261C] border-2 border-[#2D5A40] rounded-2xl p-6 flex flex-col gap-6 shadow-2xl max-w-4xl mx-auto relative">
+          {/* Sélection des 4 bases par poste */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="text-[12.5px] font-bold text-amber block mb-1.5">🧤 Base Gardiens (G)</label>
-              <select className="input" value={gListId} onChange={(e) => setGListId(e.target.value)}>
+            <div className="bg-[#0F1E16] p-3 rounded-xl border border-[#2D5A40]">
+              <label className="text-xs font-mono font-bold text-[#FF5500] block mb-1.5">🧤 GARDIEN (G)</label>
+              <select className="w-full bg-[#182E22] border border-slate-600 rounded-lg px-2.5 py-2 text-xs text-white outline-none focus:border-[#FF5500]" value={gListId} onChange={(e) => setGListId(e.target.value)}>
                 {lists.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name} {l.game_type === 'five_g' ? '★ (Auto)' : ''}
@@ -317,9 +322,9 @@ export default function LeFivePage() {
               </select>
             </div>
 
-            <div>
-              <label className="text-[12.5px] font-bold text-amber block mb-1.5">🛡️ Base Défenseurs (DEF)</label>
-              <select className="input" value={defListId} onChange={(e) => setDefListId(e.target.value)}>
+            <div className="bg-[#0F1E16] p-3 rounded-xl border border-[#2D5A40]">
+              <label className="text-xs font-mono font-bold text-[#FF5500] block mb-1.5">🛡️ DÉFENSEUR (DEF)</label>
+              <select className="w-full bg-[#182E22] border border-slate-600 rounded-lg px-2.5 py-2 text-xs text-white outline-none focus:border-[#FF5500]" value={defListId} onChange={(e) => setDefListId(e.target.value)}>
                 {lists.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name} {l.game_type === 'five_def' ? '★ (Auto)' : ''}
@@ -328,9 +333,9 @@ export default function LeFivePage() {
               </select>
             </div>
 
-            <div>
-              <label className="text-[12.5px] font-bold text-amber block mb-1.5">🎯 Base Milieux (MIL)</label>
-              <select className="input" value={milListId} onChange={(e) => setMilListId(e.target.value)}>
+            <div className="bg-[#0F1E16] p-3 rounded-xl border border-[#2D5A40]">
+              <label className="text-xs font-mono font-bold text-[#FF5500] block mb-1.5">🎯 MILIEU (MIL)</label>
+              <select className="w-full bg-[#182E22] border border-slate-600 rounded-lg px-2.5 py-2 text-xs text-white outline-none focus:border-[#FF5500]" value={milListId} onChange={(e) => setMilListId(e.target.value)}>
                 {lists.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name} {l.game_type === 'five_mil' ? '★ (Auto)' : ''}
@@ -339,9 +344,9 @@ export default function LeFivePage() {
               </select>
             </div>
 
-            <div>
-              <label className="text-[12.5px] font-bold text-amber block mb-1.5">🔥 Base Attaquants (ATT)</label>
-              <select className="input" value={attListId} onChange={(e) => setAttListId(e.target.value)}>
+            <div className="bg-[#0F1E16] p-3 rounded-xl border border-[#2D5A40]">
+              <label className="text-xs font-mono font-bold text-[#FF5500] block mb-1.5">🔥 ATTAQUANT (ATT)</label>
+              <select className="w-full bg-[#182E22] border border-slate-600 rounded-lg px-2.5 py-2 text-xs text-white outline-none focus:border-[#FF5500]" value={attListId} onChange={(e) => setAttListId(e.target.value)}>
                 {lists.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name} {l.game_type === 'five_att' ? '★ (Auto)' : ''}
@@ -352,16 +357,18 @@ export default function LeFivePage() {
           </div>
 
           <div>
-            <label className="text-[12.5px] text-muted block mb-1.5">Nombre de joueurs (1 à 6)</label>
+            <label className="text-xs font-mono uppercase tracking-wider font-extrabold text-slate-300 block mb-2">
+              Nombre de tacticiens (1 à 6)
+            </label>
             <div className="flex gap-2 flex-wrap">
               {[1, 2, 3, 4, 5, 6].map((num, i) => (
                 <button
                   key={num}
                   onClick={() => setPlayerCount(num)}
-                  className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
+                  className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
                     playerCount === num
-                      ? `${PLAYER_COLORS[i].border} ${PLAYER_COLORS[i].text} bg-white/5 shadow-md`
-                      : 'border-border text-text bg-surface2 opacity-60'
+                      ? `${PLAYER_COLORS[i].border} ${PLAYER_COLORS[i].text} bg-[#FF5500]/10 shadow-[0_0_15px_rgba(255,85,0,0.25)]`
+                      : 'border-slate-700 text-slate-400 bg-white/5 hover:border-slate-500'
                   }`}
                 >
                   {num} {num === 1 ? 'Joueur' : 'Joueurs'}
@@ -372,13 +379,16 @@ export default function LeFivePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: playerCount }).map((_, i) => (
-              <div key={i}>
-                <label className="text-[12.5px] font-bold block mb-1 flex items-center gap-2" style={{ color: PLAYER_COLORS[i].hex }}>
-                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: PLAYER_COLORS[i].hex }} />
-                  Joueur {i + 1}
+              <div key={i} className="bg-[#0F1E16] p-3 rounded-xl border border-[#2D5A40]">
+                <label className="text-xs font-bold block mb-1 flex items-center justify-between" style={{ color: PLAYER_COLORS[i].hex }}>
+                  <span className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: PLAYER_COLORS[i].hex }} />
+                    Coach {i + 1}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">{PLAYER_COLORS[i].label}</span>
                 </label>
                 <input
-                  className="input border-white/10"
+                  className="w-full bg-[#182E22] border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-[#FF5500] outline-none"
                   value={playerNames[i]}
                   onChange={(e) => {
                     const newNames = [...playerNames];
@@ -390,8 +400,11 @@ export default function LeFivePage() {
             ))}
           </div>
 
-          <button className="btn mt-2 w-fit" onClick={startGame}>
-            ⚽ Lancer la sélection tactique
+          <button
+            onClick={startGame}
+            className="w-fit mx-auto mt-2 px-8 py-3 rounded-xl bg-gradient-to-r from-[#FF5500] via-[#FF7733] to-[#CC4400] text-white font-mono font-black text-xs uppercase tracking-widest hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(255,85,0,0.4)]"
+          >
+            ✏️ Valider les bases & choisir les compos
           </button>
         </div>
       </div>
@@ -404,42 +417,41 @@ export default function LeFivePage() {
     const currentColor = PLAYER_COLORS[currentPlayerIdx];
 
     return (
-      <div className="max-w-4xl mx-auto flex flex-col gap-6">
+      <div className="bg-[#0D1B14] min-h-[calc(100vh-2rem)] rounded-2xl p-4 md:p-6 text-[#E2E8F0] max-w-5xl mx-auto flex flex-col gap-6 border-4 border-[#1E3A2B] shadow-2xl">
         <div
-          className="bg-[#121420] border-2 rounded-2xl p-4 flex items-center justify-between shadow-2xl"
-          style={{ borderColor: currentColor.hex }}
+          className="bg-[#13261C] border-2 rounded-2xl p-4 flex items-center justify-between shadow-2xl relative"
+          style={{ borderColor: currentColor.hex, boxShadow: `0 0 25px ${currentColor.hex}30` }}
         >
           <div className="flex items-center gap-3">
-            <span className="w-4 h-4 rounded-full animate-pulse" style={{ backgroundColor: currentColor.hex }} />
+            <span className="w-4 h-4 rounded-full animate-pulse shrink-0" style={{ backgroundColor: currentColor.hex }} />
             <div>
-              <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: currentColor.hex }}>
-                Tour de {activePlayerName}
+              <div className="text-[10px] font-mono font-black uppercase tracking-widest" style={{ color: currentColor.hex }}>
+                SCHÉMA TACTIQUE DE {activePlayerName}
               </div>
-              <h2 className="text-xl font-bold text-white">Choisissez votre composition de Five :</h2>
+              <h2 className="text-lg md:text-xl font-mono font-black text-white">Sélectionnez le système de jeu :</h2>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-auto">
           {formationChoices.map((form) => (
             <button
               key={form.id}
               onClick={() => selectFormation(form)}
-              className="group bg-[#141622] hover:bg-[#1a1d2e] border-2 border-white/10 rounded-2xl p-5 flex flex-col items-center justify-between gap-4 transition-all duration-300 text-center hover:scale-105"
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = currentColor.hex)}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+              className="group bg-[#13261C] hover:bg-[#1A3326] border-2 border-[#2D5A40] hover:border-[#FF5500] rounded-2xl p-5 flex flex-col items-center justify-between gap-4 transition-all duration-300 text-center hover:-translate-y-1 shadow-xl relative"
             >
-              <div className="text-5xl my-2">{form.icon}</div>
+              <div className="text-5xl my-1 group-hover:scale-110 transition-transform">{form.icon}</div>
               <div>
-                <h3 className="font-extrabold text-amber text-lg">{form.name}</h3>
-                <p className="text-xs text-muted mt-2 leading-relaxed">{form.description}</p>
+                <h3 className="font-mono font-extrabold text-[#FF5500] text-lg">{form.name}</h3>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed">{form.description}</p>
               </div>
 
-              <div className="w-full bg-surface2/50 rounded-xl p-2.5 border border-white/5 flex flex-col gap-1 text-left">
-                <span className="text-[9px] font-bold uppercase text-slate-400 block mb-1">Composition :</span>
+              <div className="w-full bg-[#0F1E16] rounded-xl p-3 border border-slate-700/50 flex flex-col gap-1 text-left">
+                <span className="text-[9px] font-mono font-black uppercase tracking-widest text-slate-400 block mb-1">Alignement :</span>
                 {form.slots.map((s, idx) => (
-                  <span key={idx} className="text-[11px] font-extrabold text-white flex items-center gap-1.5">
-                    <span className="text-amber">•</span> {s.label} ({s.role})
+                  <span key={idx} className="text-[11px] font-bold text-white flex items-center justify-between">
+                    <span>• {s.label}</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-[#FF5500]">{s.role}</span>
                   </span>
                 ))}
               </div>
@@ -457,46 +469,47 @@ export default function LeFivePage() {
     const currentSlot = activePlayer.formation?.slots[currentSlotIdx];
 
     return (
-      <div className="max-w-4xl mx-auto flex flex-col gap-6">
+      <div className="bg-[#0D1B14] min-h-[calc(100vh-2rem)] rounded-2xl p-4 md:p-6 text-[#E2E8F0] max-w-5xl mx-auto flex flex-col gap-6 border-4 border-[#1E3A2B] shadow-2xl">
         <div
-          className="bg-[#121420] border-2 rounded-2xl p-4 flex items-center justify-between shadow-2xl"
-          style={{ borderColor: activeColor.hex }}
+          className="bg-[#13261C] border-2 rounded-2xl p-4 flex items-center justify-between shadow-2xl relative"
+          style={{ borderColor: activeColor.hex, boxShadow: `0 0 25px ${activeColor.hex}30` }}
         >
           <div className="flex items-center gap-3">
-            <span className="w-4 h-4 rounded-full animate-pulse" style={{ backgroundColor: activeColor.hex }} />
+            <span className="w-4 h-4 rounded-full animate-pulse shrink-0" style={{ backgroundColor: activeColor.hex }} />
             <div>
-              <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: activeColor.hex }}>
-                Tour de {activePlayer.name} ({activePlayer.formation?.name})
+              <div className="text-[10px] font-mono font-black uppercase tracking-widest" style={{ color: activeColor.hex }}>
+                RECRUTEMENT : {activePlayer.name} ({activePlayer.formation?.name})
               </div>
-              <h2 className="text-lg md:text-xl font-bold text-white">
-                Choisissez votre : <span className="text-amber">{currentSlot?.label}</span>
+              <h2 className="text-lg md:text-xl font-mono font-black text-white">
+                Assigner le poste : <span className="text-[#FF5500]">{currentSlot?.label}</span>
               </h2>
             </div>
           </div>
-          <div className="bg-black/40 text-amber font-bold text-xs px-3.5 py-2 rounded-xl border border-amber/30">
+          <div className="bg-[#0F1E16] text-[#FF5500] font-mono font-black text-xs px-4 py-2 rounded-xl border border-[#FF5500]/30 shrink-0">
             Poste {currentSlotIdx + 1} / 5
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-auto">
           {playerChoices.map((item) => (
             <button
               key={item.id}
               onClick={() => selectPlayer(item)}
-              className="group bg-[#141622] hover:bg-[#1a1d2e] border-2 border-white/10 rounded-2xl p-3.5 flex flex-col items-center gap-3 transition-all duration-300 text-center"
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = activeColor.hex)}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+              className="group bg-[#13261C] hover:bg-[#1A3326] border-2 border-[#2D5A40] hover:border-[#FF5500] rounded-2xl p-4 flex flex-col items-center gap-4 transition-all duration-300 text-center hover:-translate-y-1 shadow-xl relative overflow-hidden"
             >
-              <div className="w-full h-52 bg-surface2 rounded-xl overflow-hidden relative border border-white/5">
+              <div className="w-full h-56 bg-[#0F1E16] rounded-xl overflow-hidden relative border border-slate-700/50">
                 {item.image_url ? (
-                  <img src={item.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={item.name} />
+                  <img src={item.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={item.name} />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl">⚽</div>
+                  <div className="w-full h-full flex items-center justify-center text-5xl opacity-40">⚽</div>
                 )}
               </div>
-              <div className="font-bold text-white text-base group-hover:text-amber transition-colors">
+              <div className="font-mono font-bold text-white text-base group-hover:text-[#FF5500] transition-colors">
                 {item.name}
               </div>
+              <span className="text-[10px] font-mono font-black uppercase tracking-widest px-3 py-1 rounded-full bg-[#FF5500]/10 border border-[#FF5500]/30 text-[#FF5500] group-hover:bg-[#FF5500] group-hover:text-white transition-all">
+                Placer sur l'ardoise
+              </span>
             </button>
           ))}
         </div>
@@ -504,7 +517,7 @@ export default function LeFivePage() {
     );
   }
 
-  // ================= 4. END / TERRAIN TACTIQUE =================
+  // ================= 4. END / ARDOISE TACTIQUE DE MATCH =================
   const gridColsClass =
     playerCount === 1 ? 'grid-cols-1' :
     playerCount === 2 ? 'grid-cols-1 md:grid-cols-2' :
@@ -513,11 +526,14 @@ export default function LeFivePage() {
     'grid-cols-2 lg:grid-cols-3';
 
   return (
-    <div className="flex flex-col h-full justify-between rounded-2xl p-2 md:p-4 overflow-y-auto">
-      <div className="text-center mb-4">
-        <div className="text-[10px] font-bold text-amber uppercase tracking-wider">COMPOSITIONS FINALES</div>
-        <h1 className="font-serif text-2xl md:text-3xl font-black text-amber">Le Five</h1>
-        <p className="text-xs text-slate-300 mt-1">Confrontez les terrains tactiques et désignez le vainqueur !</p>
+    <div className="bg-[#0D1B14] min-h-[calc(100vh-2rem)] rounded-2xl p-4 md:p-6 text-[#E2E8F0] flex flex-col justify-between border-4 border-[#1E3A2B] shadow-2xl overflow-y-auto font-sans">
+      <div className="text-center mb-4 border-b-2 border-dashed border-[#2D5A40] pb-4">
+        <div className="text-[10px] font-mono font-black text-[#FF5500] uppercase tracking-[0.3em] mb-1">
+          📌 COMPOSITIONS DE DÉPART 📌
+        </div>
+        <h1 className="font-mono text-2xl md:text-4xl font-black text-[#F8FAFC]">
+          LE FIVE - TERRAINS TACTIQUES
+        </h1>
       </div>
 
       <div className={`grid ${gridColsClass} gap-6 my-auto w-full max-w-7xl mx-auto`}>
@@ -526,27 +542,30 @@ export default function LeFivePage() {
           return (
             <div
               key={idx}
-              className="bg-[#121420]/95 border-2 rounded-2xl p-3 flex flex-col gap-3 shadow-2xl relative"
+              className="bg-[#13261C] border-2 rounded-2xl p-3 flex flex-col gap-3 shadow-2xl relative"
               style={{
                 borderColor: pColor.hex,
                 boxShadow: `0 0 20px ${pColor.hex}25`,
               }}
             >
-              <div className="text-center pb-2 border-b border-white/10">
-                <span className="text-[9px] uppercase font-black tracking-widest block" style={{ color: pColor.hex }}>
+              <div className="text-center pb-2 border-b border-slate-700/50">
+                <span className="text-[9px] font-mono font-black uppercase tracking-widest block" style={{ color: pColor.hex }}>
                   Five {idx + 1} ({team.formation?.icon})
                 </span>
-                <h2 className="text-base font-black text-white truncate">{team.name}</h2>
-                <span className="text-[11px] font-bold text-amber block">{team.formation?.name}</span>
+                <h2 className="text-base font-mono font-black text-white truncate">{team.name}</h2>
+                <span className="text-[10px] font-bold text-[#FF5500] block">{team.formation?.name}</span>
               </div>
 
-              <div className="relative w-full aspect-[3/4] max-w-[320px] mx-auto bg-gradient-to-b from-emerald-900 via-emerald-800 to-emerald-950 border-2 border-white/30 rounded-2xl overflow-hidden shadow-inner select-none">
-                <div className="absolute inset-2 border border-white/20 rounded-xl pointer-events-none" />
-                <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-white/20 pointer-events-none" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-white/20 rounded-full pointer-events-none" />
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-28 h-12 border-t border-x border-white/20 rounded-t-xl pointer-events-none" />
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-12 border-b border-x border-white/20 rounded-b-xl pointer-events-none" />
+              {/* Terrain Ardoise 2D Craie */}
+              <div className="relative w-full aspect-[3/4] max-w-[320px] mx-auto bg-[#0F281E] border-2 border-slate-300/40 rounded-2xl overflow-hidden shadow-2xl select-none">
+                {/* Lignes tracées à la craie */}
+                <div className="absolute inset-2 border border-dashed border-slate-300/30 rounded-xl pointer-events-none" />
+                <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-slate-300/30 pointer-events-none" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-slate-300/30 rounded-full pointer-events-none" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-28 h-12 border-t border-x border-slate-300/30 rounded-t-xl pointer-events-none" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-12 border-b border-x border-slate-300/30 rounded-b-xl pointer-events-none" />
 
+                {/* Joueurs aimantés sur l'ardoise */}
                 {team.formation?.slots.map((slot) => {
                   const card = team.squad[slot.id];
                   return (
@@ -555,7 +574,7 @@ export default function LeFivePage() {
                       className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 z-10 w-16"
                       style={{ top: slot.pos.top, left: slot.pos.left }}
                     >
-                      <div className="w-9 h-9 rounded-full border-2 border-amber bg-[#181a28] shadow-lg overflow-hidden flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-full border-2 border-[#FF5500] bg-[#0A1610] shadow-2xl overflow-hidden flex items-center justify-center shrink-0">
                         {card?.image_url ? (
                           <img src={card.image_url} className="w-full h-full object-cover" alt="" />
                         ) : (
@@ -563,8 +582,8 @@ export default function LeFivePage() {
                         )}
                       </div>
 
-                      <div className="bg-black/80 backdrop-blur-md px-1.5 py-0.5 rounded-md border border-white/10 text-center w-full">
-                        <span className="text-[8px] font-black uppercase text-amber block leading-tight">
+                      <div className="bg-black/90 backdrop-blur-md px-1.5 py-0.5 rounded-md border border-slate-700 text-center w-full">
+                        <span className="text-[8px] font-mono font-black uppercase text-[#FF5500] block leading-tight">
                           {slot.label}
                         </span>
                         <span className="text-[9px] font-bold text-white truncate block leading-tight">
@@ -581,8 +600,11 @@ export default function LeFivePage() {
       </div>
 
       <div className="flex justify-center mt-4">
-        <button className="btn py-2 px-6 text-xs" onClick={() => setPhase('setup')}>
-          ↺ Nouvelle partie
+        <button
+          onClick={() => setPhase('setup')}
+          className="px-6 py-2.5 rounded-xl bg-[#13261C] border border-[#FF5500]/40 text-[#FF5500] font-mono font-black text-xs uppercase tracking-widest hover:bg-[#FF5500] hover:text-white transition-all duration-300 shadow-lg"
+        >
+          ↺ Remettre à zéro l'ardoise
         </button>
       </div>
     </div>
