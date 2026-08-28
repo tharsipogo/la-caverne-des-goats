@@ -5,6 +5,20 @@ import Sidebar from '@/components/Sidebar';
 export const metadata: Metadata = {
   title: 'La Caverne des Goats',
   description: "Blind Ranking, Tier List & Undercover entre goats.",
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'Caverne Goats',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    icon: '/icons/icon-512.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
+};
+
+export const viewport = {
+  themeColor: '#101118',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
