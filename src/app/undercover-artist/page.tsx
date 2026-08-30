@@ -38,6 +38,7 @@ export default function UndercoverArtistPage() {
   const [drawIdx, setDrawIdx] = useState(0);
   const [drawerReady, setDrawerReady] = useState(false);
   const [roundNumber, setRoundNumber] = useState(1);
+  const [turnInRound, setTurnInRound] = useState(1); // 1er ou 2ème tour de la manche
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
@@ -98,7 +99,6 @@ export default function UndercoverArtistPage() {
     setPlayers(newPlayers);
     setActivePlayerId(null);
 
-    // Choix aléatoire du premier joueur pour la phase de dessin
     const randomStarter = newPlayers[Math.floor(Math.random() * newPlayers.length)];
     setFirstPlayer(randomStarter);
 
@@ -106,6 +106,7 @@ export default function UndercoverArtistPage() {
     setLastReveal(null);
     canvasInitRef.current = false;
     setRoundNumber(1);
+    setTurnInRound(1);
     setPhase('reveal');
   }
 
@@ -124,7 +125,6 @@ export default function UndercoverArtistPage() {
 
   function startDrawingPhase() {
     if (!firstPlayer) return;
-    // La file de dessin commence par le premier joueur tiré au sort
     const queue = rotateRandomStart(
       players.filter((p) => p.alive),
       (p) => p.id !== firstPlayer.id
@@ -132,10 +132,10 @@ export default function UndercoverArtistPage() {
     setDrawQueue(queue);
     setDrawIdx(0);
     setDrawerReady(false);
+    setTurnInRound(1);
     setPhase('draw');
   }
 
-  // ---- Canvas init ----
   function ensureCanvasInit() {
     if (canvasInitRef.current) return;
     const canvas = canvasRef.current;
@@ -189,8 +189,16 @@ export default function UndercoverArtistPage() {
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
     setDrawerReady(false);
+
     if (drawIdx + 1 >= drawQueue.length) {
-      setPhase('elim');
+      if (turnInRound === 1) {
+        // Deuxième tour de la même manche avant élimination
+        setTurnInRound(2);
+        setDrawIdx(0);
+      } else {
+        // Les 2 tours sont terminés, on passe au vote d'élimination
+        setPhase('elim');
+      }
     } else {
       setDrawIdx(drawIdx + 1);
     }
@@ -222,6 +230,7 @@ export default function UndercoverArtistPage() {
     setDrawQueue(queue);
     setDrawIdx(0);
     setDrawerReady(false);
+    setTurnInRound(1);
     setRoundNumber((r) => r + 1);
     setPhase('draw');
   }
@@ -261,7 +270,7 @@ export default function UndercoverArtistPage() {
           <h1 className="font-serif text-3xl">Undercover Artist</h1>
           <p className="text-muted mt-2 text-[14.5px] max-w-xl">
             Les civils connaissent tous le même mot, l'undercover n'a rien. Chacun ajoute un trait continu sur un dessin
-            commun (le trait s'arrête dès qu'on relâche), puis on élimine un joueur.
+            commun en 2 tours, puis on élimine un joueur.
           </p>
         </div>
 
@@ -326,7 +335,7 @@ export default function UndercoverArtistPage() {
     );
   }
 
-  // ================= REVEAL (Interactive Grid) =================
+  // ================= REVEAL =================
   if (phase === 'reveal') {
     return (
       <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[75vh] gap-6 text-center py-6">
@@ -339,7 +348,6 @@ export default function UndercoverArtistPage() {
           <p className="text-muted text-sm mt-1">Ne montre pas ton mot aux autres !</p>
         </div>
 
-        {/* Grille des cartes */}
         <div className="flex flex-wrap justify-center gap-4 max-w-3xl my-4">
           {players.map((p) => {
             const isBeingViewed = activePlayerId === p.id;
@@ -415,12 +423,10 @@ export default function UndercoverArtistPage() {
           })}
         </div>
 
-        {/* Compteur de cartes vues */}
         <div className="text-muted text-xs font-medium">
           {seenCount} / {players.length} cartes vues
         </div>
 
-        {/* Carte du premier joueur désigné aléatoirement */}
         {allSeen && firstPlayer && (
           <div className="flex flex-col items-center gap-4 mt-4 animate-fade-in">
             <div className="bg-[#171a2b] border border-amber/70 rounded-2xl p-5 text-center min-w-[260px] shadow-lg">
@@ -447,12 +453,12 @@ export default function UndercoverArtistPage() {
     return (
       <div>
         <div className="mb-6">
-          <div className="eyebrow">Manche {roundNumber} — dessin {drawIdx + 1} / {drawQueue.length}</div>
+          <div className="eyebrow">Manche {roundNumber} — Tour {turnInRound}/2 — Dessin {drawIdx + 1} / {drawQueue.length}</div>
           <h1 className="font-serif text-3xl">
             {drawerReady ? (
               <>Dessine, <span className="text-amber">{drawer.name}</span> !</>
             ) : (
-              <>Au tour de <span className="text-amber">{drawer.name}</span></>
+              <>Au tour de <span className="text-amber">{drawer.name}</span> (Tour {turnInRound})</>
             )}
           </h1>
           <p className="text-muted mt-2 text-[14.5px]">
@@ -479,7 +485,7 @@ export default function UndercoverArtistPage() {
     return (
       <div>
         <div className="mb-6">
-          <div className="eyebrow">Manche {roundNumber} — discussion</div>
+          <div className="eyebrow">Manche {roundNumber} — discussion après 2 tours de dessin</div>
           <h1 className="font-serif text-3xl">Regardez le dessin, puis éliminez un joueur</h1>
         </div>
 
@@ -533,17 +539,3 @@ export default function UndercoverArtistPage() {
         Le mot était <b className="text-amber">{word?.name}</b>.
       </p>
       <div className="flex justify-center">{CanvasBoard}</div>
-      <button className="btn" onClick={resetAll}>↺ Nouvelle partie</button>
-    </div>
-  );
-}
-
-function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface border border-border rounded-card p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>
-  );
-}
