@@ -66,8 +66,11 @@ export default function TierPage() {
   async function loadListData(id: string) {
     const { data: list } = await supabase.from('lists').select('*').eq('id', id).single();
     if (list) setTierRows(normalizeTierRows((list as GameList).tier_labels));
-    const { data: itemsData } = await supabase.from('items').select('*').eq('id', id);
+    
+    // Correction du filtre list_id
+    const { data: itemsData } = await supabase.from('items').select('*').eq('list_id', id);
     if (itemsData) setItems(itemsData as ListItem[]);
+    
     const { data: assignData } = await supabase
       .from('tier_assignments')
       .select('*')
@@ -212,7 +215,6 @@ export default function TierPage() {
     }
   }
 
-  // Vérifier le tier de l'item sélectionné pour le menu mobile
   const activeSelectedTier = selectedMobileItem
     ? assignments.find((a) => a.item_id === selectedMobileItem.id)?.tier
     : null;
@@ -360,7 +362,6 @@ export default function TierPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (selectedMobileItem && selectedMobileItem.id !== it.id) {
-                            // Intervertir deux éléments si on tape sur un autre élément
                             swapItems(selectedMobileItem.id, it.id, row.label);
                           } else {
                             setSelectedMobileItem(selectedMobileItem?.id === it.id ? null : it);
@@ -427,7 +428,7 @@ export default function TierPage() {
             </div>
           </div>
 
-          {/* ── Menu Tactile / Mobile pour Réordonner & Classer ── */}
+          {/* ── Menu Tactile / Mobile ── */}
           {selectedMobileItem && (
             <div
               className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#1e202e] border-2 border-amber-500 rounded-2xl p-3 shadow-2xl flex flex-col gap-2 w-[92%] max-w-sm"
@@ -445,7 +446,6 @@ export default function TierPage() {
                 </button>
               </div>
 
-              {/* Contrôles de déplacement de position (Avancer / Reculer) */}
               {activeSelectedTier && (
                 <div className="flex items-center justify-between gap-2 bg-surface p-1.5 rounded-xl border border-white/10">
                   <span className="text-[10px] font-bold text-slate-400 pl-1">Position dans {activeSelectedTier} :</span>
