@@ -24,7 +24,6 @@ function normalizeTierRows(raw: any): TierRow[] {
   });
 }
 
-// Choisit une couleur de texte lisible (clair/foncé) selon la couleur de fond du tier.
 function textColorFor(bgHex: string): string {
   const hex = bgHex.replace('#', '');
   if (hex.length !== 6) return '#101118';
@@ -46,6 +45,9 @@ export default function TierPage() {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | 'pool' | null>(null);
 
+  // État mobile : item actuellement sélectionné au clic/tap pour déplacement rapide
+  const [selectedMobileItem, setSelectedMobileItem] = useState<ListItem | null>(null);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('lists').select('*').order('created_at', { ascending: false });
@@ -59,7 +61,6 @@ export default function TierPage() {
   useEffect(() => {
     if (!listId) return;
     loadListData(listId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listId]);
 
   async function loadListData(id: string) {
@@ -103,11 +104,13 @@ export default function TierPage() {
 
     const rows = currentOrder.map((id, i) => ({ list_id: listId, item_id: id, tier, position: i }));
     await supabase.from('tier_assignments').upsert(rows, { onConflict: 'list_id,item_id' });
+    setSelectedMobileItem(null);
     loadListData(listId);
   }
 
   async function unassignItem(itemId: string) {
     await supabase.from('tier_assignments').delete().eq('list_id', listId).eq('item_id', itemId);
+    setSelectedMobileItem(null);
     loadListData(listId);
   }
 
@@ -134,7 +137,7 @@ export default function TierPage() {
     }
 
     const next = tierRows.filter((_, i) => i !== index);
-    setTierRows(next); // mise à jour immédiate de l'affichage
+    setTierRows(next);
     const { error: updErr } = await supabase.from('lists').update({ tier_labels: next }).eq('id', listId);
     if (updErr) {
       console.error('Erreur sauvegarde tier_labels :', updErr);
@@ -184,8 +187,11 @@ export default function TierPage() {
         <p className="text-muted text-sm py-8 text-center">Crée d'abord une base avec des items dans "Mes bases".</p>
       ) : (
         <div
-          className="flex flex-col md:flex-row gap-5 md:flex-1 md:min-h-0"
-          onClick={() => setColorPickerIdx(null)}
+          className="flex flex-col md:flex-row gap-5 md:flex-1 md:min-h-0 relative"
+          onClick={() => {
+            setColorPickerIdx(null);
+            setSelectedMobileItem(null);
+          }}
         >
           {/* ── Colonne gauche : les lignes de tier ── */}
           <div className="flex-1 md:overflow-y-auto md:pr-1 flex flex-col">
@@ -194,8 +200,14 @@ export default function TierPage() {
               return (
                 <div key={i} className="group flex border border-border rounded-xl mb-2.5 min-h-[88px] shrink-0">
                   <div
-                    className="relative w-[104px] shrink-0 flex flex-col items-center justify-center text-center px-2 py-2 rounded-l-xl"
+                    className="relative w-[104px] shrink-0 flex flex-col items-center justify-center text-center px-2 py-2 rounded-l-xl cursor-pointer"
                     style={{ background: row.color }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (selectedMobileItem) {
+                        moveItemToTier(selectedMobileItem.id, row.label, itemsByTier(row.label).length);
+                      }
+                    }}
                   >
                     {editingLabelIdx === i ? (
                       <input
@@ -218,21 +230,21 @@ export default function TierPage() {
                       </span>
                     )}
 
-                    {/* Icônes au survol */}
+                    {/* Icônes au survol ou au tap */}
                     <div
-                      className="absolute bottom-[7px] left-0 right-0 flex items-center justify-center gap-[7px] opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute bottom-[7px] left-0 right-0 flex items-center justify-center gap-[7px] md:opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
                         onClick={() => setColorPickerIdx(colorPickerIdx === i ? null : i)}
                         title="Changer la couleur"
-                        className="w-[13px] h-[13px] rounded-[3px] border hover:scale-125 transition-transform"
+                        className="w-[15px] h-[15px] rounded-[3px] border hover:scale-125 transition-transform"
                         style={{ borderColor: textColorFor(row.color) + '99' }}
                       />
                       <button
                         onClick={() => removeTierRow(i)}
                         title="Supprimer cette ligne"
-                        className="text-[13px] font-bold leading-none hover:scale-125 transition-transform"
+                        className="text-[15px] font-bold leading-none hover:scale-125 transition-transform"
                         style={{ color: textColorFor(row.color) + 'aa' }}
                       >
                         ×
@@ -241,7 +253,7 @@ export default function TierPage() {
 
                     {colorPickerIdx === i && (
                       <div
-                        className="absolute z-50 top-full mt-1.5 left-1/2 -translate-x-1/2 grid grid-cols-7 gap-[5px] p-2 rounded-lg bg-surface2 border border-border"
+                        className="absolute z-50 top-full mt-1.5 left-1/2 -translate-x-1/2 grid grid-cols-7 gap-[5px] p-2 rounded-lg bg-surface2 border border-border shadow-xl"
                         style={{ width: 164 }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -263,7 +275,7 @@ export default function TierPage() {
                   </div>
 
                   <div
-                    className="flex-1 flex flex-wrap gap-2 p-2.5 items-center content-start rounded-r-xl"
+                    className="flex-1 flex flex-wrap gap-2 p-2.5 items-center content-start rounded-r-xl transition-colors cursor-pointer"
                     style={{
                       background: isDropTarget ? row.color + '14' : '#161822',
                       outline: isDropTarget ? `1px dashed ${row.color}88` : 'none',
@@ -272,13 +284,24 @@ export default function TierPage() {
                     onDragOver={(e) => { e.preventDefault(); setDropTarget(row.label); }}
                     onDragLeave={() => setDropTarget(null)}
                     onDrop={() => { if (draggedItemId) moveItemToTier(draggedItemId, row.label, itemsByTier(row.label).length); setDropTarget(null); }}
+                    onClick={(e) => {
+                      if (selectedMobileItem) {
+                        e.stopPropagation();
+                        moveItemToTier(selectedMobileItem.id, row.label, itemsByTier(row.label).length);
+                      }
+                    }}
                   >
                     {itemsByTier(row.label).map((it, idx) => (
                       <ItemChip
                         key={it.id}
                         item={it}
+                        isSelected={selectedMobileItem?.id === it.id}
                         onDragStart={() => setDraggedItemId(it.id)}
                         onDropHere={() => draggedItemId && moveItemToTier(draggedItemId, row.label, idx)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedMobileItem(selectedMobileItem?.id === it.id ? null : it);
+                        }}
                       />
                     ))}
                     {isDropTarget && itemsByTier(row.label).length === 0 && (
@@ -295,14 +318,14 @@ export default function TierPage() {
             </div>
           </div>
 
-          {/* ── Colonne droite : Non classés, hauteur calée sur la gauche ── */}
+          {/* ── Colonne droite : Non classés ── */}
           <div className="md:w-[240px] shrink-0 flex flex-col md:h-full">
             <div className="flex items-center justify-between mb-2.5 shrink-0">
               <span className="eyebrow mb-0">Non classés</span>
               <span className="text-[11px] font-bold text-faint">{unassigned.length}</span>
             </div>
             <div
-              className="flex-1 md:overflow-y-auto border-[1.5px] border-dashed border-border rounded-xl p-2.5 flex flex-wrap content-start gap-2"
+              className="flex-1 md:overflow-y-auto border-[1.5px] border-dashed border-border rounded-xl p-2.5 flex flex-wrap content-start gap-2 min-h-[100px] cursor-pointer"
               style={{
                 background: dropTarget === 'pool' ? 'rgba(245,158,11,0.04)' : 'transparent',
                 outline: dropTarget === 'pool' ? '1px dashed rgba(245,158,11,0.3)' : 'none',
@@ -311,6 +334,12 @@ export default function TierPage() {
               onDragOver={(e) => { e.preventDefault(); setDropTarget('pool'); }}
               onDragLeave={() => setDropTarget(null)}
               onDrop={() => { if (draggedItemId) unassignItem(draggedItemId); setDropTarget(null); }}
+              onClick={(e) => {
+                if (selectedMobileItem) {
+                  e.stopPropagation();
+                  unassignItem(selectedMobileItem.id);
+                }
+              }}
             >
               {unassigned.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 w-full py-10 opacity-40">
@@ -319,11 +348,58 @@ export default function TierPage() {
                 </div>
               ) : (
                 unassigned.map((it) => (
-                  <ItemChip key={it.id} item={it} onDragStart={() => setDraggedItemId(it.id)} />
+                  <ItemChip
+                    key={it.id}
+                    item={it}
+                    isSelected={selectedMobileItem?.id === it.id}
+                    onDragStart={() => setDraggedItemId(it.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedMobileItem(selectedMobileItem?.id === it.id ? null : it);
+                    }}
+                  />
                 ))
               )}
             </div>
           </div>
+
+          {/* ── Modal Popover Tactile pour Mobile quand une carte est cliquée ── */}
+          {selectedMobileItem && (
+            <div
+              className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#1e202e] border-2 border-amber-500 rounded-2xl p-3 shadow-2xl flex flex-col gap-2 w-[92%] max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <span className="text-xs font-bold text-amber-400 truncate max-w-[200px]">
+                  Classer : {selectedMobileItem.name}
+                </span>
+                <button
+                  onClick={() => setSelectedMobileItem(null)}
+                  className="text-xs text-muted hover:text-white px-2 font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pt-1">
+                {tierRows.map((row) => (
+                  <button
+                    key={row.label}
+                    onClick={() => moveItemToTier(selectedMobileItem.id, row.label, itemsByTier(row.label).length)}
+                    className="px-2 py-2 rounded-lg text-xs font-black text-center truncate border border-white/10"
+                    style={{ background: row.color, color: textColorFor(row.color) }}
+                  >
+                    {row.label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => unassignItem(selectedMobileItem.id)}
+                  className="col-span-3 px-2 py-1.5 rounded-lg text-[11px] font-bold text-center bg-surface2 border border-border text-muted"
+                >
+                  Remettre en Non Classés
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -332,12 +408,16 @@ export default function TierPage() {
 
 function ItemChip({
   item,
+  isSelected,
   onDragStart,
   onDropHere,
+  onClick,
 }: {
   item: ListItem;
+  isSelected?: boolean;
   onDragStart: () => void;
   onDropHere?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }) {
   return (
     <div
@@ -350,7 +430,12 @@ function ItemChip({
         e.stopPropagation();
         onDropHere();
       }}
-      className="flex flex-col items-center rounded-[10px] overflow-hidden select-none cursor-grab active:cursor-grabbing bg-surface2 border border-border hover:border-borderHover hover:scale-[1.05] transition"
+      onClick={onClick}
+      className={`flex flex-col items-center rounded-[10px] overflow-hidden select-none cursor-pointer bg-surface2 border transition ${
+        isSelected
+          ? 'border-amber-500 scale-105 shadow-[0_0_12px_rgba(245,158,11,0.5)] ring-2 ring-amber-500/50'
+          : 'border-border hover:border-borderHover hover:scale-[1.05]'
+      }`}
       style={{ width: 72 }}
     >
       {item.image_url ? (
