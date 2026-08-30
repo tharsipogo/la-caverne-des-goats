@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
-import { fetchListItemMeta, pickRandom, rotateRandomStart, shuffle } from '@/lib/utils';
+import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 
 type Role = 'civil' | 'undercover';
 type Phase = 'setup' | 'reveal' | 'draw' | 'elim' | 'end';
@@ -38,7 +38,7 @@ export default function UndercoverArtistPage() {
   const [drawIdx, setDrawIdx] = useState(0);
   const [drawerReady, setDrawerReady] = useState(false);
   const [roundNumber, setRoundNumber] = useState(1);
-  const [turnInRound, setTurnInRound] = useState(1); // 1er ou 2ème tour de la manche
+  const [turnInRound, setTurnInRound] = useState(1);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
@@ -123,12 +123,17 @@ export default function UndercoverArtistPage() {
   const seenCount = players.filter((p) => p.seen).length;
   const allSeen = players.length > 0 && seenCount === players.length;
 
+  function rotateList(list: Player[], startPlayerId: number): Player[] {
+    const startIndex = list.findIndex((p) => p.id === startPlayerId);
+    if (startIndex === -1) return list;
+    return [...list.slice(startIndex), ...list.slice(0, startIndex)];
+  }
+
   function startDrawingPhase() {
     if (!firstPlayer) return;
-    const queue = rotateRandomStart(
-      players.filter((p) => p.alive),
-      (p) => p.id !== firstPlayer.id
-    );
+    const alivePlayers = players.filter((p) => p.alive);
+    const queue = rotateList(alivePlayers, firstPlayer.id);
+
     setDrawQueue(queue);
     setDrawIdx(0);
     setDrawerReady(false);
@@ -192,11 +197,9 @@ export default function UndercoverArtistPage() {
 
     if (drawIdx + 1 >= drawQueue.length) {
       if (turnInRound === 1) {
-        // Deuxième tour de la même manche avant élimination
         setTurnInRound(2);
         setDrawIdx(0);
       } else {
-        // Les 2 tours sont terminés, on passe au vote d'élimination
         setPhase('elim');
       }
     } else {
@@ -226,7 +229,10 @@ export default function UndercoverArtistPage() {
       return;
     }
 
-    const queue = rotateRandomStart(next.filter((p) => p.alive));
+    const alivePlayers = next.filter((p) => p.alive);
+    const randomNextStarter = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+    const queue = rotateList(alivePlayers, randomNextStarter.id);
+
     setDrawQueue(queue);
     setDrawIdx(0);
     setDrawerReady(false);
@@ -539,3 +545,17 @@ export default function UndercoverArtistPage() {
         Le mot était <b className="text-amber">{word?.name}</b>.
       </p>
       <div className="flex justify-center">{CanvasBoard}</div>
+      <button className="btn" onClick={resetAll}>↺ Nouvelle partie</button>
+    </div>
+  );
+}
+
+function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-surface border border-border rounded-card p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
