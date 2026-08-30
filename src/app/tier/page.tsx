@@ -45,7 +45,7 @@ export default function TierPage() {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | 'pool' | null>(null);
 
-  // État mobile : item actuellement sélectionné au clic/tap pour déplacement rapide
+  // État mobile/tactile
   const [selectedMobileItem, setSelectedMobileItem] = useState<ListItem | null>(null);
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function TierPage() {
   async function loadListData(id: string) {
     const { data: list } = await supabase.from('lists').select('*').eq('id', id).single();
     if (list) setTierRows(normalizeTierRows((list as GameList).tier_labels));
-    const { data: itemsData } = await supabase.from('items').select('*').eq('list_id', id);
+    const { data: itemsData } = await supabase.from('items').select('*').eq('id', id);
     if (itemsData) setItems(itemsData as ListItem[]);
     const { data: assignData } = await supabase
       .from('tier_assignments')
@@ -95,17 +95,65 @@ export default function TierPage() {
 
   const unassigned = items.filter((it) => !assignments.find((a) => a.item_id === it.id));
 
+  // Réorganisation et déplacement dynamique
   async function moveItemToTier(itemId: string, tier: string, targetIndex: number) {
-    const currentOrder = itemsByTier(tier)
-      .map((it) => it.id)
-      .filter((id) => id !== itemId);
-    const clamped = Math.max(0, Math.min(targetIndex, currentOrder.length));
-    currentOrder.splice(clamped, 0, itemId);
+    const currentList = itemsByTier(tier).map((it) => it.id);
+    const existingIdx = currentList.indexOf(itemId);
 
-    const rows = currentOrder.map((id, i) => ({ list_id: listId, item_id: id, tier, position: i }));
-    await supabase.from('tier_assignments').upsert(rows, { onConflict: 'list_id,item_id' });
+    if (existingIdx !== -1) {
+      currentList.splice(existingIdx, 1);
+    }
+
+    const clampedIndex = Math.max(0, Math.min(targetIndex, currentList.length));
+    currentList.splice(clampedIndex, 0, itemId);
+
+    const updatedRows = currentList.map((id, i) => ({
+      list_id: listId,
+      item_id: id,
+      tier,
+      position: i,
+    }));
+
+    await supabase.from('tier_assignments').upsert(updatedRows, { onConflict: 'list_id,item_id' });
     setSelectedMobileItem(null);
     loadListData(listId);
+  }
+
+  // Intervertir deux éléments directement
+  async function swapItems(itemId1: string, itemId2: string, tier: string) {
+    const currentList = itemsByTier(tier).map((it) => it.id);
+    const idx1 = currentList.indexOf(itemId1);
+    const idx2 = currentList.indexOf(itemId2);
+
+    if (idx1 !== -1 && idx2 !== -1) {
+      currentList[idx1] = itemId2;
+      currentList[idx2] = itemId1;
+
+      const updatedRows = currentList.map((id, i) => ({
+        list_id: listId,
+        item_id: id,
+        tier,
+        position: i,
+      }));
+
+      await supabase.from('tier_assignments').upsert(updatedRows, { onConflict: 'list_id,item_id' });
+      setSelectedMobileItem(null);
+      loadListData(listId);
+    }
+  }
+
+  // Décaler l'élément à gauche ou à droite (Mobile)
+  async function shiftItemPosition(itemId: string, direction: -1 | 1) {
+    const assign = assignments.find((a) => a.item_id === itemId);
+    if (!assign) return;
+
+    const list = itemsByTier(assign.tier).map((it) => it.id);
+    const currentIndex = list.indexOf(itemId);
+    const targetIndex = currentIndex + direction;
+
+    if (targetIndex >= 0 && targetIndex < list.length) {
+      await moveItemToTier(itemId, assign.tier, targetIndex);
+    }
   }
 
   async function unassignItem(itemId: string) {
@@ -163,6 +211,11 @@ export default function TierPage() {
       supabase.from('tier_assignments').update({ tier: v }).eq('list_id', listId).eq('tier', oldLabel).then(() => loadListData(listId));
     }
   }
+
+  // Vérifier le tier de l'item sélectionné pour le menu mobile
+  const activeSelectedTier = selectedMobileItem
+    ? assignments.find((a) => a.item_id === selectedMobileItem.id)?.tier
+    : null;
 
   return (
     <div className="flex flex-col md:h-full">
@@ -230,7 +283,6 @@ export default function TierPage() {
                       </span>
                     )}
 
-                    {/* Icônes au survol ou au tap */}
                     <div
                       className="absolute bottom-[7px] left-0 right-0 flex items-center justify-center gap-[7px] md:opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => e.stopPropagation()}
@@ -283,7 +335,10 @@ export default function TierPage() {
                     }}
                     onDragOver={(e) => { e.preventDefault(); setDropTarget(row.label); }}
                     onDragLeave={() => setDropTarget(null)}
-                    onDrop={() => { if (draggedItemId) moveItemToTier(draggedItemId, row.label, itemsByTier(row.label).length); setDropTarget(null); }}
+                    onDrop={() => {
+                      if (draggedItemId) moveItemToTier(draggedItemId, row.label, itemsByTier(row.label).length);
+                      setDropTarget(null);
+                    }}
                     onClick={(e) => {
                       if (selectedMobileItem) {
                         e.stopPropagation();
@@ -297,10 +352,19 @@ export default function TierPage() {
                         item={it}
                         isSelected={selectedMobileItem?.id === it.id}
                         onDragStart={() => setDraggedItemId(it.id)}
-                        onDropHere={() => draggedItemId && moveItemToTier(draggedItemId, row.label, idx)}
+                        onDropHere={() => {
+                          if (draggedItemId && draggedItemId !== it.id) {
+                            moveItemToTier(draggedItemId, row.label, idx);
+                          }
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedMobileItem(selectedMobileItem?.id === it.id ? null : it);
+                          if (selectedMobileItem && selectedMobileItem.id !== it.id) {
+                            // Intervertir deux éléments si on tape sur un autre élément
+                            swapItems(selectedMobileItem.id, it.id, row.label);
+                          } else {
+                            setSelectedMobileItem(selectedMobileItem?.id === it.id ? null : it);
+                          }
                         }}
                       />
                     ))}
@@ -363,15 +427,15 @@ export default function TierPage() {
             </div>
           </div>
 
-          {/* ── Modal Popover Tactile pour Mobile quand une carte est cliquée ── */}
+          {/* ── Menu Tactile / Mobile pour Réordonner & Classer ── */}
           {selectedMobileItem && (
             <div
               className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#1e202e] border-2 border-amber-500 rounded-2xl p-3 shadow-2xl flex flex-col gap-2 w-[92%] max-w-sm"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-border pb-2">
-                <span className="text-xs font-bold text-amber-400 truncate max-w-[200px]">
-                  Classer : {selectedMobileItem.name}
+                <span className="text-xs font-bold text-amber-400 truncate max-w-[180px]">
+                  {selectedMobileItem.name}
                 </span>
                 <button
                   onClick={() => setSelectedMobileItem(null)}
@@ -380,7 +444,29 @@ export default function TierPage() {
                   ✕
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pt-1">
+
+              {/* Contrôles de déplacement de position (Avancer / Reculer) */}
+              {activeSelectedTier && (
+                <div className="flex items-center justify-between gap-2 bg-surface p-1.5 rounded-xl border border-white/10">
+                  <span className="text-[10px] font-bold text-slate-400 pl-1">Position dans {activeSelectedTier} :</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => shiftItemPosition(selectedMobileItem.id, -1)}
+                      className="px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg text-xs font-black"
+                    >
+                      ← Avancer
+                    </button>
+                    <button
+                      onClick={() => shiftItemPosition(selectedMobileItem.id, 1)}
+                      className="px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg text-xs font-black"
+                    >
+                      Reculer →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto pt-1">
                 {tierRows.map((row) => (
                   <button
                     key={row.label}
@@ -423,7 +509,9 @@ function ItemChip({
     <div
       draggable
       onDragStart={onDragStart}
-      onDragOver={(e) => onDropHere && e.preventDefault()}
+      onDragOver={(e) => {
+        if (onDropHere) e.preventDefault();
+      }}
       onDrop={(e) => {
         if (!onDropHere) return;
         e.preventDefault();
