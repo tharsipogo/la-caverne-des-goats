@@ -13,7 +13,7 @@ export default function GuessWhoPage() {
   const [listId, setListId] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Taille du plateau configurable (12, 16 ou 20 cartes)
+  // Taille du plateau (12, 16 ou 20 cartes)
   const [gridSize, setGridSize] = useState<number>(20);
 
   // Joueurs & Config
@@ -28,6 +28,7 @@ export default function GuessWhoPage() {
   const [activePlayer, setActivePlayer] = useState<PIdx>(0);
   const [eliminated, setEliminated] = useState<[Set<string>, Set<string>]>([new Set(), new Set()]);
   const [showTargets, setShowTargets] = useState<[boolean, boolean]>([false, false]);
+  const [revealInitialSecret, setRevealInitialSecret] = useState<[boolean, boolean]>([false, false]);
   const [guessMode, setGuessMode] = useState<[boolean, boolean]>([false, false]);
   
   // Modale personnalisée
@@ -92,6 +93,7 @@ export default function GuessWhoPage() {
     setActivePlayer(0);
     setGuessMode([false, false]);
     setShowTargets([false, false]);
+    setRevealInitialSecret([false, false]);
     setPhase(isDesktop ? 'play' : 'secret_reveal');
   }
 
@@ -258,9 +260,9 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* RÉVÉLATION SECRÈTE (MOBILE SÉPARÉ) */}
+      {/* RÉVÉLATION SECRÈTE (MOBILE) */}
       {phase === 'secret_reveal' && !isDesktop && (
-        <div className="max-w-md mx-auto p-4 text-center my-auto flex flex-col items-center gap-5">
+        <div className="max-w-md mx-auto p-4 text-center my-auto flex flex-col items-center gap-5 w-full">
           <div className="text-amber font-bold text-sm uppercase tracking-wider">
             Passe le téléphone à {names[activePlayer]}
           </div>
@@ -268,7 +270,7 @@ export default function GuessWhoPage() {
           <div className="bg-[#121420] border-2 border-amber/50 rounded-2xl p-6 w-full shadow-2xl flex flex-col items-center gap-4">
             <h2 className="text-xl font-bold text-white">Ta carte mystère à faire deviner :</h2>
 
-            {showTargets[activePlayer] ? (
+            {revealInitialSecret[activePlayer] ? (
               <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-200">
                 <div className="w-36 h-48 rounded-xl overflow-hidden border-2 border-amber shadow-[0_0_20px_rgba(245,158,11,0.4)]">
                   {secrets[activePlayer]?.image_url ? (
@@ -281,15 +283,17 @@ export default function GuessWhoPage() {
               </div>
             ) : (
               <button
-                className="btn-ghost py-10 px-8 border-dashed border-amber/40 text-amber font-bold w-full"
-                onClick={() => setShowTargets(activePlayer === 0 ? [true, showTargets[1]] : [showTargets[0], true])}
+                type="button"
+                className="btn-ghost py-10 px-8 border-dashed border-amber/40 text-amber font-bold w-full cursor-pointer hover:bg-amber/10"
+                onClick={() => setRevealInitialSecret(activePlayer === 0 ? [true, revealInitialSecret[1]] : [revealInitialSecret[0], true])}
               >
                 👁️ Appuie pour révéler ta carte
               </button>
             )}
 
-            {showTargets[activePlayer] && (
+            {revealInitialSecret[activePlayer] && (
               <button
+                type="button"
                 className="btn w-full mt-2"
                 onClick={() => {
                   if (activePlayer === 0) {
@@ -350,7 +354,7 @@ export default function GuessWhoPage() {
               </div>
             </div>
 
-            {/* Démarcation centrale "VS" avec bouton "Tour suivant" placé en dessous */}
+            {/* Démarcation centrale "VS" avec bouton "Tour suivant" en dessous */}
             <div className="relative flex flex-col items-center justify-center px-3 py-1 bg-[#181b2c] border-x border-white/10 z-10 shrink-0">
               <span className="text-amber font-black text-xs px-1 py-0.5 rounded shadow-sm">VS</span>
               <button
