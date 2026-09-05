@@ -15,6 +15,7 @@ const NAV = [
   { href: '/line-capture', label: '📐 Line Capture', match: '/line-capture' },
   { href: '/draft-anime', label: '🥷 Anime Draft', match: '/draft-anime' },
   { href: '/le-five', label: '⚽ Le Five', match: '/le-five' },
+  { href: '/qui-est-ce', label: '❓ Qui est-ce ?', match: '/qui-est-ce' },
 ];
 
 export default function Sidebar() {

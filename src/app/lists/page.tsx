@@ -376,6 +376,7 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
   const [uploading, setUploading] = useState(false);
 
   const [singleName, setSingleName] = useState('');
+  const [singleMediaUrl, setSingleMediaUrl] = useState('');
   const [bulkText, setBulkText] = useState('');
 
   async function loadItems() {
@@ -391,29 +392,58 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
 
   useEffect(() => {
     loadItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.id]);
 
-  async function addSingleTextItem() {
+  async function addSingleItem() {
     const name = singleName.trim();
     if (!name) return;
-    await supabase.from('items').insert({ list_id: list.id, name });
+
+    const payload: Partial<ListItem> = {
+      list_id: list.id,
+      name,
+    };
+
+    if (singleMediaUrl.trim()) {
+      if (list.type === 'audio') {
+        payload.audio_url = singleMediaUrl.trim();
+      } else {
+        payload.image_url = singleMediaUrl.trim();
+      }
+    }
+
+    await supabase.from('items').insert(payload);
     setSingleName('');
+    setSingleMediaUrl('');
     loadItems();
   }
 
-  async function addBulkTextItems() {
-    const names = bulkText
+  async function addBulkItems() {
+    const lines = bulkText
       .split('\n')
-      .map((n) => n.trim())
+      .map((l) => l.trim())
       .filter(Boolean);
-    if (names.length === 0) return;
-    await supabase.from('items').insert(names.map((name) => ({ list_id: list.id, name })));
+
+    if (lines.length === 0) return;
+
+    // Permet de coller "Nom" ou "Nom | https://image.url"
+    const payload = lines.map((line) => {
+      const parts = line.split('|');
+      const name = parts[0].trim();
+      const url = parts[1]?.trim();
+
+      const item: Partial<ListItem> = { list_id: list.id, name };
+      if (url) {
+        if (list.type === 'audio') item.audio_url = url;
+        else item.image_url = url;
+      }
+      return item;
+    });
+
+    await supabase.from('items').insert(payload);
     setBulkText('');
     loadItems();
   }
 
-  // Ajout de PLUSIEURS fichiers (images ou audio) en une fois
   async function handleMultiFileUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -447,58 +477,82 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
       <button className="text-muted text-[13px] flex items-center gap-1.5 mb-4 hover:text-amber" onClick={onBack}>
         ← Toutes les bases
       </button>
+
       <div className="mb-7 flex items-center gap-3">
         <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-md ${TYPE_BADGE[list.type]}`}>
           {TYPE_LABEL[list.type]}
         </span>
       </div>
+
       <div className="mb-7">
         <h1 className="font-serif text-3xl">{list.name}</h1>
         <p className="text-muted mt-2 text-[14.5px]">{items.length} item{items.length > 1 ? 's' : ''}</p>
       </div>
 
-      {list.type === 'image' || list.type === 'audio' ? (
-        <div className="panel">
-          <label className="text-[12.5px] text-muted block mb-1.5">
-            Ajouter un ou plusieurs {list.type === 'audio' ? 'extraits audio' : 'images'} d'un coup
-          </label>
-          <input
-            type="file"
-            accept={list.type === 'audio' ? 'audio/*' : 'image/*'}
-            multiple
-            disabled={uploading}
-            onChange={(e) => handleMultiFileUpload(e.target.files)}
-            className="text-muted text-[12.5px]"
-          />
-          {uploading && <p className="text-amber text-xs mt-2">Envoi en cours…</p>}
-          <p className="text-muted text-xs mt-2">
-            Le nom de chaque item est pris depuis le nom du fichier — tu pourras le modifier directement dans Supabase si besoin.
-          </p>
-        </div>
-      ) : (
-        <div className="panel flex flex-col gap-4">
-          <div className="flex gap-3 flex-wrap items-end">
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-[12.5px] text-muted block mb-1.5">Ajouter un item</label>
-              <input className="input" value={singleName} onChange={(e) => setSingleName(e.target.value)} placeholder="Ex. Ocarina of Time" />
-            </div>
-            <button className="btn" onClick={addSingleTextItem}>+ Ajouter</button>
-          </div>
-          <div>
-            <label className="text-[12.5px] text-muted block mb-1.5">
-              Ou coller plusieurs noms d'un coup (un par ligne)
-            </label>
-            <textarea
-              className="input min-h-[90px]"
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              placeholder={'Ocarina of Time\nMajora\'s Mask\nBreath of the Wild'}
+      <div className="panel flex flex-col gap-5 mb-6">
+        {/* Ajout manuel 1 par 1 (Nom + URL optionnelle) */}
+        <div className="flex flex-col gap-2">
+          <label className="text-[12.5px] text-muted block">Ajouter un item</label>
+          <div className="flex flex-wrap md:flex-nowrap gap-2">
+            <input
+              className="input flex-1 min-w-[180px]"
+              value={singleName}
+              onChange={(e) => setSingleName(e.target.value)}
+              placeholder="Nom (ex. Luffy)"
             />
-            <button className="btn-secondary mt-2" onClick={addBulkTextItems}>+ Ajouter tout le paquet</button>
+            {list.type !== 'text' && (
+              <input
+                className="input flex-1 min-w-[220px]"
+                value={singleMediaUrl}
+                onChange={(e) => setSingleMediaUrl(e.target.value)}
+                placeholder={`URL de l'${list.type === 'audio' ? 'audio' : 'image'} (coller le lien)`}
+              />
+            )}
+            <button className="btn shrink-0" onClick={addSingleItem}>
+              + Ajouter
+            </button>
           </div>
         </div>
-      )}
 
+        {/* Ajout rapide par paquet */}
+        <div className="border-t border-border pt-4">
+          <label className="text-[12.5px] text-muted block mb-1">Coller plusieurs items (un par ligne)</label>
+          <p className="text-muted text-[11px] mb-2">
+            Format supporté : <code className="text-amber">Nom</code> ou <code className="text-amber">Nom | URL</code>
+          </p>
+          <textarea
+            className="input min-h-[90px]"
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            placeholder={
+              list.type === 'text'
+                ? 'Naruto\nSasuke\nSakura'
+                : 'Naruto | https://site.com/naruto.jpg\nSasuke | https://site.com/sasuke.jpg'
+            }
+          />
+          <button className="btn-secondary text-xs mt-2" onClick={addBulkItems}>
+            + Ajouter le paquet
+          </button>
+        </div>
+
+        {/* Upload de fichiers locaux */}
+        {(list.type === 'image' || list.type === 'audio') && (
+          <div className="pt-3 border-t border-border">
+            <label className="text-[12.5px] text-muted block mb-1.5">Ou importer des fichiers depuis ton appareil :</label>
+            <input
+              type="file"
+              accept={list.type === 'audio' ? 'audio/*' : 'image/*'}
+              multiple
+              disabled={uploading}
+              onChange={(e) => handleMultiFileUpload(e.target.files)}
+              className="text-muted text-[12.5px]"
+            />
+            {uploading && <p className="text-amber text-xs mt-2">Envoi en cours…</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Liste des items */}
       <div className="panel max-h-[400px] overflow-y-auto">
         {loading ? (
           <p className="text-muted">Chargement...</p>
@@ -514,11 +568,13 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
                   {list.type === 'image' ? '🖼' : list.type === 'audio' ? '🎵' : '✎'}
                 </div>
               )}
-              <div className="flex-1 text-sm">{it.name}</div>
+              <div className="flex-1 text-sm font-semibold">{it.name}</div>
               {it.audio_url && (
                 <audio controls preload="none" src={it.audio_url} className="h-8 max-w-[180px]" />
               )}
-              <button className="btn-danger btn-small" onClick={() => deleteItem(it.id)}>Retirer</button>
+              <button className="btn-danger btn-small" onClick={() => deleteItem(it.id)}>
+                Retirer
+              </button>
             </div>
           ))
         )}

@@ -33,18 +33,20 @@ export default function UndercoverArtistPage() {
   const [activePlayerId, setActivePlayerId] = useState<number | null>(null);
   const [firstPlayer, setFirstPlayer] = useState<Player | null>(null);
 
-  // drawing round
+  // Phases de dessin et tours
   const [drawQueue, setDrawQueue] = useState<Player[]>([]);
   const [drawIdx, setDrawIdx] = useState(0);
   const [drawerReady, setDrawerReady] = useState(false);
   const [roundNumber, setRoundNumber] = useState(1);
-  const [turnInRound, setTurnInRound] = useState(1);
+  const [turnInRound, setTurnInRound] = useState(1); // Tour 1 ou Tour 2 avant élimination
 
+  // Canvas & Historique d'annulation (Undo)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
   const canvasInitRef = useRef(false);
+  const [strokeHistory, setStrokeHistory] = useState<ImageData[]>([]);
 
-  // elimination
+  // Élimination & Fin
   const [eliminationTarget, setEliminationTarget] = useState<Player | null>(null);
   const [winner, setWinner] = useState<null | 'civils' | 'undercover'>(null);
   const [lastReveal, setLastReveal] = useState<{ name: string; role: Role } | null>(null);
@@ -105,6 +107,7 @@ export default function UndercoverArtistPage() {
     setWinner(null);
     setLastReveal(null);
     canvasInitRef.current = false;
+    setStrokeHistory([]);
     setRoundNumber(1);
     setTurnInRound(1);
     setPhase('reveal');
@@ -138,6 +141,7 @@ export default function UndercoverArtistPage() {
     setDrawIdx(0);
     setDrawerReady(false);
     setTurnInRound(1);
+    setStrokeHistory([]);
     setPhase('draw');
   }
 
@@ -166,8 +170,31 @@ export default function UndercoverArtistPage() {
     return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
   }
 
+  // Sauvegarde de l'image du canvas avant de tracer pour le bouton "Undo"
+  function saveCanvasState() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const snapshot = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+    setStrokeHistory((prev) => [...prev, snapshot]);
+  }
+
+  function undoLastStroke() {
+    if (strokeHistory.length === 0) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const previousState = strokeHistory[strokeHistory.length - 1];
+    ctx.putImageData(previousState, 0, 0);
+    setStrokeHistory((prev) => prev.slice(0, -1));
+  }
+
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!drawerReady) return;
+    saveCanvasState();
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
     canvas.setPointerCapture(e.pointerId);
@@ -197,9 +224,11 @@ export default function UndercoverArtistPage() {
 
     if (drawIdx + 1 >= drawQueue.length) {
       if (turnInRound === 1) {
+        // Deuxième tour de dessin
         setTurnInRound(2);
         setDrawIdx(0);
       } else {
+        // 2 tours terminés -> Élimination
         setPhase('elim');
       }
     } else {
@@ -249,6 +278,7 @@ export default function UndercoverArtistPage() {
     setWord(null);
     setWinner(null);
     setLastReveal(null);
+    setStrokeHistory([]);
     canvasInitRef.current = false;
   }
 
@@ -267,7 +297,7 @@ export default function UndercoverArtistPage() {
     />
   );
 
-  // ================= SETUP =================
+  // ================= 1. SETUP =================
   if (phase === 'setup') {
     return (
       <div>
@@ -275,8 +305,7 @@ export default function UndercoverArtistPage() {
           <div className="eyebrow">Mode</div>
           <h1 className="font-serif text-3xl">Undercover Artist</h1>
           <p className="text-muted mt-2 text-[14.5px] max-w-xl">
-            Les civils connaissent tous le même mot, l'undercover n'a rien. Chacun ajoute un trait continu sur un dessin
-            commun en 2 tours, puis on élimine un joueur.
+            Les civils connaissent tous le même mot, l'undercover n'a rien. Chacun ajoute un trait continu en 2 tours, puis on élimine un joueur.
           </p>
         </div>
 
@@ -341,7 +370,7 @@ export default function UndercoverArtistPage() {
     );
   }
 
-  // ================= REVEAL =================
+  // ================= 2. REVEAL =================
   if (phase === 'reveal') {
     return (
       <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[75vh] gap-6 text-center py-6">
@@ -453,25 +482,37 @@ export default function UndercoverArtistPage() {
     );
   }
 
-  // ================= DRAW =================
+  // ================= 3. DRAW =================
   if (phase === 'draw') {
     const drawer = drawQueue[drawIdx];
     return (
       <div>
-        <div className="mb-6">
-          <div className="eyebrow">Manche {roundNumber} — Tour {turnInRound}/2 — Dessin {drawIdx + 1} / {drawQueue.length}</div>
-          <h1 className="font-serif text-3xl">
-            {drawerReady ? (
-              <>Dessine, <span className="text-amber">{drawer.name}</span> !</>
-            ) : (
-              <>Au tour de <span className="text-amber">{drawer.name}</span> (Tour {turnInRound})</>
-            )}
-          </h1>
-          <p className="text-muted mt-2 text-[14.5px]">
-            {drawerReady
-              ? "Un seul trait continu : dès que tu relâches, c'est au joueur suivant."
-              : "Passe l'appareil, puis clique pour commencer ton trait."}
-          </p>
+        <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="eyebrow">Manche {roundNumber} — Tour {turnInRound}/2 — Dessin {drawIdx + 1} / {drawQueue.length}</div>
+            <h1 className="font-serif text-3xl">
+              {drawerReady ? (
+                <>Dessine, <span className="text-amber">{drawer.name}</span> !</>
+              ) : (
+                <>Au tour de <span className="text-amber">{drawer.name}</span> (Tour {turnInRound})</>
+              )}
+            </h1>
+            <p className="text-muted mt-2 text-[14.5px]">
+              {drawerReady
+                ? "Un seul trait continu : dès que tu relâches, c'est au joueur suivant."
+                : "Passe l'appareil, puis clique pour commencer ton trait."}
+            </p>
+          </div>
+
+          {/* Bouton d'annulation du trait */}
+          {strokeHistory.length > 0 && (
+            <button
+              onClick={undoLastStroke}
+              className="px-4 py-2 rounded-xl bg-surface2 border border-border text-amber hover:border-amber text-xs font-bold transition shrink-0"
+            >
+              ↩ Annuler le dernier trait
+            </button>
+          )}
         </div>
 
         <div className="flex justify-center">{CanvasBoard}</div>
@@ -485,7 +526,7 @@ export default function UndercoverArtistPage() {
     );
   }
 
-  // ================= ELIM =================
+  // ================= 4. ELIM =================
   if (phase === 'elim') {
     const alive = players.filter((p) => p.alive);
     return (
@@ -498,7 +539,7 @@ export default function UndercoverArtistPage() {
         <div className="flex justify-center mb-6">{CanvasBoard}</div>
 
         {lastReveal && (
-          <div className="panel py-4 border-amberDim">
+          <div className="panel py-4 border-amberDim mb-4">
             <b>{lastReveal.name}</b> était :{' '}
             <span className="text-amber">{lastReveal.role === 'civil' ? 'Civil' : 'Undercover'}</span>
           </div>
@@ -534,7 +575,7 @@ export default function UndercoverArtistPage() {
     );
   }
 
-  // ================= END =================
+  // ================= 5. END =================
   return (
     <div className="flex flex-col items-center gap-6 mt-10 text-center">
       <div className="eyebrow">Partie terminée</div>
