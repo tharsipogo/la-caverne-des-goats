@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const NAV = [
+  { href: '/', label: '🏠 Accueil & Profil', match: '/' },
   { href: '/lists', label: '🗃️ Mes bases', match: '/lists' },
   { href: '/blind', label: '🏆 Blind Ranking', match: '/blind' },
   { href: '/blindtest', label: '🎧 Blind Test', match: '/blindtest' },
@@ -25,10 +26,20 @@ export default function Sidebar() {
     <>
       {/* Desktop : colonne fixe à gauche */}
       <div className="hidden md:flex w-[210px] shrink-0 bg-bg border-r border-border py-6 px-2.5 flex-col gap-1">
-        <div className="flex flex-col gap-1 mb-6 px-2.5">
+        <Link href="/" className="flex flex-col gap-1 mb-4 px-2.5 hover:opacity-80 transition-opacity">
           <p className="font-sans font-bold text-text text-[17px] leading-tight">La Caverne des</p>
           <p className="font-sans font-black text-amber text-[20px] leading-tight">Goats</p>
-        </div>
+        </Link>
+
+        {/* Bouton rapide vers le Mode En Ligne */}
+        <Link
+          href="/"
+          className="mb-3 flex items-center justify-center gap-2 px-3 py-2.5 rounded-[10px] text-[12.5px] font-bold bg-[#4fc9c0]/15 border border-[#4fc9c0]/40 text-[#4fc9c0] hover:bg-[#4fc9c0]/25 transition-all"
+        >
+          <span>🌐</span>
+          <span>Mode En Ligne</span>
+        </Link>
+
         {NAV.map((item) => {
           const active = pathname === item.href;
           const [icon, ...rest] = item.label.split(' ');
@@ -53,10 +64,16 @@ export default function Sidebar() {
       </div>
 
       {/* Mobile : en-tête + barre de nav fixée en bas */}
-      <div className="md:hidden sticky top-0 z-40 bg-bg border-b border-border px-4 py-3.5">
-        <div className="font-sans text-lg font-bold">
+      <div className="md:hidden sticky top-0 z-40 bg-bg border-b border-border px-4 py-3.5 flex items-center justify-between">
+        <Link href="/" className="font-sans text-lg font-bold">
           La Caverne des <span className="text-amber font-black">Goats</span>
-        </div>
+        </Link>
+        <Link
+          href="/"
+          className="text-xs font-bold bg-[#4fc9c0]/20 text-[#4fc9c0] border border-[#4fc9c0]/40 px-2.5 py-1 rounded-lg"
+        >
+          🌐 En ligne
+        </Link>
       </div>
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg border-t border-border flex overflow-x-auto gap-1 px-2 py-2">
         {NAV.map((item) => {
