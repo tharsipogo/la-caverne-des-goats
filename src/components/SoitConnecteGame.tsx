@@ -59,10 +59,16 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
   // 1. Charger les mots depuis la base de données Supabase
   const fetchWords = async () => {
     const { data, error } = await supabase.from('soit_connecte_words').select('word');
-    if (data && data.length > 0) {
-      setWordsDatabase(data.map((w) => w.word));
+
+    if (error) {
+        console.error('Erreur chargement mots :', error);
+        return;
     }
-  };
+
+    if (data && data.length > 0) {
+        setWordsDatabase(data.map((w) => w.word));
+    }
+    };
 
   useEffect(() => {
     fetchWords();
