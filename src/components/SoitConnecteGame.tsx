@@ -30,9 +30,6 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
   const [phase, setPhase] = useState<'setup' | 'playing' | 'recap' | 'final_end'>('setup');
 
   const [wordsDatabase, setWordsDatabase] = useState<string[]>([]);
-  const [newWordInput, setNewWordInput] = useState('');
-  const [addSuccessMsg, setAddSuccessMsg] = useState(false);
-
   const [players, setPlayers] = useState<Player[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -73,7 +70,7 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
         .eq('session_id', session.id);
 
       if (pList) {
-        setPlayers(pList.map((p) => ({ id: p.user_id, name: p.name, avatar_url: p.avatar_url, score: 0 })));
+        setPlayers(pList.map((p) => ({ id: p.user_id, name: p.name, avatar_url: p.avatar_url, score: p.score || 0 })));
         const initialScores: Record<string, number> = {};
         pList.forEach((p) => (initialScores[p.user_id] = 0));
         setCumulativeScores(initialScores);
@@ -110,7 +107,7 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
         });
       })
       .on('broadcast', { event: 'return_to_lobby' }, () => {
-        // Redirection générale vers le salon
+        // Renvoie tous les clients vers le salon d'attente
         onLeaveGame();
       })
       .subscribe();
@@ -176,8 +173,20 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
     });
   };
 
-  const handleNextRound = () => {
+  const handleNextRound = async () => {
     if (currentRound >= totalRounds) {
+      // 1. Mettre à jour les scores totaux dans la base de données
+      if (isHost && sessionId) {
+        const rankedData = getRankedPlayersWithPoints();
+        for (const { player, pointsGiven } of rankedData) {
+          const newTotalScore = (player.score || 0) + pointsGiven;
+          await supabase
+            .from('session_players')
+            .update({ score: newTotalScore })
+            .eq('session_id', sessionId)
+            .eq('user_id', player.id);
+        }
+      }
       setPhase('final_end');
       return;
     }
@@ -190,21 +199,19 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
     });
   };
 
-  // Fermer la partie et ramener tout le monde au salon
+  // Ramener tout le monde au salon et réinitialiser le statut de la session
   const handleReturnToLobby = async () => {
-    if (sessionId) {
-      // Remettre le salon en statut lobby dans Supabase
+    if (isHost && sessionId) {
       await supabase
         .from('game_sessions')
         .update({ status: 'lobby', current_game: null })
         .eq('id', sessionId);
+
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'return_to_lobby',
+      });
     }
-
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'return_to_lobby',
-    });
-
     onLeaveGame();
   };
 
@@ -247,7 +254,6 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
     return { word: cleanWord, points: pts };
   };
 
-  // Calcul intelligent des rangs et attribution des points avec gestion des ex-æquo
   const getRankedPlayersWithPoints = () => {
     const sorted = [...players].sort(
       (a, b) => (cumulativeScores[b.id] || 0) - (cumulativeScores[a.id] || 0)
@@ -263,11 +269,10 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
         const currentScore = cumulativeScores[sorted[i].id] || 0;
 
         if (currentScore < prevScore) {
-          currentRank = i + 1; // Sauter les rangs réservés par les égalités précédentes
+          currentRank = i + 1;
         }
       }
 
-      // Le rang N donne N points, le 2e rang donne N-1 points, etc.
       const pointsGiven = Math.max(1, N - currentRank + 1);
 
       rankedList.push({
@@ -498,11 +503,11 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
 
       {isHost ? (
         <button className="btn w-full py-3 text-xs font-bold" onClick={handleReturnToLobby}>
-          👑 Retourner au Salon (Maintenir le groupe)
+          👑 Retourner au salon (Choix du jeu)
         </button>
       ) : (
         <div className="p-3 bg-surface2 rounded-xl border border-white/10 text-xs text-slate-400 animate-pulse">
-          En attente de l'hôte pour retourner au salon...
+          En attente de l'hôte pour revenir au salon...
         </div>
       )}
     </div>

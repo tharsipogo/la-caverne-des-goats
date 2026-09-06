@@ -126,6 +126,7 @@ export default function HomePage() {
       )}
 
       {/* 5. Lancement de la Partie active */}
+      {/* Dans src/app/page.tsx */}
       {profile && currentScreen === 'game' && (
         <div>
           {activeGame === 'qui-est-ce' && <GuessWhoPage />}
@@ -135,7 +136,7 @@ export default function HomePage() {
               sessionCode={sessionCode}
               profile={profile}
               isHost={isHost}
-              onLeaveGame={() => setCurrentScreen('home')}
+              onLeaveGame={() => setCurrentScreen('lobby')} // 👈 Renvoie sur le salon d'attente !
             />
           )}
         </div>
