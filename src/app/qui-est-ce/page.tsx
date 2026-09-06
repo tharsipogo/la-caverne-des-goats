@@ -72,9 +72,8 @@ export default function GuessWhoPage() {
   }, [gridSize]);
 
   // Écouteur Supabase Realtime pour le mode en ligne
-  // Écouteur Supabase Realtime pour le mode en ligne
   useEffect(() => {
-    if (gameMode !== 'online' || !roomCode || gameMode === 'menu' || phase === 'setup') return;
+    if (gameMode !== 'online' || !roomCode || phase === 'setup') return;
 
     const channel = supabase.channel(`room:${roomCode}`, {
       config: { broadcast: { self: false } },
