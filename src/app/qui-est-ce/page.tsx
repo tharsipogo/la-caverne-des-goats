@@ -69,7 +69,7 @@ export default function GuessWhoPage() {
     })();
   }, [gridSize]);
 
-  // Synchronisation Supabase Realtime sécurisée (Évite les boucles de reconnexion)
+  // Synchronisation Supabase Realtime
   useEffect(() => {
     if (gameMode !== 'online' || !roomCode || phase === 'setup') return;
 
@@ -89,7 +89,8 @@ export default function GuessWhoPage() {
         setNames([payload.hostName, payload.guestName]);
         setPhase('play');
       })
-      .on('broadcast', { event: 'switch_turn' }, () => {
+      .on('broadcast', { event: 'switch_turn' }, ({ payload }) => {
+        if (payload?.phase) setPhase(payload.phase);
         setActivePlayer((prev) => (prev === 0 ? 1 : 0));
         setGuessMode([false, false]);
         setShowTargets([false, false]);
@@ -110,7 +111,7 @@ export default function GuessWhoPage() {
 
     if (isHost) {
       channel.on('broadcast', { event: 'guest_joined' }, async ({ payload }) => {
-        if (gridItems.length > 0) return; // Empêche les re-générations si déjà démarré
+        if (gridItems.length > 0) return;
 
         const guestName = payload.guestName || 'Joueur 2';
         setNames((prev) => [prev[0], guestName]);
@@ -241,6 +242,15 @@ export default function GuessWhoPage() {
       if (pIdx === 0 && phase === 'play') {
         setPhase('last_chance');
         setActivePlayer(1);
+
+        if (gameMode === 'online') {
+          channelRef.current?.send({
+            type: 'broadcast',
+            event: 'switch_turn',
+            payload: { phase: 'last_chance' },
+          });
+        }
+
         showAlert(
           '🎯 Personnage trouvé !',
           `${names[0]} a trouvé le personnage de ${names[1]} !\n\nDernière chance pour ${names[1]} de trouver la carte pour décrocher le MATCH NUL !`
@@ -283,7 +293,8 @@ export default function GuessWhoPage() {
   }
 
   function switchTurn() {
-    setActivePlayer((prev) => (prev === 0 ? 1 : 0));
+    const nextPlayer = activePlayer === 0 ? 1 : 0;
+    setActivePlayer(nextPlayer);
     setGuessMode([false, false]);
     setShowTargets([false, false]);
 
@@ -291,7 +302,7 @@ export default function GuessWhoPage() {
       channelRef.current.send({
         type: 'broadcast',
         event: 'switch_turn',
-        payload: {},
+        payload: { phase },
       });
     }
   }
@@ -308,8 +319,6 @@ export default function GuessWhoPage() {
 
   if (loading) return <p className="text-muted p-4">Chargement...</p>;
 
-  // Index du joueur affiché à l'écran (En ligne = sa grille, Local = tour en cours)
-  const displayPlayerIdx = gameMode === 'online' ? myPlayerIdx : activePlayer;
   const isMyTurn = gameMode === 'online' ? activePlayer === myPlayerIdx : true;
 
   return (
@@ -588,7 +597,13 @@ export default function GuessWhoPage() {
             </div>
           )}
 
-          {/* Grilles de jeu (1 plateau sur mobile/online, 2 sur PC local) */}
+          {phase === 'last_chance' && (
+            <div className="bg-amber/20 border border-amber/60 text-amber text-xs font-bold p-2 rounded-lg text-center animate-bounce">
+              ⚠️ ULTIME CHANCE POUR {names[1]} : Propose la carte pour arracher le match nul !
+            </div>
+          )}
+
+          {/* Grilles de jeu */}
           <div className={`grid gap-4 overflow-y-auto my-auto pr-1 ${gameMode === 'local' && isDesktop ? 'grid-cols-2' : 'grid-cols-1 max-w-2xl mx-auto w-full'}`}>
             {([0, 1] as PIdx[]).map((pIdx) => {
               if (gameMode === 'online' && pIdx !== myPlayerIdx) return null;
@@ -618,7 +633,10 @@ export default function GuessWhoPage() {
                         className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
                           isPlayerGuessing ? 'bg-amber text-black' : 'bg-amber/20 text-amber border border-amber/40'
                         }`}
-                        onClick={() => setGuessMode(pIdx === 0 ? [!isPlayerGuessing, guessMode[1]] : [guessMode[0], !isPlayerGuessing])}
+                        onClick={() => {
+                          const nextState = !isPlayerGuessing;
+                          setGuessMode(pIdx === 0 ? [nextState, false] : [false, nextState]);
+                        }}
                       >
                         {isPlayerGuessing ? 'Annuler' : '🎯 Proposer un nom'}
                       </button>
@@ -633,6 +651,7 @@ export default function GuessWhoPage() {
                         <div
                           key={item.id}
                           onClick={() => {
+                            if (!isMyTurn && gameMode === 'online') return;
                             if (isPlayerGuessing) {
                               handleGuess(pIdx, item);
                             } else {
