@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 
-type Phase = 'setup' | 'secret_reveal' | 'play' | 'last_chance' | 'end';
+type GameMode = 'menu' | 'local' | 'online';
+type Phase = 'setup' | 'secret_reveal' | 'play' | 'last_chance' | 'end' | 'waiting';
 type PIdx = 0 | 1;
 
 export default function GuessWhoPage() {
@@ -13,7 +14,8 @@ export default function GuessWhoPage() {
   const [listId, setListId] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Taille du plateau (12, 16 ou 20 cartes)
+  // Mode de jeu (Menu principal, Local ou En ligne)
+  const [gameMode, setGameMode] = useState<GameMode>('menu');
   const [gridSize, setGridSize] = useState<number>(20);
 
   // Joueurs & Config
@@ -30,7 +32,13 @@ export default function GuessWhoPage() {
   const [showTargets, setShowTargets] = useState<[boolean, boolean]>([false, false]);
   const [revealInitialSecret, setRevealInitialSecret] = useState<[boolean, boolean]>([false, false]);
   const [guessMode, setGuessMode] = useState<[boolean, boolean]>([false, false]);
-  
+
+  // Variables Mode En Ligne
+  const [roomCode, setRoomCode] = useState('');
+  const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [isHost, setIsHost] = useState(false);
+  const [myPlayerIdx, setMyPlayerIdx] = useState<PIdx>(0);
+
   // Modale personnalisée
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
@@ -40,7 +48,6 @@ export default function GuessWhoPage() {
     onConfirm?: () => void;
   }>({ isOpen: false, title: '', message: '' });
 
-  // Responsive PC / Mobile
   const [isDesktop, setIsDesktop] = useState(false);
   const [winnerMessage, setWinnerMessage] = useState('');
 
@@ -64,6 +71,71 @@ export default function GuessWhoPage() {
     })();
   }, [gridSize]);
 
+  // Écouteur Supabase Realtime pour le mode en ligne
+  useEffect(() => {
+    if (gameMode !== 'online' || !roomCode || phase === 'menu' || phase === 'setup') return;
+
+    const channel = supabase.channel(`room:${roomCode}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel
+      .on('broadcast', { event: 'game_init' }, ({ payload }) => {
+        setGridItems(payload.grid);
+        setSecrets([payload.secret1, payload.secret2]);
+        setNames([payload.hostName, payload.guestName]);
+        setPhase('play');
+      })
+      .on('broadcast', { event: 'switch_turn' }, () => {
+        switchTurnLocal();
+      })
+      .on('broadcast', { event: 'game_over' }, ({ payload }) => {
+        setWinnerMessage(payload.message);
+        setPhase('end');
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED' && !isHost) {
+          channel.send({
+            type: 'broadcast',
+            event: 'guest_joined',
+            payload: { guestName: names[1] },
+          });
+        }
+      });
+
+    if (isHost) {
+      channel.on('broadcast', { event: 'guest_joined' }, async ({ payload }) => {
+        const guestName = payload.guestName || 'Joueur 2';
+        setNames([names[0], guestName]);
+
+        const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
+        if (!items || items.length < gridSize) return;
+
+        const grid = shuffle(items as ListItem[]).slice(0, gridSize);
+        const secret1 = pickRandom(grid, 1)[0];
+        let secret2 = pickRandom(grid, 1)[0];
+        while (secret2.id === secret1.id) {
+          secret2 = pickRandom(grid, 1)[0];
+        }
+
+        setGridItems(grid);
+        setSecrets([secret1, secret2]);
+
+        channel.send({
+          type: 'broadcast',
+          event: 'game_init',
+          payload: { grid, secret1, secret2, hostName: names[0], guestName },
+        });
+
+        setPhase('play');
+      });
+    }
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [gameMode, roomCode, phase, isHost, listId, gridSize, names]);
+
   function showAlert(title: string, message: string, onConfirm?: () => void) {
     setModalConfig({ isOpen: true, title, message, isConfirm: false, onConfirm });
   }
@@ -72,7 +144,8 @@ export default function GuessWhoPage() {
     setModalConfig({ isOpen: true, title, message, isConfirm: true, onConfirm });
   }
 
-  async function startGame() {
+  // Lancement de la partie locale
+  async function startLocalGame() {
     if (!listId) return;
     const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
     if (!items || items.length < gridSize) {
@@ -97,8 +170,42 @@ export default function GuessWhoPage() {
     setPhase(isDesktop ? 'play' : 'secret_reveal');
   }
 
+  // Créer un salon en ligne
+  async function createOnlineRoom() {
+    const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const { error } = await supabase.from('rooms').insert({
+      code,
+      list_id: listId,
+      grid_size: gridSize,
+      host_name: names[0],
+    });
+
+    if (error) return showAlert('Erreur', 'Impossible de créer le salon.');
+
+    setIsHost(true);
+    setMyPlayerIdx(0);
+    setRoomCode(code);
+    setPhase('waiting');
+  }
+
+  // Rejoindre un salon en ligne
+  async function joinOnlineRoom() {
+    const code = joinCodeInput.trim().toUpperCase();
+    if (!code) return showAlert('Erreur', 'Entre un code de salon valide.');
+
+    const { data, error } = await supabase.from('rooms').select('*').eq('code', code).single();
+    if (error || !data) return showAlert('Erreur', 'Salon introuvable !');
+
+    setGridSize(data.grid_size);
+    setIsHost(false);
+    setMyPlayerIdx(1);
+    setRoomCode(code);
+    setPhase('waiting');
+  }
+
   function toggleEliminate(pIdx: PIdx, itemId: string) {
-    if (!isDesktop && pIdx !== activePlayer) return;
+    if (gameMode === 'online' && pIdx !== myPlayerIdx) return;
+    if (gameMode === 'local' && !isDesktop && pIdx !== activePlayer) return;
 
     const currentSet = new Set(eliminated[pIdx]);
     if (currentSet.has(itemId)) {
@@ -132,16 +239,22 @@ export default function GuessWhoPage() {
           `${names[0]} a trouvé le personnage de ${names[1]} !\n\nDernière chance pour ${names[1]} de trouver la carte pour décrocher le MATCH NUL !`
         );
       } else if (phase === 'last_chance') {
-        setWinnerMessage(`🤝 MATCH NUL ! ${names[1]} a aussi trouvé la carte mystère !`);
+        const msg = `🤝 MATCH NUL ! ${names[1]} a aussi trouvé la carte mystère !`;
+        setWinnerMessage(msg);
         setPhase('end');
+        if (gameMode === 'online') broadcastGameOver(msg);
       } else {
-        setWinnerMessage(`🏆 Victoire de ${names[pIdx]} !`);
+        const msg = `🏆 Victoire de ${names[pIdx]} !`;
+        setWinnerMessage(msg);
         setPhase('end');
+        if (gameMode === 'online') broadcastGameOver(msg);
       }
     } else {
       if (phase === 'last_chance') {
-        setWinnerMessage(`🏆 Victoire de ${names[0]} ! ${names[1]} s'est trompé sur son ultime tentative.`);
+        const msg = `🏆 Victoire de ${names[0]} ! ${names[1]} s'est trompé sur son ultime tentative.`;
+        setWinnerMessage(msg);
         setPhase('end');
+        if (gameMode === 'online') broadcastGameOver(msg);
       } else {
         showAlert(
           '❌ Mauvaise réponse !',
@@ -152,18 +265,39 @@ export default function GuessWhoPage() {
     }
   }
 
-  function switchTurn() {
+  function broadcastGameOver(message: string) {
+    supabase.channel(`room:${roomCode}`).send({
+      type: 'broadcast',
+      event: 'game_over',
+      payload: { message },
+    });
+  }
+
+  function switchTurnLocal() {
     setGuessMode([false, false]);
     setShowTargets([false, false]);
     setActivePlayer((prev) => (prev === 0 ? 1 : 0));
   }
 
+  function switchTurn() {
+    switchTurnLocal();
+    if (gameMode === 'online') {
+      supabase.channel(`room:${roomCode}`).send({
+        type: 'broadcast',
+        event: 'switch_turn',
+        payload: {},
+      });
+    }
+  }
+
   const reset = () => {
+    setGameMode('menu');
     setPhase('setup');
     setGridItems([]);
     setSecrets([null, null]);
     setEliminated([new Set(), new Set()]);
     setWinnerMessage('');
+    setRoomCode('');
   };
 
   if (loading) return <p className="text-muted p-4">Chargement...</p>;
@@ -203,15 +337,53 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* SETUP */}
-      {phase === 'setup' && (
+      {/* 1. SÉLECTION DU MODE DE JEU (MENU INITIAL) */}
+      {gameMode === 'menu' && (
+        <div className="max-w-md mx-auto my-auto w-full bg-[#121420] p-6 rounded-2xl border border-white/10 flex flex-col gap-6 text-center shadow-2xl">
+          <div>
+            <div className="eyebrow">Jeu de société</div>
+            <h1 className="text-3xl font-black text-amber mt-1">Qui est-ce ?</h1>
+            <p className="text-muted text-xs mt-2">Choisis ton mode de jeu pour commencer la partie</p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => setGameMode('local')}
+              className="p-4 rounded-xl border border-amber/40 bg-amber/10 hover:bg-amber/20 text-white flex items-center justify-between transition-all group"
+            >
+              <div className="text-left">
+                <div className="font-bold text-sm text-amber">🎮 Mode Local (1 écran)</div>
+                <div className="text-[11px] text-slate-400">Passe le téléphone ou joue à 2 sur PC</div>
+              </div>
+              <span className="text-lg group-hover:translate-x-1 transition-transform">→</span>
+            </button>
+
+            <button
+              onClick={() => setGameMode('online')}
+              className="p-4 rounded-xl border border-[#4fc9c0]/40 bg-[#4fc9c0]/10 hover:bg-[#4fc9c0]/20 text-white flex items-center justify-between transition-all group"
+            >
+              <div className="text-left">
+                <div className="font-bold text-sm text-[#4fc9c0]">🌐 Mode En Ligne</div>
+                <div className="text-[11px] text-slate-400">Joue à distance via un code à 4 lettres</div>
+              </div>
+              <span className="text-lg group-hover:translate-x-1 transition-transform">→</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. CONFIGURATION MODE LOCAL OU EN LIGNE */}
+      {gameMode !== 'menu' && phase === 'setup' && (
         <div className="max-w-xl mx-auto p-4 my-auto w-full">
-          <div className="mb-6 text-center">
-            <div className="eyebrow">Mode de jeu</div>
-            <h1 className="font-serif text-3xl font-bold">Qui est-ce ?</h1>
-            <p className="text-muted text-sm mt-1">
-              Pose tes questions à l'oral, coche les cartes éliminées et devine le personnage adverse !
-            </p>
+          <div className="mb-6 text-center relative">
+            <button
+              onClick={() => setGameMode('menu')}
+              className="absolute left-0 top-0 text-xs text-slate-400 hover:text-white flex items-center gap-1"
+            >
+              ← Retour
+            </button>
+            <div className="eyebrow">{gameMode === 'local' ? 'Mode Local' : 'Mode En Ligne'}</div>
+            <h1 className="font-serif text-3xl font-bold">Configuration</h1>
           </div>
 
           <div className="panel flex flex-col gap-5">
@@ -244,23 +416,62 @@ export default function GuessWhoPage() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-muted block mb-1">Joueur 1</label>
-                <input className="input" value={names[0]} onChange={(e) => setNames([e.target.value, names[1]])} />
-              </div>
-              <div>
-                <label className="text-xs text-muted block mb-1">Joueur 2</label>
-                <input className="input" value={names[1]} onChange={(e) => setNames([names[0], e.target.value])} />
-              </div>
-            </div>
+            {gameMode === 'local' ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-muted block mb-1">Joueur 1</label>
+                    <input className="input" value={names[0]} onChange={(e) => setNames([e.target.value, names[1]])} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted block mb-1">Joueur 2</label>
+                    <input className="input" value={names[1]} onChange={(e) => setNames([names[0], e.target.value])} />
+                  </div>
+                </div>
+                <button className="btn w-full mt-2" onClick={startLocalGame}>▶ Lancer la partie locale</button>
+              </>
+            ) : (
+              <div className="flex flex-col gap-4 border-t border-white/10 pt-4">
+                <div>
+                  <label className="text-xs text-muted block mb-1">Ton Pseudo</label>
+                  <input className="input w-full" value={names[0]} onChange={(e) => setNames([e.target.value, names[1]])} />
+                </div>
 
-            <button className="btn w-full mt-2" onClick={startGame}>▶ Lancer le Qui est-ce ?</button>
+                <button className="btn w-full" onClick={createOnlineRoom}>👑 Créer un salon</button>
+
+                <div className="relative text-center my-1">
+                  <span className="bg-[#121420] px-3 text-xs text-slate-500 uppercase">ou rejoindre</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    className="input uppercase flex-1"
+                    placeholder="Code à 4 lettres"
+                    maxLength={4}
+                    value={joinCodeInput}
+                    onChange={(e) => setJoinCodeInput(e.target.value)}
+                  />
+                  <button className="btn-ghost border border-white/20" onClick={joinOnlineRoom}>Rejoindre</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* RÉVÉLATION SECRÈTE (MOBILE) */}
+      {/* 3. SALLE D'ATTENTE EN LIGNE */}
+      {phase === 'waiting' && (
+        <div className="my-auto text-center flex flex-col items-center gap-4">
+          <h2 className="text-xl text-white">Code du salon :</h2>
+          <span className="text-4xl font-black text-amber tracking-widest bg-surface2 px-6 py-2 rounded-xl border border-amber/40 shadow-lg">
+            {roomCode}
+          </span>
+          <p className="text-sm text-slate-400 animate-pulse">En attente de l'adversaire...</p>
+          <button className="btn-ghost text-xs text-red-400 mt-4" onClick={reset}>Annuler</button>
+        </div>
+      )}
+
+      {/* 4. RÉVÉLATION SECRÈTE (MOBILE SÉPARÉ EN LOCAL) */}
       {phase === 'secret_reveal' && !isDesktop && (
         <div className="max-w-md mx-auto p-4 text-center my-auto flex flex-col items-center gap-5 w-full">
           <div className="text-amber font-bold text-sm uppercase tracking-wider">
@@ -311,7 +522,7 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* EN JEU / ULTIME TENTATIVE */}
+      {/* 5. PLATEAU EN JEU / ULTIME TENTATIVE */}
       {(phase === 'play' || phase === 'last_chance') && (
         <div className="flex flex-col h-full justify-between max-w-6xl mx-auto w-full gap-3">
           {/* Bandeau supérieur miroir */}
@@ -329,7 +540,6 @@ export default function GuessWhoPage() {
                 </span>
               </div>
 
-              {/* Bouton Cible P1 */}
               <div className="relative" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => setShowTargets([!showTargets[0], false])}
@@ -354,7 +564,7 @@ export default function GuessWhoPage() {
               </div>
             </div>
 
-            {/* Démarcation centrale "VS" avec bouton "Tour suivant" en dessous */}
+            {/* Démarcation centrale "VS" */}
             <div className="relative flex flex-col items-center justify-center px-3 py-1 bg-[#181b2c] border-x border-white/10 z-10 shrink-0">
               <span className="text-amber font-black text-xs px-1 py-0.5 rounded shadow-sm">VS</span>
               <button
@@ -373,7 +583,6 @@ export default function GuessWhoPage() {
                 activePlayer === 1 ? 'border-[#4fc9c0] ring-1 ring-[#4fc9c0]/50' : 'border-transparent opacity-70'
               }`}
             >
-              {/* Bouton Cible P2 */}
               <div className="relative" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => setShowTargets([false, !showTargets[1]])}
@@ -415,6 +624,7 @@ export default function GuessWhoPage() {
           {/* Grilles de jeu */}
           <div className={`grid gap-4 overflow-y-auto my-auto pr-1 ${isDesktop ? 'grid-cols-2' : 'grid-cols-1 max-w-2xl mx-auto w-full'}`}>
             {([0, 1] as PIdx[]).map((pIdx) => {
+              if (gameMode === 'online' && pIdx !== myPlayerIdx) return null;
               if (!isDesktop && pIdx !== activePlayer) return null;
 
               const playerAccent = pIdx === 0 ? '#e2645a' : '#4fc9c0';
@@ -496,7 +706,7 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* FIN DE PARTIE */}
+      {/* 6. FIN DE PARTIE */}
       {phase === 'end' && (
         <div className="max-w-md mx-auto p-4 text-center my-auto flex flex-col items-center gap-6">
           <h2 className="text-3xl font-black text-amber drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
@@ -529,7 +739,7 @@ export default function GuessWhoPage() {
             </div>
           </div>
 
-          <button className="btn py-3 px-8 text-sm" onClick={reset}>↺ Rejouer une partie</button>
+          <button className="btn py-3 px-8 text-sm" onClick={reset}>↺ Retour au menu principal</button>
         </div>
       )}
     </div>
