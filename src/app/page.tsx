@@ -136,7 +136,10 @@ export default function HomePage() {
               sessionCode={sessionCode}
               profile={profile}
               isHost={isHost}
-              onLeaveGame={() => setCurrentScreen('lobby')} // 👈 Renvoie sur le salon d'attente !
+              onLeaveGame={() => {
+                setActiveGame(''); // 1. Réinitialise le jeu actif
+                setCurrentScreen('lobby'); // 2. Remet l'écran sur le salon
+              }}
             />
           )}
         </div>

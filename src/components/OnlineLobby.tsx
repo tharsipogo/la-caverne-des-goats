@@ -88,33 +88,39 @@ export default function OnlineLobby({ profile, onStartGame }: Props) {
   };
 
   // Écoute Realtime de la session
-  useEffect(() => {
+ // Dans l'effet Supabase Realtime de OnlineLobby.tsx :
+    useEffect(() => {
     if (!sessionId) return;
 
     const fetchPlayers = async () => {
-      const { data } = await supabase
+        const { data } = await supabase
         .from('session_players')
         .select('*')
         .eq('session_id', sessionId);
-      if (data) setPlayers(data);
+        if (data) setPlayers(data);
     };
 
     fetchPlayers();
 
     const channel = supabase
-      .channel(`session:${sessionId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'session_players' }, fetchPlayers)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_sessions' }, (payload) => {
+        .channel(`session:${sessionId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'session_players' }, fetchPlayers)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_sessions' }, (payload) => {
         if (payload.new.status === 'in_game' && payload.new.current_game) {
-          setSelectedGameNotification(payload.new.current_game);
+            setSelectedGameNotification(payload.new.current_game);
         }
-      })
-      .subscribe();
+        
+        // FIX : Si la session repasse en 'lobby', effacer la notification du jeu précédent
+        if (payload.new.status === 'lobby') {
+            setSelectedGameNotification(null);
+        }
+        })
+        .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+        supabase.removeChannel(channel);
     };
-  }, [sessionId]);
+    }, [sessionId]);
 
   const handleApprove = async (playerId: string) => {
     await supabase.from('session_players').update({ is_approved: true }).eq('id', playerId);
