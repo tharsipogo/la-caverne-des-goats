@@ -17,11 +17,6 @@ interface PlayerSubmission {
   words: string[];
 }
 
-interface ScoredWord {
-  word: string;
-  points: number;
-}
-
 interface Props {
   sessionCode: string;
   profile: any;
@@ -30,51 +25,37 @@ interface Props {
 }
 
 export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeaveGame }: Props) {
-  // Configuration
   const [totalRounds, setTotalRounds] = useState(3);
   const [currentRound, setCurrentRound] = useState(1);
   const [phase, setPhase] = useState<'setup' | 'playing' | 'recap' | 'final_end'>('setup');
 
-  // Mots dynamiques Supabase
   const [wordsDatabase, setWordsDatabase] = useState<string[]>([]);
   const [newWordInput, setNewWordInput] = useState('');
   const [addSuccessMsg, setAddSuccessMsg] = useState(false);
 
-  // Joueurs & Session
   const [players, setPlayers] = useState<Player[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // État du tour
   const [currentSecretWord, setCurrentSecretWord] = useState('');
   const [userWords, setUserWords] = useState<string[]>(Array(7).fill(''));
   const [hasValidated, setHasValidated] = useState(false);
   const [submissions, setSubmissions] = useState<PlayerSubmission[]>([]);
   const [timeLeft, setTimeLeft] = useState(90);
 
-  // Score global accumulé
   const [cumulativeScores, setCumulativeScores] = useState<Record<string, number>>({});
 
   const channelRef = useRef<any>(null);
 
-  // 1. Charger les mots depuis la base de données Supabase
   const fetchWords = async () => {
     const { data, error } = await supabase.from('soit_connecte_words').select('word');
-
-    if (error) {
-        console.error('Erreur chargement mots :', error);
-        return;
-    }
-
-    if (data && data.length > 0) {
-        setWordsDatabase(data.map((w) => w.word));
-    }
-    };
+    if (error) console.error('Erreur Supabase :', error);
+    if (data && data.length > 0) setWordsDatabase(data.map((w) => w.word));
+  };
 
   useEffect(() => {
     fetchWords();
   }, []);
 
-  // 2. Initialisation de la session Supabase
   useEffect(() => {
     (async () => {
       const { data: session } = await supabase
@@ -100,25 +81,6 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
     })();
   }, [sessionCode]);
 
-  // 3. Ajouter un nouveau mot à la BDD
-  const handleAddWord = async () => {
-    const wordToAdd = newWordInput.trim();
-    if (!wordToAdd) return;
-
-    const { error } = await supabase.from('soit_connecte_words').insert({ word: wordToAdd });
-
-    if (error) {
-      alert('Erreur : ce mot existe déjà ou est invalide.');
-      return;
-    }
-
-    setNewWordInput('');
-    setAddSuccessMsg(true);
-    setTimeout(() => setAddSuccessMsg(false), 2000);
-    fetchWords();
-  };
-
-  // Écoute Supabase Realtime
   useEffect(() => {
     if (!sessionId) return;
 
@@ -147,6 +109,10 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
           return [...filtered, payload];
         });
       })
+      .on('broadcast', { event: 'return_to_lobby' }, () => {
+        // Redirection générale vers le salon
+        onLeaveGame();
+      })
       .subscribe();
 
     return () => {
@@ -161,7 +127,6 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
     setTimeLeft(90);
   };
 
-  // Timer du tour (1min30)
   useEffect(() => {
     if (phase !== 'playing') return;
 
@@ -225,6 +190,24 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
     });
   };
 
+  // Fermer la partie et ramener tout le monde au salon
+  const handleReturnToLobby = async () => {
+    if (sessionId) {
+      // Remettre le salon en statut lobby dans Supabase
+      await supabase
+        .from('game_sessions')
+        .update({ status: 'lobby', current_game: null })
+        .eq('id', sessionId);
+    }
+
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'return_to_lobby',
+    });
+
+    onLeaveGame();
+  };
+
   const calculateRoundScores = () => {
     const wordCounts: Record<string, number> = {};
     submissions.forEach((sub) => {
@@ -251,7 +234,7 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
     setPhase('recap');
   };
 
-  const getWordScoreInfo = (word: string): ScoredWord => {
+  const getWordScoreInfo = (word: string) => {
     const cleanWord = word.trim().toLowerCase();
     if (!cleanWord) return { word: '—', points: 0 };
 
@@ -262,6 +245,39 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
 
     const pts = count >= 2 ? count - 1 : 0;
     return { word: cleanWord, points: pts };
+  };
+
+  // Calcul intelligent des rangs et attribution des points avec gestion des ex-æquo
+  const getRankedPlayersWithPoints = () => {
+    const sorted = [...players].sort(
+      (a, b) => (cumulativeScores[b.id] || 0) - (cumulativeScores[a.id] || 0)
+    );
+
+    const N = players.length;
+    const rankedList: { player: Player; rank: number; pointsGiven: number }[] = [];
+
+    let currentRank = 1;
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0) {
+        const prevScore = cumulativeScores[sorted[i - 1].id] || 0;
+        const currentScore = cumulativeScores[sorted[i].id] || 0;
+
+        if (currentScore < prevScore) {
+          currentRank = i + 1; // Sauter les rangs réservés par les égalités précédentes
+        }
+      }
+
+      // Le rang N donne N points, le 2e rang donne N-1 points, etc.
+      const pointsGiven = Math.max(1, N - currentRank + 1);
+
+      rankedList.push({
+        player: sorted[i],
+        rank: currentRank,
+        pointsGiven,
+      });
+    }
+
+    return rankedList;
   };
 
   // ================= 1. SETUP =================
@@ -276,26 +292,8 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
           </p>
         </div>
 
-        {/* Compteur de mots disponibles */}
         <div className="text-xs text-amber font-bold bg-amber/10 p-2 rounded-xl border border-amber/20">
           📚 Banque actuelle : <b>{wordsDatabase.length}</b> mots
-        </div>
-
-        {/* Formulaire d'ajout de mot */}
-        <div className="bg-surface2 p-3 rounded-xl border border-white/10 flex flex-col gap-2 text-left">
-          <span className="text-[11px] text-slate-300 font-bold">➕ Ajouter un mot à la base :</span>
-          <div className="flex gap-2">
-            <input
-              className="input text-xs flex-1"
-              placeholder="Ex: Piratage, Escalade..."
-              value={newWordInput}
-              onChange={(e) => setNewWordInput(e.target.value)}
-            />
-            <button className="btn-ghost border border-amber text-amber px-3 py-1 text-xs font-bold" onClick={handleAddWord}>
-              Ajouter
-            </button>
-          </div>
-          {addSuccessMsg && <span className="text-[10px] text-green-400 font-bold">✓ Mot ajouté avec succès !</span>}
         </div>
 
         {isHost ? (
@@ -457,9 +455,7 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
   }
 
   // ================= 4. FINAL =================
-  const sortedPlayers = [...players].sort(
-    (a, b) => (cumulativeScores[b.id] || 0) - (cumulativeScores[a.id] || 0)
-  );
+  const rankedData = getRankedPlayersWithPoints();
 
   return (
     <div className="max-w-md mx-auto p-6 bg-[#121420] border-2 border-amber/60 rounded-2xl text-center shadow-2xl flex flex-col gap-6 my-auto">
@@ -469,44 +465,46 @@ export default function SoitConnecteGame({ sessionCode, profile, isHost, onLeave
       </div>
 
       <div className="flex flex-col gap-2">
-        {sortedPlayers.map((p, idx) => {
-          const finalRankPoints = players.length - idx;
-
-          return (
-            <div
-              key={p.id}
-              className={`flex items-center justify-between p-3 rounded-xl border ${
-                idx === 0
-                  ? 'bg-amber/20 border-amber text-amber font-bold scale-105'
-                  : 'bg-surface2 border-white/10 text-slate-200'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="font-black text-sm w-4">{idx + 1}.</span>
-                <img
-                  src={p.avatar_url}
-                  className="w-9 h-9 rounded-xl border border-white/20 object-cover"
-                  alt=""
-                />
-                <span className="text-sm font-bold">{p.name}</span>
-              </div>
-
-              <div className="text-right">
-                <span className="block text-xs font-black">
-                  {cumulativeScores[p.id] || 0} pts
-                </span>
-                <span className="text-[10px] text-amber font-bold">
-                  +{finalRankPoints} pts au classement
-                </span>
-              </div>
+        {rankedData.map(({ player, rank, pointsGiven }) => (
+          <div
+            key={player.id}
+            className={`flex items-center justify-between p-3 rounded-xl border ${
+              rank === 1
+                ? 'bg-amber/20 border-amber text-amber font-bold scale-105'
+                : 'bg-surface2 border-white/10 text-slate-200'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span className="font-black text-sm w-4">{rank}.</span>
+              <img
+                src={player.avatar_url}
+                className="w-9 h-9 rounded-xl border border-white/20 object-cover"
+                alt=""
+              />
+              <span className="text-sm font-bold">{player.name}</span>
             </div>
-          );
-        })}
+
+            <div className="text-right">
+              <span className="block text-xs font-black">
+                {cumulativeScores[player.id] || 0} pts
+              </span>
+              <span className="text-[10px] text-amber font-bold">
+                +{pointsGiven} pts au classement
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <button className="btn-ghost border border-white/20 w-full py-3 text-xs" onClick={onLeaveGame}>
-        ← Retour au menu
-      </button>
+      {isHost ? (
+        <button className="btn w-full py-3 text-xs font-bold" onClick={handleReturnToLobby}>
+          👑 Retourner au Salon (Maintenir le groupe)
+        </button>
+      ) : (
+        <div className="p-3 bg-surface2 rounded-xl border border-white/10 text-xs text-slate-400 animate-pulse">
+          En attente de l'hôte pour retourner au salon...
+        </div>
+      )}
     </div>
   );
 }
