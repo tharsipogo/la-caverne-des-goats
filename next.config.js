@@ -1,13 +1,14 @@
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  register: true,
+  skipWaiting: true, // Force la PWA à appliquer immédiatement la nouvelle version déployée
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**.supabase.co',
-      },
-    ],
-  },
+  // Ta config Next.js habituelle
 };
 
-module.exports = nextConfig;
+export default withPWA(nextConfig);
