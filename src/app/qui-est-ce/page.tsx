@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
@@ -14,18 +14,16 @@ export default function GuessWhoPage() {
   const [listId, setListId] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Mode de jeu (Menu principal, Local ou En ligne)
+  // Configuration
   const [gameMode, setGameMode] = useState<GameMode>('menu');
   const [gridSize, setGridSize] = useState<number>(20);
-
-  // Joueurs & Config
   const [names, setNames] = useState<[string, string]>(['Joueur 1', 'Joueur 2']);
   const [phase, setPhase] = useState<Phase>('setup');
-  
-  // Cartes du plateau
+
+  // Plateau
   const [gridItems, setGridItems] = useState<ListItem[]>([]);
   const [secrets, setSecrets] = useState<[ListItem | null, ListItem | null]>([null, null]);
-  
+
   // État du jeu
   const [activePlayer, setActivePlayer] = useState<PIdx>(0);
   const [eliminated, setEliminated] = useState<[Set<string>, Set<string>]>([new Set(), new Set()]);
@@ -33,13 +31,14 @@ export default function GuessWhoPage() {
   const [revealInitialSecret, setRevealInitialSecret] = useState<[boolean, boolean]>([false, false]);
   const [guessMode, setGuessMode] = useState<[boolean, boolean]>([false, false]);
 
-  // Variables Mode En Ligne
+  // Mode en Ligne
   const [roomCode, setRoomCode] = useState('');
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [myPlayerIdx, setMyPlayerIdx] = useState<PIdx>(0);
+  const channelRef = useRef<any>(null);
 
-  // Modale personnalisée
+  // Modale & Résultats
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -47,7 +46,6 @@ export default function GuessWhoPage() {
     isConfirm?: boolean;
     onConfirm?: () => void;
   }>({ isOpen: false, title: '', message: '' });
-
   const [isDesktop, setIsDesktop] = useState(false);
   const [winnerMessage, setWinnerMessage] = useState('');
 
@@ -71,13 +69,18 @@ export default function GuessWhoPage() {
     })();
   }, [gridSize]);
 
-  // Écouteur Supabase Realtime pour le mode en ligne
+  // Synchronisation Supabase Realtime sécurisée (Évite les boucles de reconnexion)
   useEffect(() => {
     if (gameMode !== 'online' || !roomCode || phase === 'setup') return;
+
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
 
     const channel = supabase.channel(`room:${roomCode}`, {
       config: { broadcast: { self: false } },
     });
+    channelRef.current = channel;
 
     channel
       .on('broadcast', { event: 'game_init' }, ({ payload }) => {
@@ -87,7 +90,9 @@ export default function GuessWhoPage() {
         setPhase('play');
       })
       .on('broadcast', { event: 'switch_turn' }, () => {
-        switchTurnLocal();
+        setActivePlayer((prev) => (prev === 0 ? 1 : 0));
+        setGuessMode([false, false]);
+        setShowTargets([false, false]);
       })
       .on('broadcast', { event: 'game_over' }, ({ payload }) => {
         setWinnerMessage(payload.message);
@@ -105,8 +110,10 @@ export default function GuessWhoPage() {
 
     if (isHost) {
       channel.on('broadcast', { event: 'guest_joined' }, async ({ payload }) => {
+        if (gridItems.length > 0) return; // Empêche les re-générations si déjà démarré
+
         const guestName = payload.guestName || 'Joueur 2';
-        setNames([names[0], guestName]);
+        setNames((prev) => [prev[0], guestName]);
 
         const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
         if (!items || items.length < gridSize) return;
@@ -132,9 +139,12 @@ export default function GuessWhoPage() {
     }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [gameMode, roomCode, phase, isHost, listId, gridSize, names]);
+  }, [gameMode, roomCode, phase, isHost]);
 
   function showAlert(title: string, message: string, onConfirm?: () => void) {
     setModalConfig({ isOpen: true, title, message, isConfirm: false, onConfirm });
@@ -144,7 +154,6 @@ export default function GuessWhoPage() {
     setModalConfig({ isOpen: true, title, message, isConfirm: true, onConfirm });
   }
 
-  // Lancement de la partie locale
   async function startLocalGame() {
     if (!listId) return;
     const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
@@ -170,7 +179,6 @@ export default function GuessWhoPage() {
     setPhase(isDesktop ? 'play' : 'secret_reveal');
   }
 
-  // Créer un salon en ligne
   async function createOnlineRoom() {
     const code = Math.random().toString(36).substring(2, 6).toUpperCase();
     const { error } = await supabase.from('rooms').insert({
@@ -188,7 +196,6 @@ export default function GuessWhoPage() {
     setPhase('waiting');
   }
 
-  // Rejoindre un salon en ligne
   async function joinOnlineRoom() {
     const code = joinCodeInput.trim().toUpperCase();
     if (!code) return showAlert('Erreur', 'Entre un code de salon valide.');
@@ -266,23 +273,22 @@ export default function GuessWhoPage() {
   }
 
   function broadcastGameOver(message: string) {
-    supabase.channel(`room:${roomCode}`).send({
-      type: 'broadcast',
-      event: 'game_over',
-      payload: { message },
-    });
-  }
-
-  function switchTurnLocal() {
-    setGuessMode([false, false]);
-    setShowTargets([false, false]);
-    setActivePlayer((prev) => (prev === 0 ? 1 : 0));
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'game_over',
+        payload: { message },
+      });
+    }
   }
 
   function switchTurn() {
-    switchTurnLocal();
-    if (gameMode === 'online') {
-      supabase.channel(`room:${roomCode}`).send({
+    setActivePlayer((prev) => (prev === 0 ? 1 : 0));
+    setGuessMode([false, false]);
+    setShowTargets([false, false]);
+
+    if (gameMode === 'online' && channelRef.current) {
+      channelRef.current.send({
         type: 'broadcast',
         event: 'switch_turn',
         payload: {},
@@ -301,6 +307,10 @@ export default function GuessWhoPage() {
   };
 
   if (loading) return <p className="text-muted p-4">Chargement...</p>;
+
+  // Index du joueur affiché à l'écran (En ligne = sa grille, Local = tour en cours)
+  const displayPlayerIdx = gameMode === 'online' ? myPlayerIdx : activePlayer;
+  const isMyTurn = gameMode === 'online' ? activePlayer === myPlayerIdx : true;
 
   return (
     <div
@@ -337,13 +347,13 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* 1. SÉLECTION DU MODE DE JEU (MENU INITIAL) */}
+      {/* 1. MENU PRINCIPAL */}
       {gameMode === 'menu' && (
         <div className="max-w-md mx-auto my-auto w-full bg-[#121420] p-6 rounded-2xl border border-white/10 flex flex-col gap-6 text-center shadow-2xl">
           <div>
             <div className="eyebrow">Jeu de société</div>
             <h1 className="text-3xl font-black text-amber mt-1">Qui est-ce ?</h1>
-            <p className="text-muted text-xs mt-2">Choisis ton mode de jeu pour commencer la partie</p>
+            <p className="text-muted text-xs mt-2">Choisis ton mode de jeu pour commencer</p>
           </div>
 
           <div className="flex flex-col gap-3">
@@ -372,7 +382,7 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* 2. CONFIGURATION MODE LOCAL OU EN LIGNE */}
+      {/* 2. CONFIGURATION */}
       {gameMode !== 'menu' && phase === 'setup' && (
         <div className="max-w-xl mx-auto p-4 my-auto w-full">
           <div className="mb-6 text-center relative">
@@ -459,7 +469,7 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* 3. SALLE D'ATTENTE EN LIGNE */}
+      {/* 3. SALLE D'ATTENTE */}
       {phase === 'waiting' && (
         <div className="my-auto text-center flex flex-col items-center gap-4">
           <h2 className="text-xl text-white">Code du salon :</h2>
@@ -471,63 +481,12 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* 4. RÉVÉLATION SECRÈTE (MOBILE SÉPARÉ EN LOCAL) */}
-      {phase === 'secret_reveal' && !isDesktop && (
-        <div className="max-w-md mx-auto p-4 text-center my-auto flex flex-col items-center gap-5 w-full">
-          <div className="text-amber font-bold text-sm uppercase tracking-wider">
-            Passe le téléphone à {names[activePlayer]}
-          </div>
-
-          <div className="bg-[#121420] border-2 border-amber/50 rounded-2xl p-6 w-full shadow-2xl flex flex-col items-center gap-4">
-            <h2 className="text-xl font-bold text-white">Ta carte mystère à faire deviner :</h2>
-
-            {revealInitialSecret[activePlayer] ? (
-              <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-200">
-                <div className="w-36 h-48 rounded-xl overflow-hidden border-2 border-amber shadow-[0_0_20px_rgba(245,158,11,0.4)]">
-                  {secrets[activePlayer]?.image_url ? (
-                    <img src={secrets[activePlayer]?.image_url} className="w-full h-full object-cover" alt="" />
-                  ) : (
-                    <div className="w-full h-full bg-surface2 flex items-center justify-center text-4xl">🎴</div>
-                  )}
-                </div>
-                <span className="text-lg font-bold text-amber">{secrets[activePlayer]?.name}</span>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="btn-ghost py-10 px-8 border-dashed border-amber/40 text-amber font-bold w-full cursor-pointer hover:bg-amber/10"
-                onClick={() => setRevealInitialSecret(activePlayer === 0 ? [true, revealInitialSecret[1]] : [revealInitialSecret[0], true])}
-              >
-                👁️ Appuie pour révéler ta carte
-              </button>
-            )}
-
-            {revealInitialSecret[activePlayer] && (
-              <button
-                type="button"
-                className="btn w-full mt-2"
-                onClick={() => {
-                  if (activePlayer === 0) {
-                    setActivePlayer(1);
-                  } else {
-                    setActivePlayer(0);
-                    setPhase('play');
-                  }
-                }}
-              >
-                {activePlayer === 0 ? `C'est bon ! Passer à ${names[1]}` : 'Commencer la partie !'}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 5. PLATEAU EN JEU / ULTIME TENTATIVE */}
+      {/* 4. PLATEAU DE JEU */}
       {(phase === 'play' || phase === 'last_chance') && (
         <div className="flex flex-col h-full justify-between max-w-6xl mx-auto w-full gap-3">
           {/* Bandeau supérieur miroir */}
           <div className="relative flex items-stretch bg-[#121420]/90 border border-white/10 rounded-xl overflow-visible shadow-lg">
-            {/* Joueur 1 (Gauche) */}
+            {/* Joueur 1 */}
             <div
               className={`flex-1 flex items-center justify-between p-2 border-b-2 transition-all rounded-l-xl bg-gradient-to-r from-[#e2645a]/25 via-[#e2645a]/10 to-transparent ${
                 activePlayer === 0 ? 'border-[#e2645a] ring-1 ring-[#e2645a]/50' : 'border-transparent opacity-70'
@@ -540,71 +499,76 @@ export default function GuessWhoPage() {
                 </span>
               </div>
 
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => setShowTargets([!showTargets[0], false])}
-                  className="px-2.5 py-1 rounded border text-[11px] font-bold transition flex items-center gap-1 bg-[#e2645a]/15 border-[#e2645a]/40 text-[#e2645a] hover:bg-[#e2645a]/30"
-                >
-                  👁️ {showTargets[0] ? 'Masquer' : 'Ma cible'}
-                </button>
+              {(gameMode === 'local' || myPlayerIdx === 0) && (
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => setShowTargets([!showTargets[0], false])}
+                    className="px-2.5 py-1 rounded border text-[11px] font-bold transition flex items-center gap-1 bg-[#e2645a]/15 border-[#e2645a]/40 text-[#e2645a] hover:bg-[#e2645a]/30"
+                  >
+                    👁️ {showTargets[0] ? 'Masquer' : 'Ma cible'}
+                  </button>
 
-                {showTargets[0] && (
-                  <div className="absolute left-0 top-full mt-1.5 z-50 bg-[#161822] border-2 border-[#e2645a] rounded-xl p-2 shadow-2xl flex flex-col items-center gap-1 w-28 animate-in fade-in zoom-in-95 duration-150">
-                    <span className="text-[9px] text-[#e2645a] font-bold">Ta cible :</span>
-                    {secrets[0]?.image_url ? (
-                      <img src={secrets[0].image_url} className="w-full h-16 object-cover rounded-md" alt="" />
-                    ) : (
-                      <div className="w-full h-16 bg-surface2 rounded-md flex items-center justify-center text-xs">🎴</div>
-                    )}
-                    <span className="text-[10px] font-black text-white truncate w-full text-center">
-                      {secrets[0]?.name}
-                    </span>
-                  </div>
-                )}
-              </div>
+                  {showTargets[0] && (
+                    <div className="absolute left-0 top-full mt-1.5 z-50 bg-[#161822] border-2 border-[#e2645a] rounded-xl p-2 shadow-2xl flex flex-col items-center gap-1 w-28 animate-in fade-in zoom-in-95 duration-150">
+                      <span className="text-[9px] text-[#e2645a] font-bold">Ta cible :</span>
+                      {secrets[0]?.image_url ? (
+                        <img src={secrets[0].image_url} className="w-full h-16 object-cover rounded-md" alt="" />
+                      ) : (
+                        <div className="w-full h-16 bg-surface2 rounded-md flex items-center justify-center text-xs">🎴</div>
+                      )}
+                      <span className="text-[10px] font-black text-white truncate w-full text-center">
+                        {secrets[0]?.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Démarcation centrale "VS" */}
+            {/* Démarcation centrale VS + Bouton Fin de tour */}
             <div className="relative flex flex-col items-center justify-center px-3 py-1 bg-[#181b2c] border-x border-white/10 z-10 shrink-0">
               <span className="text-amber font-black text-xs px-1 py-0.5 rounded shadow-sm">VS</span>
-              <button
-                onClick={switchTurn}
-                className="mt-1 px-2 py-0.5 rounded bg-amber/20 hover:bg-amber/30 border border-amber/40 text-amber font-bold text-[9px] transition-all flex items-center gap-1 shrink-0"
-                title="Passer au joueur suivant"
-              >
-                <span>Tour suivant</span>
-                <span className="text-[10px]">→</span>
-              </button>
+              {isMyTurn && (
+                <button
+                  onClick={switchTurn}
+                  className="mt-1 px-2 py-0.5 rounded bg-amber/20 hover:bg-amber/30 border border-amber/40 text-amber font-bold text-[9px] transition-all flex items-center gap-1 shrink-0"
+                >
+                  <span>Tour suivant</span>
+                  <span className="text-[10px]">→</span>
+                </button>
+              )}
             </div>
 
-            {/* Joueur 2 (Droite) */}
+            {/* Joueur 2 */}
             <div
               className={`flex-1 flex items-center justify-between p-2 border-b-2 transition-all rounded-r-xl bg-gradient-to-l from-[#4fc9c0]/25 via-[#4fc9c0]/10 to-transparent ${
                 activePlayer === 1 ? 'border-[#4fc9c0] ring-1 ring-[#4fc9c0]/50' : 'border-transparent opacity-70'
               }`}
             >
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => setShowTargets([false, !showTargets[1]])}
-                  className="px-2.5 py-1 rounded border text-[11px] font-bold transition flex items-center gap-1 bg-[#4fc9c0]/15 border-[#4fc9c0]/40 text-[#4fc9c0] hover:bg-[#4fc9c0]/30"
-                >
-                  👁️ {showTargets[1] ? 'Masquer' : 'Ma cible'}
-                </button>
+              {(gameMode === 'local' || myPlayerIdx === 1) && (
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => setShowTargets([false, !showTargets[1]])}
+                    className="px-2.5 py-1 rounded border text-[11px] font-bold transition flex items-center gap-1 bg-[#4fc9c0]/15 border-[#4fc9c0]/40 text-[#4fc9c0] hover:bg-[#4fc9c0]/30"
+                  >
+                    👁️ {showTargets[1] ? 'Masquer' : 'Ma cible'}
+                  </button>
 
-                {showTargets[1] && (
-                  <div className="absolute right-0 top-full mt-1.5 z-50 bg-[#161822] border-2 border-[#4fc9c0] rounded-xl p-2 shadow-2xl flex flex-col items-center gap-1 w-28 animate-in fade-in zoom-in-95 duration-150">
-                    <span className="text-[9px] text-[#4fc9c0] font-bold">Ta cible :</span>
-                    {secrets[1]?.image_url ? (
-                      <img src={secrets[1].image_url} className="w-full h-16 object-cover rounded-md" alt="" />
-                    ) : (
-                      <div className="w-full h-16 bg-surface2 rounded-md flex items-center justify-center text-xs">🎴</div>
-                    )}
-                    <span className="text-[10px] font-black text-white truncate w-full text-center">
-                      {secrets[1]?.name}
-                    </span>
-                  </div>
-                )}
-              </div>
+                  {showTargets[1] && (
+                    <div className="absolute right-0 top-full mt-1.5 z-50 bg-[#161822] border-2 border-[#4fc9c0] rounded-xl p-2 shadow-2xl flex flex-col items-center gap-1 w-28 animate-in fade-in zoom-in-95 duration-150">
+                      <span className="text-[9px] text-[#4fc9c0] font-bold">Ta cible :</span>
+                      {secrets[1]?.image_url ? (
+                        <img src={secrets[1].image_url} className="w-full h-16 object-cover rounded-md" alt="" />
+                      ) : (
+                        <div className="w-full h-16 bg-surface2 rounded-md flex items-center justify-center text-xs">🎴</div>
+                      )}
+                      <span className="text-[10px] font-black text-white truncate w-full text-center">
+                        {secrets[1]?.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="text-right">
                 <div className="font-bold text-white text-xs sm:text-sm">{names[1]}</div>
@@ -615,17 +579,20 @@ export default function GuessWhoPage() {
             </div>
           </div>
 
-          {phase === 'last_chance' && (
-            <div className="bg-amber/20 border border-amber/60 text-amber text-xs font-bold p-2 rounded-lg text-center animate-bounce">
-              ⚠️ ULTIME CHANCE POUR {names[1]} : Propose la carte pour arracher le match nul !
+          {/* Indicatif du tour en ligne */}
+          {gameMode === 'online' && (
+            <div className="text-center">
+              <span className={`text-xs font-bold px-3 py-1 rounded-full ${isMyTurn ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-slate-800 text-slate-400'}`}>
+                {isMyTurn ? '🟢 C\'est ton tour de poser une question !' : '🔴 Tour de l\'adversaire...'}
+              </span>
             </div>
           )}
 
-          {/* Grilles de jeu */}
-          <div className={`grid gap-4 overflow-y-auto my-auto pr-1 ${isDesktop ? 'grid-cols-2' : 'grid-cols-1 max-w-2xl mx-auto w-full'}`}>
+          {/* Grilles de jeu (1 plateau sur mobile/online, 2 sur PC local) */}
+          <div className={`grid gap-4 overflow-y-auto my-auto pr-1 ${gameMode === 'local' && isDesktop ? 'grid-cols-2' : 'grid-cols-1 max-w-2xl mx-auto w-full'}`}>
             {([0, 1] as PIdx[]).map((pIdx) => {
               if (gameMode === 'online' && pIdx !== myPlayerIdx) return null;
-              if (!isDesktop && pIdx !== activePlayer) return null;
+              if (gameMode === 'local' && !isDesktop && pIdx !== activePlayer) return null;
 
               const playerAccent = pIdx === 0 ? '#e2645a' : '#4fc9c0';
               const currentEliminated = eliminated[pIdx];
@@ -636,7 +603,7 @@ export default function GuessWhoPage() {
                 <div
                   key={pIdx}
                   className={`bg-[#121420]/90 border-2 rounded-2xl p-3 flex flex-col gap-3 transition-all ${
-                    activePlayer === pIdx ? 'ring-2 ring-amber/50 opacity-100' : 'opacity-60'
+                    activePlayer === pIdx ? 'ring-2 ring-amber/50 opacity-100' : 'opacity-80'
                   }`}
                   style={{ borderColor: playerAccent }}
                 >
@@ -646,14 +613,16 @@ export default function GuessWhoPage() {
                       <span className="text-[10px] text-slate-400">Cartes restantes : <b>{remainingCount}/{gridSize}</b></span>
                     </div>
 
-                    <button
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                        isPlayerGuessing ? 'bg-amber text-black' : 'bg-amber/20 text-amber border border-amber/40'
-                      }`}
-                      onClick={() => setGuessMode(pIdx === 0 ? [!isPlayerGuessing, guessMode[1]] : [guessMode[0], !isPlayerGuessing])}
-                    >
-                      {isPlayerGuessing ? 'Annuler' : '🎯 Proposer un nom'}
-                    </button>
+                    {isMyTurn && (
+                      <button
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                          isPlayerGuessing ? 'bg-amber text-black' : 'bg-amber/20 text-amber border border-amber/40'
+                        }`}
+                        onClick={() => setGuessMode(pIdx === 0 ? [!isPlayerGuessing, guessMode[1]] : [guessMode[0], !isPlayerGuessing])}
+                      >
+                        {isPlayerGuessing ? 'Annuler' : '🎯 Proposer un nom'}
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
@@ -706,7 +675,7 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* 6. FIN DE PARTIE */}
+      {/* 5. FIN DE PARTIE */}
       {phase === 'end' && (
         <div className="max-w-md mx-auto p-4 text-center my-auto flex flex-col items-center gap-6">
           <h2 className="text-3xl font-black text-amber drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
