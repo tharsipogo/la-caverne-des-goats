@@ -9,6 +9,12 @@ import { Starfield } from '@/components/Starfield';
 export const metadata: Metadata = {
   title: 'La Caverne des Goats',
   description: 'Jeux et classements en ligne et local',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/chili_party_logo.svg',
+    shortcut: '/chili_party_logo.svg',
+    apple: '/icons/icon-512.jpg',
+  },
 };
 
 export default function RootLayout({
