@@ -186,7 +186,7 @@ export default function UndercoverPage() {
   // ================= SETUP =================
   if (phase === 'setup') {
     return (
-      <div className="w-full h-full flex flex-col overflow-hidden card-enter">
+      <div className="w-full flex flex-col card-enter">
         <Topbar onBack={() => router.push('/')} breadcrumb="Jeux / Undercover" />
 
         <div className="flex items-baseline gap-3 mb-4 shrink-0">
@@ -274,7 +274,7 @@ export default function UndercoverPage() {
   // ================= REVEAL (Interactive Grid) =================
   if (phase === 'reveal') {
     return (
-      <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[75vh] gap-6 text-center py-6">
+      <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[75dvh] gap-6 text-center py-6">
         <div className="text-amber font-bold text-xs tracking-widest uppercase">
           DISTRIBUTION
         </div>
@@ -333,7 +333,7 @@ export default function UndercoverPage() {
 
                   <button
                     onClick={() => toggleCard(p)}
-                    className="w-full bg-[#202538] hover:bg-[#2a314a] text-amber font-bold text-xs py-1.5 rounded-lg border border-amber/30 transition"
+                    className="btn-secondary btn-small w-full"
                   >
                     J'ai vu ✓
                   </button>
@@ -378,7 +378,7 @@ export default function UndercoverPage() {
             </div>
 
             <button
-              className="bg-amber hover:brightness-105 active:scale-95 text-[#101118] font-bold text-sm px-8 py-3.5 rounded-xl shadow-[0_4px_16px_rgba(245,158,11,0.3)] transition"
+              className="btn px-8 py-3.5"
               onClick={() => setPhase('game')}
             >
               Commencer la partie →
@@ -470,7 +470,7 @@ export default function UndercoverPage() {
 
   // ================= END =================
   return (
-    <div className="flex flex-col items-center justify-center gap-6 min-h-[70vh] text-center max-w-xl mx-auto">
+    <div className="flex flex-col items-center justify-center gap-6 min-h-[70dvh] text-center max-w-xl mx-auto">
       <div className="eyebrow">Partie terminée</div>
       <h1 className="text-2xl md:text-3xl font-bold text-white">
         {winner === 'civils' && 'Les civils gagnent 🎉'}

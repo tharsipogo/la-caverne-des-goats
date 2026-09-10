@@ -279,3 +279,37 @@ pour rester utilisable sur petit écran avec tous ces contrôles.
 - D'autres endroits où le scroll pourrait encore être insuffisant sur
   des écrans très petits — à identifier une fois que tu as pu tester le
   correctif ci-dessus.
+
+## Session 9 — Scroll Absolute Cinema/Le Five/Anime Draft + bouton coupé Undercover + boutons incohérents
+
+### Scroll toujours cassé sur les 3 pages exclues du redesign
+Deux bugs distincts (design non touché, comme demandé) :
+- `100vh` → `100dvh` partout dans ces 3 fichiers : sur mobile, `100vh`
+  correspond à la hauteur maximale (barre d'adresse masquée), plus
+  grande que l'espace réellement visible — ça pouvait laisser du
+  contenu hors-champ. `dvh` s'ajuste dynamiquement.
+- Le Five et Anime Draft avaient un `overflow-y-auto` sur un élément
+  qui n'a qu'un `min-h-[...]` (pas de hauteur bornée) — ce conteneur ne
+  scrolle jamais lui-même puisqu'il grandit toujours pour contenir son
+  contenu, mais sur mobile ce `overflow-y-auto` "en trop" peut quand
+  même intercepter le geste de scroll tactile et empêcher le vrai
+  scroll (celui de la zone de contenu globale) de se déclencher.
+  Supprimé — la zone de contenu globale scrolle maintenant normalement.
+
+### Bouton coupé + scroll bloqué dans Undercover
+La config d'Undercover forçait `h-full overflow-hidden` pour tenir sans
+scroll. Problème : si le contenu dépassait quand même (petit écran,
+beaucoup de joueurs), il n'y avait plus aucun moyen d'atteindre le bas
+— le `overflow-hidden` bloquait tout, y compris le scroll de secours
+de la page. Retiré : le contenu reste compact par défaut, mais peut
+maintenant scroller normalement dès qu'il ne tient pas.
+
+### Boutons pas homogènes
+Deux boutons "à l'ancienne" (ombre floue façon glow, pas l'effet push)
+étaient passés au travers du redesign de la session 7 : le bouton
+"J'ai vu ✓" et "Commencer la partie →" dans Undercover, et le bouton
+d'attribution de point dans Blind Test. Passés sur les classes
+partagées (`.btn` / `.btn-secondary`) pour respecter le même style push
+que le reste des jeux. Les autres jeux (Versus, Tier, Qui est-ce ?,
+Line Capture, Undercover Artist) utilisaient déjà les classes
+partagées — rien à changer dessus.

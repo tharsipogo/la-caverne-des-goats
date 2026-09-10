@@ -313,7 +313,7 @@ export default function BlindTestPage() {
                     <button
                       key={p.name}
                       onClick={() => awardPoint(i)}
-                      className="bg-amber hover:brightness-105 active:scale-95 text-[#101118] font-bold text-sm px-6 py-3 rounded-xl shadow-[0_4px_14px_rgba(245,158,11,0.3)] transition"
+                      className="btn px-6 py-3"
                     >
                       {p.name}
                     </button>
