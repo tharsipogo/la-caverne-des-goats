@@ -28,15 +28,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const STORAGE_KEY_USER_ID = 'caverne_user_id';
 const STORAGE_KEY_GUEST = 'caverne_guest_profile';
 
-const DEFAULT_AVATARS = [
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Felix',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Aneka',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Zack',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Spooky',
-];
-
-export { DEFAULT_AVATARS };
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);

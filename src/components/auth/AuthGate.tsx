@@ -1,10 +1,11 @@
 'use client';
 
 import { FormEvent, ReactNode, useState } from 'react';
-import { useAuth, DEFAULT_AVATARS } from '@/lib/authContext';
+import { useAuth } from '@/lib/authContext';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { AvatarPicker, buildAvatarUrl } from '@/components/auth/AvatarPicker';
 
 type Screen = 'choice' | 'login' | 'register' | 'guest';
 
@@ -111,7 +112,7 @@ function RegisterScreen({ onBack }: { onBack: () => void }) {
   const { register } = useAuth();
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATARS[0]);
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -119,13 +120,13 @@ function RegisterScreen({ onBack }: { onBack: () => void }) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await register(username, pin, avatarUrl);
+    const res = await register(username, pin, avatarUrl || buildAvatarUrl({ eyes: 'cheery', mouth: 'openedSmile', hair: 'shortHair', skin: 'f2d3b1', hairColor: '0e0e0e', bg: 'b6e3f4' }));
     if (res.error) setError(res.error);
     setLoading(false);
   };
 
   return (
-    <Card className="max-w-md w-full flex flex-col gap-5">
+    <Card className="max-w-md w-full max-h-[90vh] overflow-y-auto flex flex-col gap-5">
       <div>
         <button onClick={onBack} className="text-xs text-muted hover:text-white mb-2">
           ← Retour
@@ -144,20 +145,8 @@ function RegisterScreen({ onBack }: { onBack: () => void }) {
           error={error}
         />
         <div className="flex flex-col gap-2 text-left">
-          <span className="text-xs text-muted font-bold">Choisis ton Avatar :</span>
-          <div className="flex justify-between gap-2">
-            {DEFAULT_AVATARS.map((url) => (
-              <img
-                key={url}
-                src={url}
-                alt="avatar"
-                onClick={() => setAvatarUrl(url)}
-                className={`w-12 h-12 rounded-xl bg-surface2 p-1 cursor-pointer border-2 transition-all ${
-                  avatarUrl === url ? 'border-amber scale-105' : 'border-transparent opacity-60'
-                }`}
-              />
-            ))}
-          </div>
+          <span className="text-xs text-muted font-bold">Crée ton personnage :</span>
+          <AvatarPicker value={avatarUrl} onChange={setAvatarUrl} />
         </div>
         <Button type="submit" disabled={loading} className="w-full py-3">
           {loading ? 'Création…' : 'Valider et jouer →'}
@@ -170,15 +159,16 @@ function RegisterScreen({ onBack }: { onBack: () => void }) {
 function GuestScreen({ onBack }: { onBack: () => void }) {
   const { continueAsGuest } = useAuth();
   const [username, setUsername] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!username.trim()) return;
-    continueAsGuest(username, DEFAULT_AVATARS[Math.floor(Math.random() * DEFAULT_AVATARS.length)]);
+    continueAsGuest(username, avatarUrl || buildAvatarUrl({ eyes: 'cheery', mouth: 'openedSmile', hair: 'shortHair', skin: 'f2d3b1', hairColor: '0e0e0e', bg: 'b6e3f4' }));
   };
 
   return (
-    <Card className="max-w-md w-full flex flex-col gap-5">
+    <Card className="max-w-md w-full max-h-[90vh] overflow-y-auto flex flex-col gap-5">
       <div>
         <button onClick={onBack} className="text-xs text-muted hover:text-white mb-2">
           ← Retour
@@ -190,6 +180,7 @@ function GuestScreen({ onBack }: { onBack: () => void }) {
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input placeholder="Ton pseudo" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <AvatarPicker value={avatarUrl} onChange={setAvatarUrl} />
         <Button type="submit" className="w-full py-3">
           Continuer →
         </Button>

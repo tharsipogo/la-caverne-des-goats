@@ -12,7 +12,7 @@ interface TopbarProps {
 export function Topbar({ onBack, breadcrumb }: TopbarProps) {
   return (
     <div
-      className="h-14 shrink-0 -mx-5 md:-mx-10 -mt-6 md:-mt-8 mb-6 px-5 md:px-10 flex items-center justify-between border-b border-white/[0.06] relative z-10"
+      className="h-14 shrink-0 -mx-4 md:-mx-10 -mt-5 md:-mt-8 mb-5 px-4 md:px-10 flex items-center justify-between border-b border-white/[0.06] relative z-10"
       style={{ background: 'rgba(8, 10, 24, 0.82)', backdropFilter: 'blur(20px)' }}
     >
       {onBack ? (

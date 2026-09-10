@@ -249,3 +249,33 @@ n'ont donc pas hérité automatiquement du nouveau look. Comme elles
 n'étaient pas explicitement exclues, à traiter en suivi si tu veux
 qu'elles matchent aussi le nouveau système — c'est un travail page par
 page vu leur style déjà très personnalisé.
+
+## Session 8 — Corrections mobile + retour du créateur d'avatar
+
+### Scroll mobile qui coupait le contenu
+La nav du bas sur mobile est en `fixed` (hors du flux), donc rien ne
+réservait sa hauteur dans la zone de contenu scrollable — les
+~70 derniers pixels du bas étaient cachés dessous. Corrigé :
+- `pb-24` ajouté à la zone de contenu sur mobile (annulé en `md:pb-8`
+  sur desktop où il n'y a pas de nav fixe en bas).
+- `h-screen` → `h-dvh` dans `layout.tsx` (le viewport `100vh` classique
+  ne tient pas compte du rétrécissement/agrandissement de la barre
+  d'adresse mobile ; `dvh` s'ajuste correctement).
+- Marges négatives de `Topbar.tsx` réajustées pour matcher les nouvelles
+  valeurs de padding mobile (`px-4 py-5` au lieu de `px-5 py-6`).
+
+### Créateur d'avatar restauré
+`AuthGate.tsx` proposait 4 avatars robots fixes au lieu du créateur de
+personnage (yeux / bouche / cheveux / couleurs). Remis en place via un
+nouveau composant partagé `src/components/auth/AvatarPicker.tsx`
+(DiceBear "big-smile" v10.x, mêmes valeurs déjà validées plus tôt dans
+le projet) — utilisé à la fois pour "Créer un compte" et "Continuer en
+invité". La carte d'inscription a aussi un `max-h-[90vh] overflow-y-auto`
+pour rester utilisable sur petit écran avec tous ces contrôles.
+
+### Pas encore traité (pour la prochaine passe)
+- Interfaces non adaptées au mobile en général, notamment **Anime
+  Draft** — explicitement mis de côté par toi pour plus tard.
+- D'autres endroits où le scroll pourrait encore être insuffisant sur
+  des écrans très petits — à identifier une fois que tu as pu tester le
+  correctif ci-dessus.
