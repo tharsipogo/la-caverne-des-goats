@@ -187,7 +187,7 @@ export default function AbsoluteCinemaPage() {
   // ================= 1. SETUP =================
   if (phase === 'setup') {
     return (
-      <div className="bg-[#0A0A0C] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-8 text-[#E0E0E0] border border-[#D4AF37]/30 shadow-2xl">
+      <div className="bg-[#0A0A0C] min-h-[calc(100dvh-2rem)] mb-20 md:mb-0 rounded-2xl p-4 md:p-8 text-[#E0E0E0] border border-[#D4AF37]/30 shadow-2xl">
         <div className="mb-8 text-center">
           <div className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#D4AF37] mb-1">
             ⚜️ FOAT Award ⚜️
@@ -400,7 +400,7 @@ export default function AbsoluteCinemaPage() {
     const currentTheme = PLAYER_THEMES[currentPlayerIdx];
 
     return (
-      <div className="bg-[#0A0A0C] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-6 text-[#E0E0E0] max-w-5xl mx-auto flex flex-col gap-6 border border-[#D4AF37]/30 shadow-2xl">
+      <div className="bg-[#0A0A0C] min-h-[calc(100dvh-2rem)] mb-20 md:mb-0 rounded-2xl p-4 md:p-6 text-[#E0E0E0] max-w-5xl mx-auto flex flex-col gap-6 border border-[#D4AF37]/30 shadow-2xl">
         <div
           className="bg-[#121115] border-2 rounded-2xl p-4 flex items-center justify-between shadow-2xl relative overflow-hidden"
           style={{
@@ -470,7 +470,7 @@ export default function AbsoluteCinemaPage() {
     playerCount === 2 ? 'grid-cols-2' : playerCount === 3 ? 'grid-cols-3' : 'grid-cols-4';
 
   return (
-    <div className="bg-[#0A0A0C] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-6 text-[#E0E0E0] flex flex-col justify-between border border-[#D4AF37]/30 shadow-2xl">
+    <div className="bg-[#0A0A0C] min-h-[calc(100dvh-2rem)] mb-20 md:mb-0 rounded-2xl p-4 md:p-6 text-[#E0E0E0] flex flex-col justify-between border border-[#D4AF37]/30 shadow-2xl">
       <div className="text-center mb-2">
         <div className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.3em] mb-0.5">
           ⚜️ PALMARÈS DU FESTIVAL ⚜️

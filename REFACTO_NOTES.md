@@ -313,3 +313,31 @@ partagées (`.btn` / `.btn-secondary`) pour respecter le même style push
 que le reste des jeux. Les autres jeux (Versus, Tier, Qui est-ce ?,
 Line Capture, Undercover Artist) utilisaient déjà les classes
 partagées — rien à changer dessus.
+
+## Session 10 — Bouton encore caché derrière la nav mobile (Absolute Cinema/Le Five/Anime Draft)
+
+Le scroll fonctionnait mais n'allait pas assez loin : ces 3 jeux
+utilisent un `flex flex-col justify-between` avec `min-h-[calc(100dvh-2rem)]`
+sur leur carte — le dernier bouton se retrouve donc collé pile au bord
+bas de cette carte, qui elle-même frôle le bas du viewport. Sur mobile,
+ce bord tombe presque exactement derrière la nav fixe en bas.
+Ajouté `mb-20 md:mb-0` (marge, pas du padding interne à la carte — donc
+aucun changement visuel du design) sur chacune des cartes de ces 3
+jeux : 80px de dégagement garanti sous la carte sur mobile, rien sur
+desktop où il n'y a pas de nav fixe.
+
+## Session 11 — Qui est-ce ? n'affichait rien
+
+Le conteneur racine de toute la page (utilisé pour TOUS les écrans :
+menu, config, attente, plateau de jeu) utilisait encore
+`h-full max-h-[calc(100vh-2rem)]` — exactement le même type de bug que
+celui déjà trouvé et corrigé dans Undercover à la session précédente,
+sauf que là il enveloppait la page entière au lieu d'un seul écran.
+Depuis que le conteneur parent (dans `layout.tsx`) n'a plus de hauteur
+fixe classique (`flex-1 min-h-0`), `h-full` sur cet enfant pouvait se
+résoudre de façon imprévisible et rendre tout le contenu invisible.
+Remplacé par `min-h-[calc(100dvh-2rem)]` (le même schéma qui fonctionne
+déjà sur Absolute Cinema/Le Five/Anime Draft), plus `mb-20 md:mb-0`
+pour la même raison de dégagement sous la nav mobile. Le même correctif
+appliqué à l'écran du plateau de jeu (phase "play"/"last_chance") qui
+avait le même souci.

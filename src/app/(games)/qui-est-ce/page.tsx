@@ -327,7 +327,7 @@ export default function GuessWhoPage() {
 
   return (
     <div
-      className="relative flex flex-col h-full max-h-[calc(100vh-2rem)] justify-between p-2 sm:p-4 w-full"
+      className="relative flex flex-col min-h-[calc(100dvh-2rem)] justify-between p-2 sm:p-4 w-full mb-20 md:mb-0"
       onClick={() => setShowTargets([false, false])}
     >
       {/* Modale Personnalisée */}
@@ -487,7 +487,7 @@ export default function GuessWhoPage() {
 
       {/* 4. PLATEAU DE JEU */}
       {(phase === 'play' || phase === 'last_chance') && (
-        <div className="flex flex-col h-full justify-between max-w-6xl mx-auto w-full gap-3">
+        <div className="flex flex-col min-h-[70dvh] justify-between max-w-6xl mx-auto w-full gap-3">
           {/* Bandeau supérieur miroir */}
           <div className="relative flex items-stretch bg-[#121420]/90 border border-white/10 rounded-xl overflow-visible shadow-lg">
             {/* Joueur 1 */}
