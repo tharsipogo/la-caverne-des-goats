@@ -327,7 +327,7 @@ export default function GuessWhoPage() {
 
   return (
     <div
-      className="relative flex flex-col min-h-[calc(100dvh-2rem)] justify-between p-2 sm:p-4 w-full"
+      className="relative flex flex-col min-h-[calc(100dvh-2rem)] overflow-x-hidden justify-between p-2 sm:p-4 w-full"
       onClick={() => setShowTargets([false, false])}
     >
       {/* Modale Personnalisée */}

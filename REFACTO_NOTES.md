@@ -427,3 +427,14 @@ deux nouvelles pistes corrigées en même temps, sur les 3 jeux concernés
 Si le problème persiste encore après ce correctif, il me faudrait une
 capture zoomée pile sur l'endroit exact où ça dépasse pour identifier
 le pixel en cause plutôt que de continuer à tester des hypothèses.
+
+## Session 17 — overflow-x-hidden au lieu de overflow-hidden
+
+Confirmé par toi : `overflow-hidden` réglait bien le débordement visuel,
+le seul souci était qu'il bloquait aussi le scroll vertical vers le bas
+(impossible d'atteindre tous les paramètres). Solution : `overflow-x-
+hidden` au lieu de `overflow-hidden` sur les cadres extérieurs des 4
+écrans concernés (Le Five, Anime Draft, Absolute Cinema, Qui est-ce ?)
+— seul l'axe horizontal est bloqué (ce qui empêche le débordement sur
+les côtés), l'axe vertical reste totalement libre donc le scroll pour
+atteindre le bouton et tous les paramètres fonctionne normalement.
