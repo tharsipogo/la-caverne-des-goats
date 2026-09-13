@@ -294,7 +294,7 @@ export default function LeFivePage() {
   // ================= 1. SETUP (VESTIAIRE ET ARDOISE DU COACH) =================
   if (phase === 'setup') {
     return (
-      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] mb-20 md:mb-0 rounded-2xl p-4 md:p-8 text-[#E2E8F0] border-4 border-[#1E3A2B] shadow-2xl relative font-sans">
+      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-8 text-[#E2E8F0] border-4 border-[#1E3A2B] shadow-2xl relative font-sans">
         {/* En-tête Tableau */}
         <div className="mb-8 text-center border-b-2 border-dashed border-[#2D5A40] pb-6">
           <div className="text-xs uppercase tracking-[0.3em] font-mono font-bold text-[#FF5500] mb-1">
@@ -417,7 +417,7 @@ export default function LeFivePage() {
     const currentColor = PLAYER_COLORS[currentPlayerIdx];
 
     return (
-      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] mb-20 md:mb-0 rounded-2xl p-4 md:p-6 text-[#E2E8F0] max-w-5xl mx-auto flex flex-col gap-6 border-4 border-[#1E3A2B] shadow-2xl">
+      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-6 text-[#E2E8F0] max-w-5xl mx-auto flex flex-col gap-6 border-4 border-[#1E3A2B] shadow-2xl">
         <div
           className="bg-[#13261C] border-2 rounded-2xl p-4 flex items-center justify-between shadow-2xl relative"
           style={{ borderColor: currentColor.hex, boxShadow: `0 0 25px ${currentColor.hex}30` }}
@@ -469,7 +469,7 @@ export default function LeFivePage() {
     const currentSlot = activePlayer.formation?.slots[currentSlotIdx];
 
     return (
-      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] mb-20 md:mb-0 rounded-2xl p-4 md:p-6 text-[#E2E8F0] max-w-5xl mx-auto flex flex-col gap-6 border-4 border-[#1E3A2B] shadow-2xl">
+      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-6 text-[#E2E8F0] max-w-5xl mx-auto flex flex-col gap-6 border-4 border-[#1E3A2B] shadow-2xl">
         <div
           className="bg-[#13261C] border-2 rounded-2xl p-4 flex items-center justify-between shadow-2xl relative"
           style={{ borderColor: activeColor.hex, boxShadow: `0 0 25px ${activeColor.hex}30` }}
@@ -526,7 +526,7 @@ export default function LeFivePage() {
     'grid-cols-2 lg:grid-cols-3';
 
   return (
-    <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] mb-20 md:mb-0 rounded-2xl p-4 md:p-6 text-[#E2E8F0] flex flex-col justify-between border-4 border-[#1E3A2B] shadow-2xl font-sans">
+    <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-6 text-[#E2E8F0] flex flex-col justify-between border-4 border-[#1E3A2B] shadow-2xl font-sans">
       <div className="text-center mb-4 border-b-2 border-dashed border-[#2D5A40] pb-4">
         <div className="text-[10px] font-mono font-black text-[#FF5500] uppercase tracking-[0.3em] mb-1">
           📌 COMPOSITIONS DE DÉPART 📌

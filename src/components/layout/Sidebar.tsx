@@ -150,27 +150,40 @@ export function Sidebar() {
           <OnlineModeToggle compact />
         </div>
       </div>
-
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.06] flex overflow-x-auto gap-1 px-2 py-2"
-        style={{ background: 'rgba(8, 10, 24, 0.82)', backdropFilter: 'blur(20px)' }}
-      >
-        {[...main, ...games].map((item, i) => {
-          const active = pathname === item.href;
-          const [icon, ...rest] = item.label.split(' ');
-          return (
-            <Link
-              key={item.href + i}
-              href={item.href}
-              className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[10.5px] font-semibold min-w-[64px] shrink-0"
-              style={{ color: active ? '#f5a623' : '#94a3b8' }}
-            >
-              <span className="text-lg leading-none">{icon}</span>
-              <span className="truncate max-w-[68px]">{rest.join(' ')}</span>
-            </Link>
-          );
-        })}
-      </nav>
     </>
+  );
+}
+
+/**
+ * Nav mobile du bas — un vrai élément de flux (pas `fixed`), rendu
+ * APRÈS la zone de contenu scrollable dans layout.tsx, pour garantir
+ * qu'il réserve toujours sa propre place et ne recouvre jamais le bas
+ * du contenu.
+ */
+export function MobileBottomNav() {
+  const pathname = usePathname();
+  const { main, games } = useSidebarNav();
+
+  return (
+    <nav
+      className="md:hidden shrink-0 border-t border-white/[0.06] flex overflow-x-auto gap-1 px-2 py-2 relative z-20"
+      style={{ background: 'rgba(8, 10, 24, 0.82)', backdropFilter: 'blur(20px)' }}
+    >
+      {[...main, ...games].map((item, i) => {
+        const active = pathname === item.href;
+        const [icon, ...rest] = item.label.split(' ');
+        return (
+          <Link
+            key={item.href + i}
+            href={item.href}
+            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[10.5px] font-semibold min-w-[64px] shrink-0"
+            style={{ color: active ? '#f5a623' : '#94a3b8' }}
+          >
+            <span className="text-lg leading-none">{icon}</span>
+            <span className="truncate max-w-[68px]">{rest.join(' ')}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

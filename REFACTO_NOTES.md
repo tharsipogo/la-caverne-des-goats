@@ -341,3 +341,21 @@ déjà sur Absolute Cinema/Le Five/Anime Draft), plus `mb-20 md:mb-0`
 pour la même raison de dégagement sous la nav mobile. Le même correctif
 appliqué à l'écran du plateau de jeu (phase "play"/"last_chance") qui
 avait le même souci.
+
+## Session 12 — Vrai correctif structurel du recouvrement par la nav mobile
+
+Les tentatives précédentes (padding/marge devinés page par page) ne
+réglaient que le symptôme. Cause réelle : la nav mobile du bas était en
+`position: fixed`, donc **hors du flux** — aucun élément ne réservait
+sa place, elle flottait par-dessus le contenu peu importe où on
+scrollait.
+
+Corrigé structurellement : la nav mobile est sortie de `Sidebar` vers
+son propre composant exporté `MobileBottomNav` (toujours dans
+`Sidebar.tsx`), rendu par `layout.tsx` **après** la zone de contenu, en
+tant que simple enfant du flex (`shrink-0`, plus de `fixed`). Sur mobile,
+la colonne devient : topbar → contenu (`flex-1 overflow-y-auto`, prend
+tout l'espace restant) → nav du bas (prend sa vraie place). Le contenu
+ne peut structurellement plus jamais passer sous la nav, quel que soit
+le jeu — donc suppression de tous les correctifs approximatifs
+précédents (`pb-24`, `mb-20 md:mb-0` un peu partout), devenus inutiles.

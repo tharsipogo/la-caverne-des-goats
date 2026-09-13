@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { Sidebar, MobileBottomNav } from '@/components/layout/Sidebar';
 import { AuthProvider } from '@/lib/authContext';
 import { AuthGate } from '@/components/auth/AuthGate';
 import { OnlineModeProvider } from '@/lib/onlineModeContext';
@@ -24,9 +24,10 @@ export default function RootLayout({
           <AuthGate>
             <OnlineModeProvider>
               <Sidebar />
-              <div className="relative z-10 flex-1 flex flex-col min-w-0 min-h-0 px-4 py-5 pb-24 md:px-10 md:py-8 md:pb-8 overflow-y-auto">
+              <div className="relative z-10 flex-1 flex flex-col min-w-0 min-h-0 px-4 py-5 md:px-10 md:py-8 overflow-y-auto">
                 {children}
               </div>
+              <MobileBottomNav />
             </OnlineModeProvider>
           </AuthGate>
         </AuthProvider>
