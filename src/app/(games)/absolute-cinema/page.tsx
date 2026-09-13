@@ -200,7 +200,7 @@ export default function AbsoluteCinemaPage() {
           </p>
         </div>
 
-        <div className="bg-[#121115] border border-[#D4AF37]/20 rounded-2xl p-6 flex flex-col gap-6 shadow-xl max-w-4xl mx-auto">
+        <div className="bg-[#121115] border border-[#D4AF37]/20 rounded-2xl p-6 flex flex-col gap-6 max-w-4xl w-full min-w-0 mx-auto">
           <div>
             <label className="text-xs uppercase tracking-wider font-extrabold text-[#D4AF37] block mb-2">
               Nombre de Producteurs

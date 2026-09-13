@@ -308,7 +308,7 @@ export default function LeFivePage() {
           </p>
         </div>
 
-        <div className="bg-[#13261C] border-2 border-[#2D5A40] rounded-2xl p-6 flex flex-col gap-6 shadow-2xl max-w-4xl w-full min-w-0 mx-auto relative">
+        <div className="bg-[#13261C] border-2 border-[#2D5A40] rounded-2xl p-6 flex flex-col gap-6 max-w-4xl w-full min-w-0 mx-auto relative">
           {/* Sélection des 4 bases par poste */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-[#0F1E16] p-3 rounded-xl border border-[#2D5A40]">

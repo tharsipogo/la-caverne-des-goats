@@ -387,3 +387,20 @@ D'après la capture d'écran envoyée, la carte intérieure des paramètres
 carte extérieure — le `w-full min-w-0` ajouté sur la carte intérieure en
 session 13 semble avoir suffi à régler le débordement visuel, sans
 avoir besoin du `overflow-hidden` qui, lui, cassait le scroll.
+
+## Session 15 — Vraie cause du "débordement" trouvée : l'ombre portée
+
+D'après ta capture, les petits triangles noirs aux coins de la carte
+intérieure venaient de son `shadow-2xl` (ombre très diffuse, ~50px de
+flou) qui déborde du padding de la carte extérieure (16-24px sur
+mobile) — pas d'un vrai débordement de largeur. `overflow-hidden`
+bloquait le scroll sans même résoudre ça puisque le flou de l'ombre est
+justement ce que ce genre de correctif est censé cacher, mais au prix
+du scroll cassé.
+
+Vrai correctif : retiré le `shadow-2xl`/`shadow-xl` de la carte
+"paramètres" imbriquée dans l'écran de configuration des 3 jeux
+(Le Five, Anime Draft, Absolute Cinema) — elle est déjà à l'intérieur
+d'une carte qui a elle-même son ombre, l'ombre de la carte intérieure
+ne servait à rien visuellement à part déborder. Gardé le `w-full
+min-w-0` par sécurité, aucun autre changement de style.

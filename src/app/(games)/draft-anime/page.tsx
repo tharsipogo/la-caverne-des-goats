@@ -185,7 +185,7 @@ export default function AnimeDraftPage() {
           </p>
         </div>
 
-        <div className="bg-[#131B2E] border border-white/10 rounded-2xl p-6 flex flex-col gap-6 shadow-2xl max-w-4xl mx-auto relative z-10">
+        <div className="bg-[#131B2E] border border-white/10 rounded-2xl p-6 flex flex-col gap-6 max-w-4xl w-full min-w-0 mx-auto relative z-10">
           {/* Choix du Thème */}
           <div>
             <label className="text-xs uppercase tracking-widest font-extrabold text-[#FACC15] block mb-2">
