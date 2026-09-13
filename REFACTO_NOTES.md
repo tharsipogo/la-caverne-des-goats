@@ -359,3 +359,20 @@ tout l'espace restant) → nav du bas (prend sa vraie place). Le contenu
 ne peut structurellement plus jamais passer sous la nav, quel que soit
 le jeu — donc suppression de tous les correctifs approximatifs
 précédents (`pb-24`, `mb-20 md:mb-0` un peu partout), devenus inutiles.
+
+## Session 13 — Cadre intérieur qui dépassait dans Le Five
+
+Sur l'écran de configuration (vestiaire), la carte "paramètres" imbriquée
+dans la grande carte "LE FIVE" pouvait visuellement déborder de celle-ci.
+Sans capture d'écran précise, correctif défensif appliqué plutôt que de
+deviner à l'aveugle une cause exacte :
+- `overflow-hidden` sur la grande carte extérieure — garantit que rien à
+  l'intérieur ne peut plus jamais dépasser visuellement son bord, quel
+  que soit ce qui cause le débordement (ombre, grille, etc.).
+- `w-full min-w-0` sur la carte intérieure — l'empêche de revendiquer
+  plus de largeur que sa carte parente le permet.
+Aucun changement de couleur, de texte ou de disposition — uniquement de
+l'endiguement (containment). Si un souci de recouvrement de contenu
+apparaît malgré tout après ce correctif (texte coupé au lieu de
+déborder proprement), une capture d'écran aiderait à cibler la vraie
+cause plutôt que ce correctif défensif.

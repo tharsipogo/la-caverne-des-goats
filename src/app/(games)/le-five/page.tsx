@@ -294,7 +294,7 @@ export default function LeFivePage() {
   // ================= 1. SETUP (VESTIAIRE ET ARDOISE DU COACH) =================
   if (phase === 'setup') {
     return (
-      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-8 text-[#E2E8F0] border-4 border-[#1E3A2B] shadow-2xl relative font-sans">
+      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-8 text-[#E2E8F0] border-4 border-[#1E3A2B] shadow-2xl relative font-sans overflow-hidden">
         {/* En-tête Tableau */}
         <div className="mb-8 text-center border-b-2 border-dashed border-[#2D5A40] pb-6">
           <div className="text-xs uppercase tracking-[0.3em] font-mono font-bold text-[#FF5500] mb-1">
@@ -308,7 +308,7 @@ export default function LeFivePage() {
           </p>
         </div>
 
-        <div className="bg-[#13261C] border-2 border-[#2D5A40] rounded-2xl p-6 flex flex-col gap-6 shadow-2xl max-w-4xl mx-auto relative">
+        <div className="bg-[#13261C] border-2 border-[#2D5A40] rounded-2xl p-6 flex flex-col gap-6 shadow-2xl max-w-4xl w-full min-w-0 mx-auto relative">
           {/* Sélection des 4 bases par poste */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-[#0F1E16] p-3 rounded-xl border border-[#2D5A40]">
