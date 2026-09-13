@@ -51,7 +51,7 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
   const handleJoinRoom = async () => {
     if (!joinInput.trim()) return alert('Renseigne le code du salon.');
     try {
-      const session = await joinGameSession(joinInput, profile);
+      const session = await joinGameSession(joinInput.trim(), profile);
       setCode(session.code);
       setSessionId(session.id);
       setIsHost(session.host_id === profile.user_id);

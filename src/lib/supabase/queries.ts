@@ -82,11 +82,12 @@ export async function joinGameSession(code: string, userProfile: ProfileRow) {
   const { data: session, error: sessionError } = await supabase
     .from('game_sessions')
     .select('*')
-    .eq('code', code.toUpperCase())
+    .eq('code', code.trim().toUpperCase())
     .single();
 
   if (sessionError || !session) {
-    throw new Error('Salon introuvable.');
+    console.error('Erreur joinGameSession (recherche du salon) :', sessionError);
+    throw new Error('Salon introuvable. Vérifie le code, ou que les droits Supabase (RLS) sont bien configurés — voir supabase/migration_online_mode.sql.');
   }
   if (session.status === 'finished') {
     throw new Error('Ce salon est terminé.');

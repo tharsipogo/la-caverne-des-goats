@@ -438,3 +438,25 @@ hidden` au lieu de `overflow-hidden` sur les cadres extérieurs des 4
 — seul l'axe horizontal est bloqué (ce qui empêche le débordement sur
 les côtés), l'axe vertical reste totalement libre donc le scroll pour
 atteindre le bouton et tous les paramètres fonctionne normalement.
+
+## Session 18 — "Salon introuvable" en rejoignant avec le bon code
+
+Deux corrections :
+1. **Vrai bug** : le code tapé dans le champ "Rejoindre" n'était pas
+   nettoyé des espaces avant d'être envoyé à Supabase — un espace
+   ajouté par le clavier mobile (autocorrection, espace en fin de
+   saisie) suffisait à faire échouer la recherche exacte du salon.
+   `.trim()` ajouté à l'entrée utilisateur et en sécurité dans
+   `joinGameSession` elle-même.
+2. **Piste à vérifier de ton côté** : si le problème persiste après ce
+   correctif, c'est très probablement que **la migration SQL
+   (`supabase/migration_online_mode.sql`) n'a pas encore été exécutée**
+   sur ton projet Supabase. Les tables `game_sessions`/`session_players`
+   ont été créées à un moment donné en dehors du schéma suivi par le
+   projet, et si elles n'ont pas de policy RLS ouverte, la création du
+   salon peut réussir (si une policy d'insertion existe) alors que la
+   lecture par un autre appareil échoue silencieusement — ce qui
+   ressemble exactement à "le salon n'existe pas" alors qu'il existe
+   bel et bien. Le message d'erreur log maintenant le vrai code
+   d'erreur Supabase dans la console du navigateur pour distinguer les
+   deux cas plus facilement à l'avenir.
