@@ -376,3 +376,14 @@ l'endiguement (containment). Si un souci de recouvrement de contenu
 apparaît malgré tout après ce correctif (texte coupé au lieu de
 déborder proprement), une capture d'écran aiderait à cibler la vraie
 cause plutôt que ce correctif défensif.
+
+## Session 14 — Le correctif précédent bloquait le scroll (Le Five)
+
+Le `overflow-hidden` ajouté en session 13 sur la grande carte "LE FIVE"
+empêchait d'atteindre le bas des paramètres (noms des coachs, bouton
+Valider) — même piège que celui déjà rencontré avec Undercover. Retiré.
+D'après la capture d'écran envoyée, la carte intérieure des paramètres
+(Gardien/Défenseur/Milieu/Attaquant) est en fait bien contenue dans la
+carte extérieure — le `w-full min-w-0` ajouté sur la carte intérieure en
+session 13 semble avoir suffi à régler le débordement visuel, sans
+avoir besoin du `overflow-hidden` qui, lui, cassait le scroll.
