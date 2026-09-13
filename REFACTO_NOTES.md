@@ -404,3 +404,26 @@ Vrai correctif : retiré le `shadow-2xl`/`shadow-xl` de la carte
 d'une carte qui a elle-même son ombre, l'ombre de la carte intérieure
 ne servait à rien visuellement à part déborder. Gardé le `w-full
 min-w-0` par sécurité, aucun autre changement de style.
+
+## Session 16 — Toujours le "débordement" : opacité de la barre du haut + plus d'espace
+
+Vu que retirer l'ombre n'a rien changé (confirmé après redéploiement),
+deux nouvelles pistes corrigées en même temps, sur les 3 jeux concernés
+(Le Five, Anime Draft, Absolute Cinema) :
+
+1. **Barres du haut/bas semi-transparentes** (`rgba(8,10,24,0.82)` +
+   flou) → passées à `0.97` (quasi opaques) + ajout du préfixe
+   `-webkit-backdrop-filter` pour Safari/certains Android. Si le flou
+   ne s'applique pas sur ton téléphone (fréquent sur certains
+   navigateurs Android), la transparence seule pouvait laisser
+   deviner la carte qui défile en dessous à la jonction — d'où
+   l'impression de forme qui dépasse, identique quelle que soit la
+   couleur du jeu.
+2. **Espace intérieur du grand cadre** passé de `p-4` à `p-6` sur
+   mobile (16px → 24px) pour l'écran de configuration initial des 3
+   jeux — marge plus généreuse entre le cadre extérieur et celui des
+   paramètres, qui ne peut plus jamais paraître "collé".
+
+Si le problème persiste encore après ce correctif, il me faudrait une
+capture zoomée pile sur l'endroit exact où ça dépasse pour identifier
+le pixel en cause plutôt que de continuer à tester des hypothèses.

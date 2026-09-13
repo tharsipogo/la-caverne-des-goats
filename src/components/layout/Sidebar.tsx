@@ -106,7 +106,7 @@ export function Sidebar() {
       {/* Desktop Navigation */}
       <aside
         className="hidden md:flex w-56 shrink-0 py-6 px-2.5 flex-col gap-1 h-screen sticky top-0 relative z-10 border-r border-white/[0.06]"
-        style={{ background: 'rgba(8, 10, 24, 0.82)', backdropFilter: 'blur(20px)' }}
+        style={{ background: 'rgba(8, 10, 24, 0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
       >
         <Link href="/" className="flex items-center gap-2 mb-4 px-2.5 hover:opacity-80 transition-opacity">
           <span className="text-xl leading-none">🐐</span>
@@ -140,7 +140,7 @@ export function Sidebar() {
       {/* Mobile Navigation */}
       <div
         className="md:hidden sticky top-0 z-40 border-b border-white/[0.06] px-4 py-3 flex items-center justify-between gap-3"
-        style={{ background: 'rgba(8, 10, 24, 0.82)', backdropFilter: 'blur(20px)' }}
+        style={{ background: 'rgba(8, 10, 24, 0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
       >
         <Link href="/" className="font-serif text-lg font-semibold text-white shrink-0 flex items-center gap-1.5">
           <span>🐐</span>
@@ -167,7 +167,7 @@ export function MobileBottomNav() {
   return (
     <nav
       className="md:hidden shrink-0 border-t border-white/[0.06] flex overflow-x-auto gap-1 px-2 py-2 relative z-20"
-      style={{ background: 'rgba(8, 10, 24, 0.82)', backdropFilter: 'blur(20px)' }}
+      style={{ background: 'rgba(8, 10, 24, 0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
     >
       {[...main, ...games].map((item, i) => {
         const active = pathname === item.href;

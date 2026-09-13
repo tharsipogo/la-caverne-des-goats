@@ -170,7 +170,7 @@ export default function AnimeDraftPage() {
   // ================= 1. SETUP =================
   if (phase === 'setup') {
     return (
-      <div className="bg-[#0B0F19] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-8 text-[#E2E8F0] border border-white/10 shadow-2xl relative font-sans">
+      <div className="bg-[#0B0F19] min-h-[calc(100dvh-2rem)] rounded-2xl p-6 md:p-8 text-[#E2E8F0] border border-white/10 shadow-2xl relative font-sans">
         <div className="mb-8 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-white/5 border border-white/10 mb-3">
             <span className="text-xs font-black text-[#FF6600]">🍃 NARUTO</span>

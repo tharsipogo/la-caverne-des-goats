@@ -187,7 +187,7 @@ export default function AbsoluteCinemaPage() {
   // ================= 1. SETUP =================
   if (phase === 'setup') {
     return (
-      <div className="bg-[#0A0A0C] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-8 text-[#E0E0E0] border border-[#D4AF37]/30 shadow-2xl">
+      <div className="bg-[#0A0A0C] min-h-[calc(100dvh-2rem)] rounded-2xl p-6 md:p-8 text-[#E0E0E0] border border-[#D4AF37]/30 shadow-2xl">
         <div className="mb-8 text-center">
           <div className="text-xs uppercase tracking-[0.3em] font-extrabold text-[#D4AF37] mb-1">
             ⚜️ FOAT Award ⚜️

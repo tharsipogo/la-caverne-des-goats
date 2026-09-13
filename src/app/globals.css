@@ -75,7 +75,7 @@ html, body {
 }
 
 .glass-surface {
-  background: rgba(8, 10, 24, 0.82);
+  background: rgba(8, 10, 24, 0.97);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }

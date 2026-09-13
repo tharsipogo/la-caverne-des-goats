@@ -294,7 +294,7 @@ export default function LeFivePage() {
   // ================= 1. SETUP (VESTIAIRE ET ARDOISE DU COACH) =================
   if (phase === 'setup') {
     return (
-      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] rounded-2xl p-4 md:p-8 text-[#E2E8F0] border-4 border-[#1E3A2B] shadow-2xl relative font-sans">
+      <div className="bg-[#0D1B14] min-h-[calc(100dvh-2rem)] rounded-2xl p-6 md:p-8 text-[#E2E8F0] border-4 border-[#1E3A2B] shadow-2xl relative font-sans">
         {/* En-tête Tableau */}
         <div className="mb-8 text-center border-b-2 border-dashed border-[#2D5A40] pb-6">
           <div className="text-xs uppercase tracking-[0.3em] font-mono font-bold text-[#FF5500] mb-1">
