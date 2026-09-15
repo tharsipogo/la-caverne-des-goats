@@ -24,9 +24,16 @@ export function useOnlineMode() {
   return ctx;
 }
 
-/** Jeux qui ont un vrai mode en ligne jouable via un salon. */
+/**
+ * Jeux réellement jouables via le salon (créent leur partie à partir
+ * de la session Supabase du salon : sessionCode/profile/isHost). Qui
+ * est-ce ? et Undercover Artist ont chacun leur PROPRE système de
+ * salon indépendant, non branché sur celui-ci — à ne pas proposer ici
+ * tant qu'ils ne sont pas rebranchés, sous peine d'écran vide côté
+ * joueurs qui rejoignent.
+ */
 export const ONLINE_GAMES = [
   { slug: 'soit-connecte', label: 'Soit connecté', icon: '🔗' },
-  { slug: 'qui-est-ce', label: 'Qui est-ce ?', icon: '❓' },
   { slug: 'undercover-artist', label: 'Undercover Artist', icon: '🎨' },
+  { slug: 'qui-est-ce', label: 'Qui est-ce ?', icon: '❓' },
 ] as const;

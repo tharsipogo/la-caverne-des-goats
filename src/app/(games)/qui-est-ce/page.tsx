@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 import { GameConfigShell } from '@/components/game/GameConfigShell';
 import { PlayerNameField } from '@/components/game/PlayerNameField';
+import { useAuth } from '@/lib/authContext';
+import { submitGameResults, returnSessionToLobby } from '@/lib/supabase/queries';
 
 type GameMode = 'menu' | 'local' | 'online';
 type Phase = 'setup' | 'secret_reveal' | 'play' | 'last_chance' | 'end' | 'waiting';
@@ -14,6 +16,8 @@ type PIdx = 0 | 1;
 
 export default function GuessWhoPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [lists, setLists] = useState<GameList[]>([]);
   const [listId, setListId] = useState('');
   const [loading, setLoading] = useState(true);
@@ -52,6 +56,15 @@ export default function GuessWhoPage() {
   }>({ isOpen: false, title: '', message: '' });
   const [isDesktop, setIsDesktop] = useState(false);
   const [winnerMessage, setWinnerMessage] = useState('');
+  const [winnerIdx, setWinnerIdxState] = useState<PIdx | null>(null);
+  function setWinnerIdx(idx: PIdx | null) {
+    setWinnerIdxState(idx);
+  }
+
+  // Salon (mode en ligne branché sur game_sessions/session_players)
+  const [salonSessionId, setSalonSessionId] = useState<string | null>(null);
+  const salonPlayerIdsRef = useRef<[string, string] | null>(null);
+  const salonResultsSubmitted = useRef(false);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -72,6 +85,63 @@ export default function GuessWhoPage() {
       setLoading(false);
     })();
   }, [gridSize]);
+
+  // Pont vers le salon : si l'URL contient ?salon=CODE, on saute le
+  // menu et on rejoint directement en tant qu'hôte ou invité, avec les
+  // vrais joueurs du salon (pour le score en fin de partie).
+  useEffect(() => {
+    const salonCode = searchParams.get('salon');
+    if (!salonCode || !user) return;
+
+    (async () => {
+      const { data: session } = await supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('code', salonCode)
+        .single();
+      if (!session) return;
+
+      setSalonSessionId(session.id);
+
+      const { data: sPlayers } = await supabase
+        .from('session_players')
+        .select('*')
+        .eq('session_id', session.id)
+        .order('created_at', { ascending: true });
+
+      const hostPlayer = sPlayers?.find((p) => p.user_id === session.host_id);
+      const guestPlayer = sPlayers?.find((p) => p.user_id !== session.host_id);
+      if (hostPlayer && guestPlayer) {
+        salonPlayerIdsRef.current = [hostPlayer.user_id, guestPlayer.user_id];
+      }
+
+      const amHost = user.user_id === session.host_id;
+      setIsHost(amHost);
+      setMyPlayerIdx(amHost ? 0 : 1);
+      setNames([hostPlayer?.name || (amHost ? user.username : 'Joueur 1'), guestPlayer?.name || (!amHost ? user.username : 'Joueur 2')]);
+      setRoomCode(salonCode);
+      setGameMode('online');
+      // L'hôte passe par l'écran de configuration (choix de la base et
+      // taille de grille) avant de créer le salon ; l'invité n'a rien à
+      // configurer et va directement en salle d'attente.
+      if (!amHost) setPhase('waiting');
+    })();
+  }, [searchParams, user]);
+
+  // Soumission des scores au salon quand la partie se termine
+  useEffect(() => {
+    if (phase !== 'end' || !salonSessionId || !isHost || salonResultsSubmitted.current) return;
+    salonResultsSubmitted.current = true;
+
+    const ids = salonPlayerIdsRef.current;
+    if (!ids) {
+      returnSessionToLobby(salonSessionId).catch((err) => console.error('returnSessionToLobby (qui-est-ce) :', err));
+      return;
+    }
+    const [hostId, guestId] = ids;
+    const ranked = winnerIdx === null ? [hostId, guestId] : winnerIdx === 0 ? [hostId, guestId] : [guestId, hostId];
+    submitGameResults(salonSessionId, ranked).catch((err) => console.error('submitGameResults (qui-est-ce) :', err));
+  }, [phase, salonSessionId, isHost, winnerIdx]);
 
   // Synchronisation Supabase Realtime
   useEffect(() => {
@@ -101,6 +171,7 @@ export default function GuessWhoPage() {
       })
       .on('broadcast', { event: 'game_over' }, ({ payload }) => {
         setWinnerMessage(payload.message);
+        setWinnerIdx(payload.winnerIdx ?? null);
         setPhase('end');
       })
       .subscribe((status) => {
@@ -185,6 +256,15 @@ export default function GuessWhoPage() {
   }
 
   async function createOnlineRoom() {
+    // Déjà dans un salon (arrivée via le pont depuis la page d'accueil) :
+    // pas besoin de recréer une ligne "rooms", on a déjà le bon code.
+    if (roomCode) {
+      setIsHost(true);
+      setMyPlayerIdx(0);
+      setPhase('waiting');
+      return;
+    }
+
     const code = Math.random().toString(36).substring(2, 6).toUpperCase();
     const { error } = await supabase.from('rooms').insert({
       code,
@@ -263,19 +343,22 @@ export default function GuessWhoPage() {
         const msg = `🤝 MATCH NUL ! ${names[1]} a aussi trouvé la carte mystère !`;
         setWinnerMessage(msg);
         setPhase('end');
-        if (gameMode === 'online') broadcastGameOver(msg);
+        if (gameMode === 'online') broadcastGameOver(msg, null);
+        else setWinnerIdx(null);
       } else {
         const msg = `🏆 Victoire de ${names[pIdx]} !`;
         setWinnerMessage(msg);
         setPhase('end');
-        if (gameMode === 'online') broadcastGameOver(msg);
+        if (gameMode === 'online') broadcastGameOver(msg, pIdx);
+        else setWinnerIdx(pIdx);
       }
     } else {
       if (phase === 'last_chance') {
         const msg = `🏆 Victoire de ${names[0]} ! ${names[1]} s'est trompé sur son ultime tentative.`;
         setWinnerMessage(msg);
         setPhase('end');
-        if (gameMode === 'online') broadcastGameOver(msg);
+        if (gameMode === 'online') broadcastGameOver(msg, 0);
+        else setWinnerIdx(0);
       } else {
         showAlert(
           '❌ Mauvaise réponse !',
@@ -286,14 +369,15 @@ export default function GuessWhoPage() {
     }
   }
 
-  function broadcastGameOver(message: string) {
+  function broadcastGameOver(message: string, winnerIdx: PIdx | null) {
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
         event: 'game_over',
-        payload: { message },
+        payload: { message, winnerIdx },
       });
     }
+    setWinnerIdx(winnerIdx);
   }
 
   function switchTurn() {
@@ -722,7 +806,11 @@ export default function GuessWhoPage() {
             </div>
           </div>
 
-          <button className="btn py-3 px-8 text-sm" onClick={reset}>↺ Retour au menu principal</button>
+          {salonSessionId ? (
+            <button className="btn py-3 px-8 text-sm" onClick={() => router.push('/')}>← Retour au salon</button>
+          ) : (
+            <button className="btn py-3 px-8 text-sm" onClick={reset}>↺ Retour au menu principal</button>
+          )}
         </div>
       )}
     </div>

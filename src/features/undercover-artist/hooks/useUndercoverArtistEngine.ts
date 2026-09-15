@@ -2,21 +2,29 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
-import { GameMode, Phase, Player, Role } from '../types';
+import { submitGameResults, returnSessionToLobby } from '@/lib/supabase/queries';
+import { GameMode, Phase, Player, Role, UndercoverArtistProps } from '../types';
 
 export const CANVAS_W = 640;
 export const CANVAS_H = 400;
 
-export function useUndercoverArtistEngine() {
+export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
+  const { sessionCode, profile, isHost: isHostProp, onLeaveGame } = props;
+
   const [lists, setLists] = useState<GameList[]>([]);
   const [listId, setListId] = useState('');
 
-  const [gameMode, setGameMode] = useState<GameMode>('menu');
-  const [roomCode, setRoomCode] = useState('');
+  const [gameMode, setGameMode] = useState<GameMode>(sessionCode ? 'online' : 'menu');
+  const [roomCode, setRoomCode] = useState(sessionCode || '');
   const [joinCodeInput, setJoinCodeInput] = useState('');
-  const [isHost, setIsHost] = useState(false);
-  const [myUserId] = useState(() => Math.random().toString(36).substring(2, 9));
+  const [isHost, setIsHost] = useState(!!isHostProp);
+  const [myUserId] = useState(() => profile?.user_id || Math.random().toString(36).substring(2, 9));
   const channelRef = useRef<any>(null);
+
+  // Salon (mode en ligne branché sur game_sessions/session_players)
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const salonResultsSubmitted = useRef(false);
+  const sessionPlayersRef = useRef<{ user_id: string; name: string }[]>([]);
 
   const [playerCount, setPlayerCount] = useState(5);
   const [playerNames, setPlayerNames] = useState<string[]>(Array.from({ length: 5 }, (_, i) => `Joueur ${i + 1}`));
@@ -57,8 +65,34 @@ export function useUndercoverArtistEngine() {
     })();
   }, []);
 
+  // Résolution du salon (sessionCode -> sessionId + liste des vrais joueurs)
   useEffect(() => {
-    if (gameMode !== 'online' || !roomCode || phase === 'setup') return;
+    if (!sessionCode) return;
+    (async () => {
+      const { data: session } = await supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('code', sessionCode)
+        .single();
+      if (!session) return;
+      setSessionId(session.id);
+
+      const { data: sPlayers } = await supabase
+        .from('session_players')
+        .select('*')
+        .eq('session_id', session.id)
+        .order('created_at', { ascending: true });
+
+      if (sPlayers && sPlayers.length > 0) {
+        sessionPlayersRef.current = sPlayers.map((p) => ({ user_id: p.user_id, name: p.name }));
+        setCount(sPlayers.length);
+        setPlayerNames(sPlayers.map((p) => p.name));
+      }
+    })();
+  }, [sessionCode]);
+
+  useEffect(() => {
+    if (gameMode !== 'online' || !roomCode) return;
 
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
@@ -241,7 +275,7 @@ export function useUndercoverArtistEngine() {
       role: shuffledRoles[i],
       alive: true,
       seen: true,
-      userId: i === 0 ? myUserId : undefined,
+      userId: sessionPlayersRef.current[i]?.user_id ?? (i === 0 ? myUserId : undefined),
     }));
 
     const randomStarter = newPlayers[Math.floor(Math.random() * newPlayers.length)];
@@ -518,6 +552,28 @@ export function useUndercoverArtistEngine() {
     setRoomCode('');
     canvasInitRef.current = false;
   }
+
+  // Soumission automatique des scores au salon quand la partie se termine
+  useEffect(() => {
+    if (!winner || !sessionId || !isHost || salonResultsSubmitted.current) return;
+    salonResultsSubmitted.current = true;
+
+    const winningTeamIds = players
+      .filter((p) => (winner === 'civils' ? p.role === 'civil' : p.role === 'undercover'))
+      .map((p) => p.userId)
+      .filter((id): id is string => !!id);
+    const losingTeamIds = players
+      .filter((p) => (winner === 'civils' ? p.role !== 'civil' : p.role !== 'undercover'))
+      .map((p) => p.userId)
+      .filter((id): id is string => !!id);
+
+    const ranked = [...winningTeamIds, ...losingTeamIds];
+    if (ranked.length > 0) {
+      submitGameResults(sessionId, ranked).catch((err) => console.error('submitGameResults (undercover-artist) :', err));
+    } else {
+      returnSessionToLobby(sessionId).catch((err) => console.error('returnSessionToLobby (undercover-artist) :', err));
+    }
+  }, [winner, sessionId, isHost, players]);
 
   return {
     lists,

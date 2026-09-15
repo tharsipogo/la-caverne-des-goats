@@ -47,6 +47,18 @@ create table if not exists session_players (
 
 alter table session_players add column if not exists joined_current_game boolean not null default false;
 
+-- Contrainte unique nécessaire pour l'upsert "rejoindre le salon"
+-- (ON CONFLICT (session_id, user_id)). On supprime d'abord les
+-- doublons éventuels (garde la ligne la plus ancienne) pour que la
+-- création de l'index ne plante pas s'il y en a déjà.
+delete from session_players a using session_players b
+  where a.session_id = b.session_id
+    and a.user_id = b.user_id
+    and a.created_at > b.created_at;
+
+create unique index if not exists session_players_session_user_uidx
+  on session_players (session_id, user_id);
+
 -- Base de mots pour "Soit connecté"
 create table if not exists soit_connecte_words (
   id uuid primary key default gen_random_uuid(),

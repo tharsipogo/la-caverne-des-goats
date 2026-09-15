@@ -460,3 +460,96 @@ Deux corrections :
    bel et bien. Le message d'erreur log maintenant le vrai code
    d'erreur Supabase dans la console du navigateur pour distinguer les
    deux cas plus facilement à l'avenir.
+
+## Session 19 — Migration SQL : contrainte unique manquante pour l'upsert du salon
+
+`joinGameSession` utilise `.upsert(..., { onConflict: 'session_id,user_id' })`
+pour rejoindre un salon sans créer de doublon. Postgres exige une vraie
+contrainte/index unique sur ces colonnes pour que `ON CONFLICT` sache à
+quoi comparer — absente jusqu'ici, d'où l'erreur "there is no unique or
+exclusion constraint matching the ON CONFLICT specification".
+
+`supabase/migration_online_mode.sql` mis à jour : supprime d'abord les
+doublons éventuels sur `(session_id, user_id)` (garde la ligne la plus
+ancienne), puis crée l'index unique correspondant. **Il faut relancer ce
+script SQL dans Supabase** (celui déjà exécuté ne suffit plus, cette
+partie est nouvelle) pour que rejoindre un salon fonctionne.
+
+## Session 20 — Qui est-ce ? en salon = écran vide + navigation bloquée
+
+Confirmé en usage réel : quand l'hôte lance "Qui est-ce ?" depuis le
+salon, le joueur qui rejoint tombe sur un écran vide, et ne peut pas
+cliquer sur d'autres jeux dans la sidebar.
+
+Deux causes, corrigées :
+1. `src/app/page.tsx` (le rendu du jeu en ligne) ne gérait que
+   `soit-connecte` et `undercover-artist` — aucun cas pour
+   `qui-est-ce`, donc rien ne s'affichait. Ajouté un écran de repli
+   ("Ce jeu n'est pas encore disponible en salon" + bouton "Retour au
+   salon" fonctionnel) pour tout `activeGame` non géré, au lieu d'un
+   vide silencieux.
+2. Les liens "autres jeux" affichés dans la sidebar en mode en ligne
+   pointaient tous vers `/` — cliquer dessus ne faisait donc rien
+   puisque c'est déjà la page affichée (le choix du jeu est piloté par
+   un état React interne, pas par l'URL). Retiré ces liens
+   non-fonctionnels : en mode en ligne, la sidebar ne montre plus que
+   "Accueil & Profil".
+
+**Important — retiré du sélecteur de jeu de l'hôte** : Qui est-ce ? et
+Undercover Artist ont chacun leur propre système de salon indépendant,
+jamais branché sur celui-ci (déjà signalé en session 5). Le sélecteur
+dans `OnlineLobby.tsx` ne propose maintenant plus que "Soit connecté"
+— le seul jeu réellement fonctionnel en salon pour l'instant, pour
+éviter de reproduire ce bug. Qui est-ce ? et Undercover Artist restent
+jouables normalement en solo/local via leurs routes dédiées.
+
+## Session 21 — Les 3 jeux en ligne rebranchés sur le salon
+
+Chantier de fond enfin traité : Qui est-ce ? et Undercover Artist sont
+maintenant réellement jouables via le salon, avec scoring automatique
+comme "Soit connecté".
+
+### Undercover Artist
+Avait déjà un vrai moteur multijoueur temps réel (canal broadcast), mais
+son propre système de salon indépendant (table `rooms`), jamais relié à
+`game_sessions`. Rebranché :
+- `UndercoverArtistProps` accepte maintenant `sessionCode` / `profile` /
+  `isHost` (le composant reste utilisable seul via `/undercover-artist`
+  sans ces props — comportement inchangé pour le solo/local).
+- Quand lancé depuis le salon : saute l'écran menu, résout le vrai
+  salon (`game_sessions`/`session_players`), utilise les vrais noms et
+  `user_id` des joueurs (au lieu de noms tapés à la main par l'hôte).
+- **Vrai bug corrigé** : le canal temps réel ne se connectait qu'une
+  fois la partie commencée (`phase !== 'setup'`), donc quand l'hôte
+  cliquait "Démarrer", personne n'écoutait encore — le message partait
+  dans le vide. Le canal se connecte maintenant dès l'entrée en mode
+  en ligne.
+- À la fin de la partie (victoire civils/undercover), les scores sont
+  soumis automatiquement au salon (équipe gagnante = points, équipe
+  perdante = rien), puis retour au salon avec le tableau à jour.
+
+### Qui est-ce ?
+Route à part entière (pas un composant à props) avec, comme Undercover
+Artist, son propre système de salon indépendant (table `rooms`).
+Plutôt que de tout réécrire en composant intégré (~730 lignes, risque
+élevé), pont ajouté via l'URL :
+- Depuis le salon, choisir "Qui est-ce ?" redirige l'hôte et le premier
+  joueur qui rejoint vers `/qui-est-ce?salon=CODE`.
+- La page détecte ce paramètre : l'hôte passe par son écran de
+  configuration habituel (base, taille de grille) puis crée le salon
+  avec le CODE DU SALON (au lieu d'en générer un nouveau) ; l'invité
+  saute directement en salle d'attente.
+- Comme ce jeu est strictement à 2 joueurs, seuls l'hôte et le premier
+  membre du salon à avoir rejoint participent à la manche (affiché
+  clairement dans le sélecteur de l'hôte).
+- Le vainqueur (ou le nul) est maintenant transmis dans le message de
+  fin de partie (avant, seul un texte était envoyé, sans info
+  structurée) pour permettre le calcul du score.
+- Écran de fin : bouton "Retour au salon" quand la partie vient d'un
+  salon (au lieu de "Retour au menu principal").
+
+### Toujours à savoir
+- Qui est-ce ? reste limité à 2 joueurs actifs par manche même dans un
+  salon plus grand — les autres restent spectateurs côté salon pour ce
+  tour.
+- Les 3 jeux sont maintenant proposés dans le sélecteur de l'hôte.

@@ -10,8 +10,8 @@ import { UndercoverArtistProps } from './types';
 import { GameConfigShell } from '@/components/game/GameConfigShell';
 import { PlayerNameField } from '@/components/game/PlayerNameField';
 
-export default function UndercoverArtistContainer({ onLeaveGame }: UndercoverArtistProps) {
-  const engine = useUndercoverArtistEngine();
+export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, profile, isHost }: UndercoverArtistProps) {
+  const engine = useUndercoverArtistEngine({ onLeaveGame, sessionCode, profile, isHost });
 
   // 1. MENU PRINCIPAL
   if (engine.gameMode === 'menu') {

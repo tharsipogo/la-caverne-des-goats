@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useOnlineMode, ONLINE_GAMES } from '@/lib/onlineModeContext';
+import { useOnlineMode } from '@/lib/onlineModeContext';
 import { useAuth } from '@/lib/authContext';
 
 const NAV_MAIN = [
@@ -27,9 +27,13 @@ const NAV_GAMES = [
 function useSidebarNav() {
   const { onlineMode } = useOnlineMode();
   if (!onlineMode) return { main: NAV_MAIN, games: NAV_GAMES };
+  // En mode en ligne, la sélection du jeu se fait depuis le salon
+  // lui-même (OnlineLobby) — ces liens ne mènent nulle part de
+  // différent puisqu'ils pointent tous vers "/", donc on ne montre
+  // que l'accueil pour ne pas laisser de faux liens inactifs.
   return {
     main: [{ href: '/', label: '🏠 Accueil & Profil' }],
-    games: ONLINE_GAMES.map((g) => ({ href: '/', label: `${g.icon} ${g.label}` })),
+    games: [],
   };
 }
 
@@ -126,7 +130,7 @@ export function Sidebar() {
           {main.map((item, i) => (
             <NavLink key={item.href + i} href={item.href} label={item.label} active={pathname === item.href} />
           ))}
-          <GamesLabel />
+          {games.length > 0 && <GamesLabel />}
           {games.map((item, i) => (
             <NavLink key={item.href + i} href={item.href} label={item.label} active={pathname === item.href} />
           ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
   createGameSession,
@@ -27,6 +28,7 @@ interface OnlineLobbyProps {
 }
 
 export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
+  const router = useRouter();
   const [step, setStep] = useState<'menu' | 'room' | 'final'>('menu');
   const [code, setCode] = useState('');
   const [joinInput, setJoinInput] = useState('');
@@ -94,6 +96,10 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
 
   const handleSelectGame = async (gameType: GameType) => {
     await selectGameForSession(sessionId, gameType);
+    if (gameType === 'qui-est-ce') {
+      router.push(`/qui-est-ce?salon=${code}`);
+      return;
+    }
     // L'hôte va directement configurer la partie, pas besoin de la modale.
     onStartGame(code, gameType, true);
   };
@@ -101,6 +107,10 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
   const handleJoinCurrentGame = async () => {
     if (!pendingGame) return;
     await markPlayerJoinedCurrentGame(sessionId, profile.user_id);
+    if (pendingGame === 'qui-est-ce') {
+      router.push(`/qui-est-ce?salon=${code}`);
+      return;
+    }
     onStartGame(code, pendingGame, false);
   };
 
@@ -227,13 +237,16 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
             <Button size="sm" onClick={() => handleSelectGame('qui-est-ce')}>
               🎴 Qui est-ce ?
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => handleSelectGame('undercover-artist')}>
-              ✏️ Undercover
-            </Button>
             <Button size="sm" variant="teal" onClick={() => handleSelectGame('soit-connecte')}>
               🔗 Soit connecté
             </Button>
+            <Button size="sm" variant="secondary" onClick={() => handleSelectGame('undercover-artist')}>
+              ✏️ Undercover Artist
+            </Button>
           </div>
+          <p className="text-[11px] text-muted">
+            "Qui est-ce ?" se joue à 2 — seuls l'hôte et le premier joueur qui rejoint participeront.
+          </p>
           <Button variant="danger" size="sm" disabled={ending} onClick={handleEndSession}>
             {ending ? 'Fermeture…' : '🏁 Terminer le salon'}
           </Button>
