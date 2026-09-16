@@ -113,11 +113,10 @@ export function Sidebar() {
         style={{ background: 'rgba(8, 10, 24, 0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
       >
         <Link href="/" className="flex items-center gap-2 mb-4 px-2.5 hover:opacity-80 transition-opacity">
-          <span className="text-xl leading-none">🐐</span>
+          <span className="text-xl leading-none">🌶️</span>
           <span className="flex flex-col leading-tight">
-            <span className="font-sans text-[11px] text-muted">La Caverne des</span>
             <span className="font-serif font-semibold text-[19px]" style={{ color: '#f5a623' }}>
-              Goats
+              Chili Party
             </span>
           </span>
         </Link>
@@ -147,8 +146,8 @@ export function Sidebar() {
         style={{ background: 'rgba(8, 10, 24, 0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
       >
         <Link href="/" className="font-serif text-lg font-semibold text-white shrink-0 flex items-center gap-1.5">
-          <span>🐐</span>
-          <span style={{ color: '#f5a623' }}>Goats</span>
+          <span>🌶️</span>
+          <span style={{ color: '#f5a623' }}>Chili Party</span>
         </Link>
         <div className="w-36">
           <OnlineModeToggle compact />

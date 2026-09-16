@@ -22,6 +22,8 @@ const GAME_LABELS: Record<string, string> = {
   'soit-connecte': '🔗 Soit connecté',
 };
 
+const SALON_STORAGE_KEY = 'caverne_salon';
+
 interface OnlineLobbyProps {
   profile: ProfileRow;
   onStartGame: (sessionCode: string, gameType: GameType, isHost: boolean) => void;
@@ -37,6 +39,47 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
   const [sessionId, setSessionId] = useState('');
   const [pendingGame, setPendingGame] = useState<GameType | null>(null);
   const [ending, setEnding] = useState(false);
+  const [restoring, setRestoring] = useState(true);
+
+  const saveSalon = (c: string, sid: string, host: boolean) => {
+    localStorage.setItem(SALON_STORAGE_KEY, JSON.stringify({ code: c, sessionId: sid, isHost: host }));
+  };
+  const clearSalon = () => localStorage.removeItem(SALON_STORAGE_KEY);
+
+  // Restaure le salon en cours (si on revient d'une partie, ou après un
+  // rechargement de page) — le salon doit persister tant que l'hôte ne
+  // le termine pas explicitement.
+  useEffect(() => {
+    (async () => {
+      const saved = localStorage.getItem(SALON_STORAGE_KEY);
+      if (!saved) {
+        setRestoring(false);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(saved) as { code: string; sessionId: string; isHost: boolean };
+        const { data: session } = await supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('id', parsed.sessionId)
+          .single();
+
+        if (!session || session.status === 'finished') {
+          clearSalon();
+          setRestoring(false);
+          return;
+        }
+
+        setCode(parsed.code);
+        setSessionId(parsed.sessionId);
+        setIsHost(parsed.isHost);
+        setStep('room');
+      } catch {
+        clearSalon();
+      }
+      setRestoring(false);
+    })();
+  }, []);
 
   const handleCreateRoom = async () => {
     try {
@@ -45,6 +88,7 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
       setSessionId(session.id);
       setIsHost(true);
       setStep('room');
+      saveSalon(newCode, session.id, true);
     } catch (err: any) {
       alert(`Erreur lors de la création du salon : ${err?.message || 'Inconnue'}`);
     }
@@ -54,10 +98,12 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
     if (!joinInput.trim()) return alert('Renseigne le code du salon.');
     try {
       const session = await joinGameSession(joinInput.trim(), profile);
+      const amHost = session.host_id === profile.user_id;
       setCode(session.code);
       setSessionId(session.id);
-      setIsHost(session.host_id === profile.user_id);
+      setIsHost(amHost);
       setStep('room');
+      saveSalon(session.code, session.id, amHost);
     } catch (err: any) {
       alert(err.message || 'Impossible de rejoindre le salon.');
     }
@@ -85,6 +131,7 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
         }
         if (payload.new.status === 'finished') {
           setStep('final');
+          clearSalon();
         }
       })
       .subscribe();
@@ -119,10 +166,15 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
     await endGameSession(sessionId);
     setEnding(false);
     setStep('final');
+    clearSalon();
   };
 
   const joinedCount = players.filter((p) => p.joined_current_game).length;
   const sortedByScore = [...players].sort((a, b) => b.score - a.score);
+
+  if (restoring) {
+    return <p className="text-muted text-sm text-center py-8">Chargement du salon…</p>;
+  }
 
   if (step === 'menu') {
     return (

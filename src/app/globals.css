@@ -66,6 +66,14 @@ html, body {
   outline: none;
   border-color: #f5a623;
 }
+/* Sur Windows (Chrome/Edge), le menu déroulant natif d'un <select> ignore
+   souvent le fond transparent/sombre et affiche du texte sombre sur fond
+   clair. On force explicitement les couleurs de chaque <option>, sur
+   TOUS les selects de l'appli (pas seulement ceux en classe .input). */
+select option {
+  background-color: #161822;
+  color: #f3f4f6;
+}
 
 /* -------- Panneaux en verre dépoli -------- */
 .panel {

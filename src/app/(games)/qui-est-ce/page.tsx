@@ -23,7 +23,7 @@ export default function GuessWhoPage() {
   const [loading, setLoading] = useState(true);
 
   // Configuration
-  const [gameMode, setGameMode] = useState<GameMode>('menu');
+  const [gameMode, setGameMode] = useState<GameMode>(() => (searchParams.get('salon') ? 'online' : 'local'));
   const [gridSize, setGridSize] = useState<number>(20);
   const [names, setNames] = useState<[string, string]>(['Joueur 1', 'Joueur 2']);
   const [phase, setPhase] = useState<Phase>('setup');
@@ -65,6 +65,7 @@ export default function GuessWhoPage() {
   const [salonSessionId, setSalonSessionId] = useState<string | null>(null);
   const salonPlayerIdsRef = useRef<[string, string] | null>(null);
   const salonResultsSubmitted = useRef(false);
+  const [guestReady, setGuestReady] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -88,10 +89,12 @@ export default function GuessWhoPage() {
 
   // Pont vers le salon : si l'URL contient ?salon=CODE, on saute le
   // menu et on rejoint directement en tant qu'hôte ou invité, avec les
-  // vrais joueurs du salon (pour le score en fin de partie).
+  // vrais joueurs du salon (pour le score en fin de partie). Suivi en
+  // direct : l'hôte arrive souvent avant que l'invité ait rejoint.
   useEffect(() => {
     const salonCode = searchParams.get('salon');
     if (!salonCode || !user) return;
+    let salonChannel: any;
 
     (async () => {
       const { data: session } = await supabase
@@ -102,30 +105,43 @@ export default function GuessWhoPage() {
       if (!session) return;
 
       setSalonSessionId(session.id);
-
-      const { data: sPlayers } = await supabase
-        .from('session_players')
-        .select('*')
-        .eq('session_id', session.id)
-        .order('created_at', { ascending: true });
-
-      const hostPlayer = sPlayers?.find((p) => p.user_id === session.host_id);
-      const guestPlayer = sPlayers?.find((p) => p.user_id !== session.host_id);
-      if (hostPlayer && guestPlayer) {
-        salonPlayerIdsRef.current = [hostPlayer.user_id, guestPlayer.user_id];
-      }
-
       const amHost = user.user_id === session.host_id;
       setIsHost(amHost);
       setMyPlayerIdx(amHost ? 0 : 1);
-      setNames([hostPlayer?.name || (amHost ? user.username : 'Joueur 1'), guestPlayer?.name || (!amHost ? user.username : 'Joueur 2')]);
       setRoomCode(salonCode);
       setGameMode('online');
-      // L'hôte passe par l'écran de configuration (choix de la base et
-      // taille de grille) avant de créer le salon ; l'invité n'a rien à
-      // configurer et va directement en salle d'attente.
       if (!amHost) setPhase('waiting');
+
+      const applyPlayers = (sPlayers: { user_id: string; name: string }[]) => {
+        const hostPlayer = sPlayers.find((p) => p.user_id === session.host_id);
+        const guestPlayer = sPlayers.find((p) => p.user_id !== session.host_id);
+        if (hostPlayer && guestPlayer) {
+          salonPlayerIdsRef.current = [hostPlayer.user_id, guestPlayer.user_id];
+          setGuestReady(true);
+        }
+        setNames([hostPlayer?.name || (amHost ? user.username : 'Joueur 1'), guestPlayer?.name || (!amHost ? user.username : 'Joueur 2')]);
+      };
+
+      const fetchPlayers = async () => {
+        const { data: sPlayers } = await supabase
+          .from('session_players')
+          .select('*')
+          .eq('session_id', session.id)
+          .order('created_at', { ascending: true });
+        if (sPlayers) applyPlayers(sPlayers);
+      };
+
+      await fetchPlayers();
+
+      salonChannel = supabase
+        .channel(`qec-salon-players:${session.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'session_players', filter: `session_id=eq.${session.id}` }, fetchPlayers)
+        .subscribe();
     })();
+
+    return () => {
+      if (salonChannel) supabase.removeChannel(salonChannel);
+    };
   }, [searchParams, user]);
 
   // Soumission des scores au salon quand la partie se termine
@@ -185,32 +201,10 @@ export default function GuessWhoPage() {
       });
 
     if (isHost) {
-      channel.on('broadcast', { event: 'guest_joined' }, async ({ payload }) => {
-        if (gridItems.length > 0) return;
-
+      channel.on('broadcast', { event: 'guest_joined' }, ({ payload }) => {
         const guestName = payload.guestName || 'Joueur 2';
         setNames((prev) => [prev[0], guestName]);
-
-        const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
-        if (!items || items.length < gridSize) return;
-
-        const grid = shuffle(items as ListItem[]).slice(0, gridSize);
-        const secret1 = pickRandom(grid, 1)[0];
-        let secret2 = pickRandom(grid, 1)[0];
-        while (secret2.id === secret1.id) {
-          secret2 = pickRandom(grid, 1)[0];
-        }
-
-        setGridItems(grid);
-        setSecrets([secret1, secret2]);
-
-        channel.send({
-          type: 'broadcast',
-          event: 'game_init',
-          payload: { grid, secret1, secret2, hostName: names[0], guestName },
-        });
-
-        setPhase('play');
+        setGuestReady(true);
       });
     }
 
@@ -221,6 +215,31 @@ export default function GuessWhoPage() {
       }
     };
   }, [gameMode, roomCode, phase, isHost]);
+
+  async function hostStartGame() {
+    if (gridItems.length > 0) return;
+
+    const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
+    if (!items || items.length < gridSize) return showAlert('Base trop petite', `Il faut au moins ${gridSize} items dans la base choisie.`);
+
+    const grid = shuffle(items as ListItem[]).slice(0, gridSize);
+    const secret1 = pickRandom(grid, 1)[0];
+    let secret2 = pickRandom(grid, 1)[0];
+    while (secret2.id === secret1.id) {
+      secret2 = pickRandom(grid, 1)[0];
+    }
+
+    setGridItems(grid);
+    setSecrets([secret1, secret2]);
+
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'game_init',
+      payload: { grid, secret1, secret2, hostName: names[0], guestName: names[1] },
+    });
+
+    setPhase('play');
+  }
 
   function showAlert(title: string, message: string, onConfirm?: () => void) {
     setModalConfig({ isOpen: true, title, message, isConfirm: false, onConfirm });
@@ -444,41 +463,6 @@ export default function GuessWhoPage() {
         </div>
       )}
 
-      {/* 1. MENU PRINCIPAL */}
-      {gameMode === 'menu' && (
-        <div className="max-w-md mx-auto my-auto w-full bg-[#121420] p-6 rounded-2xl border border-white/10 flex flex-col gap-6 text-center shadow-2xl">
-          <div>
-            <div className="eyebrow">Jeu de société</div>
-            <h1 className="text-3xl font-black text-amber mt-1">Qui est-ce ?</h1>
-            <p className="text-muted text-xs mt-2">Choisis ton mode de jeu pour commencer</p>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={() => setGameMode('local')}
-              className="p-4 rounded-xl border border-amber/40 bg-amber/10 hover:bg-amber/20 text-white flex items-center justify-between transition-all group"
-            >
-              <div className="text-left">
-                <div className="font-bold text-sm text-amber">🎮 Mode Local (1 écran)</div>
-                <div className="text-[11px] text-slate-400">Passe le téléphone ou joue à 2 sur PC</div>
-              </div>
-              <span className="text-lg group-hover:translate-x-1 transition-transform">→</span>
-            </button>
-
-            <button
-              onClick={() => setGameMode('online')}
-              className="p-4 rounded-xl border border-[#4fc9c0]/40 bg-[#4fc9c0]/10 hover:bg-[#4fc9c0]/20 text-white flex items-center justify-between transition-all group"
-            >
-              <div className="text-left">
-                <div className="font-bold text-sm text-[#4fc9c0]">🌐 Mode En Ligne</div>
-                <div className="text-[11px] text-slate-400">Joue à distance via un code à 4 lettres</div>
-              </div>
-              <span className="text-lg group-hover:translate-x-1 transition-transform">→</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 2. CONFIGURATION */}
       {gameMode !== 'menu' && phase === 'setup' && (
         <GameConfigShell
@@ -532,26 +516,21 @@ export default function GuessWhoPage() {
             ) : (
               <div className="flex flex-col gap-4 border-t border-white/10 pt-4">
                 <div>
-                  <label className="text-xs text-muted block mb-1">Ton Pseudo</label>
-                  <input className="input w-full" value={names[0]} onChange={(e) => setNames([e.target.value, names[1]])} />
+                  <label className="text-xs text-muted block mb-1">Joueur 1 (hôte)</label>
+                  <PlayerNameField index={0} value={names[0]} disabled onChange={() => {}} />
+                </div>
+                <div>
+                  <label className="text-xs text-muted block mb-1">Joueur 2</label>
+                  <PlayerNameField index={1} value={guestReady ? names[1] : 'En attente…'} disabled onChange={() => {}} />
                 </div>
 
-                <button className="btn w-full" onClick={createOnlineRoom}>👑 Créer un salon</button>
-
-                <div className="relative text-center my-1">
-                  <span className="bg-[#121420] px-3 text-xs text-slate-500 uppercase">ou rejoindre</span>
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    className="input uppercase flex-1"
-                    placeholder="Code à 4 lettres"
-                    maxLength={4}
-                    value={joinCodeInput}
-                    onChange={(e) => setJoinCodeInput(e.target.value)}
-                  />
-                  <button className="btn-ghost border border-white/20" onClick={joinOnlineRoom}>Rejoindre</button>
-                </div>
+                {isHost ? (
+                  <button className="btn w-full mt-2" onClick={hostStartGame} disabled={!guestReady}>
+                    {guestReady ? '▶ Lancer la partie' : 'En attente du 2ᵉ joueur…'}
+                  </button>
+                ) : (
+                  <p className="text-center text-sm text-muted py-2">En attente que l'hôte lance la partie…</p>
+                )}
               </div>
             )}
         </GameConfigShell>
@@ -560,12 +539,8 @@ export default function GuessWhoPage() {
       {/* 3. SALLE D'ATTENTE */}
       {phase === 'waiting' && (
         <div className="my-auto text-center flex flex-col items-center gap-4">
-          <h2 className="text-xl text-white">Code du salon :</h2>
-          <span className="text-4xl font-black text-amber tracking-widest bg-surface2 px-6 py-2 rounded-xl border border-amber/40 shadow-lg">
-            {roomCode}
-          </span>
-          <p className="text-sm text-slate-400 animate-pulse">En attente de l'adversaire...</p>
-          <button className="btn-ghost text-xs text-red-400 mt-4" onClick={reset}>Annuler</button>
+          <h2 className="text-xl text-white">En attente que l'hôte lance la partie…</h2>
+          <p className="text-sm text-slate-400 animate-pulse">Reste sur cet écran, ça démarre automatiquement.</p>
         </div>
       )}
 

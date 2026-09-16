@@ -7,8 +7,12 @@ import { OnlineModeProvider } from '@/lib/onlineModeContext';
 import { Starfield } from '@/components/Starfield';
 
 export const metadata: Metadata = {
-  title: 'La Caverne des Goats',
+  title: 'Chili Party',
   description: 'Jeux et classements en ligne et local',
+  icons: {
+    icon: '/icons/icon-512.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({

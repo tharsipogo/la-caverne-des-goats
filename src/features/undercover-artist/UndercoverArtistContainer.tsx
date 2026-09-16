@@ -13,50 +13,13 @@ import { PlayerNameField } from '@/components/game/PlayerNameField';
 export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, profile, isHost }: UndercoverArtistProps) {
   const engine = useUndercoverArtistEngine({ onLeaveGame, sessionCode, profile, isHost });
 
-  // 1. MENU PRINCIPAL
-  if (engine.gameMode === 'menu') {
-    return (
-      <Card glow className="max-w-md mx-auto my-auto w-full flex flex-col gap-6 text-center">
-        <div>
-          <span className="text-xs text-amber font-bold uppercase tracking-widest block">Jeu de dessin & rôle</span>
-          <h1 className="text-3xl font-black text-amber mt-1">Undercover Artist</h1>
-          <p className="text-xs text-slate-400 mt-2">Retrouve l'imposteur qui dessine sans connaître le mot !</p>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={() => engine.setGameMode('local')}
-            className="p-4 rounded-xl border border-amber/40 bg-amber/10 hover:bg-amber/20 text-white flex items-center justify-between transition-all group"
-          >
-            <div className="text-left">
-              <div className="font-bold text-sm text-amber">🎮 Mode Local (1 écran)</div>
-              <div className="text-[11px] text-slate-400">Passe le téléphone à tour de rôle</div>
-            </div>
-            <span className="text-lg group-hover:translate-x-1 transition-transform">→</span>
-          </button>
-
-          <button
-            onClick={() => engine.setGameMode('online')}
-            className="p-4 rounded-xl border border-[#4fc9c0]/40 bg-[#4fc9c0]/10 hover:bg-[#4fc9c0]/20 text-white flex items-center justify-between transition-all group"
-          >
-            <div className="text-left">
-              <div className="font-bold text-sm text-[#4fc9c0]">🌐 Mode En Ligne</div>
-              <div className="text-[11px] text-slate-400">Joue sur ton écran avec tes amis</div>
-            </div>
-            <span className="text-lg group-hover:translate-x-1 transition-transform">→</span>
-          </button>
-        </div>
-      </Card>
-    );
-  }
-
   // 2. SETUP
   if (engine.phase === 'setup') {
     return (
       <GameConfigShell
         title="Configuration"
-        subtitle={engine.gameMode === 'local' ? 'Mode Local' : 'Mode En Ligne'}
-        onBack={() => engine.setGameMode('menu')}
+        subtitle={engine.gameMode === 'local' ? 'Mode Local' : 'Mode En Ligne — Salon'}
+        onBack={engine.gameMode === 'online' ? onLeaveGame : undefined}
       >
           <div>
             <label className="text-xs text-muted block mb-1.5">Base de mots</label>
@@ -75,25 +38,35 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
 
           <div>
             <label className="text-xs text-muted block mb-1.5">Nombre de joueurs</label>
-            <div className="flex items-center gap-3">
-              <Button variant="secondary" size="sm" onClick={() => engine.setCount(engine.playerCount - 1)}>
-                −
-              </Button>
-              <span className="text-xl font-bold w-8 text-center">{engine.playerCount}</span>
-              <Button variant="secondary" size="sm" onClick={() => engine.setCount(engine.playerCount + 1)}>
-                +
-              </Button>
-            </div>
+            {engine.gameMode === 'online' ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold">{engine.playerCount}</span>
+                <span className="text-xs text-muted">joueur{engine.playerCount > 1 ? 's' : ''} dans le salon</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Button variant="secondary" size="sm" onClick={() => engine.setCount(engine.playerCount - 1)}>
+                  −
+                </Button>
+                <span className="text-xl font-bold w-8 text-center">{engine.playerCount}</span>
+                <Button variant="secondary" size="sm" onClick={() => engine.setCount(engine.playerCount + 1)}>
+                  +
+                </Button>
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="text-xs text-muted block mb-1.5">Noms des joueurs</label>
+            <label className="text-xs text-muted block mb-1.5">
+              {engine.gameMode === 'online' ? 'Joueurs' : 'Noms des joueurs'}
+            </label>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5">
               {engine.playerNames.map((name, i) => (
                 <PlayerNameField
                   key={i}
                   index={i}
                   value={name}
+                  disabled={engine.gameMode === 'online'}
                   onChange={(v) => {
                     const next = [...engine.playerNames];
                     next[i] = v;
@@ -134,24 +107,12 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
             <Button className="w-full mt-2 py-3" onClick={engine.startLocalGame}>
               ▶ Distribuer les cartes
             </Button>
+          ) : engine.isHost ? (
+            <Button className="w-full mt-2 py-3" onClick={engine.startOnlineGame} disabled={engine.playerCount < 3}>
+              ▶ Lancer la partie ({engine.playerCount} joueur{engine.playerCount > 1 ? 's' : ''})
+            </Button>
           ) : (
-            <div className="flex flex-col gap-3 border-t border-white/10 pt-4">
-              <Button className="w-full" onClick={engine.createOnlineRoom}>
-                👑 Créer un salon
-              </Button>
-              <div className="flex gap-2">
-                <Input
-                  className="uppercase flex-1"
-                  placeholder="Code à 4 lettres"
-                  maxLength={4}
-                  value={engine.joinCodeInput}
-                  onChange={(e) => engine.setJoinCodeInput(e.target.value)}
-                />
-                <Button variant="ghost" onClick={engine.joinOnlineRoom}>
-                  Rejoindre
-                </Button>
-              </div>
-            </div>
+            <p className="text-center text-sm text-muted py-3">En attente que l'hôte lance la partie…</p>
           )}
       </GameConfigShell>
     );

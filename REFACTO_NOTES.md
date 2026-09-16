@@ -553,3 +553,92 @@ Plutôt que de tout réécrire en composant intégré (~730 lignes, risque
   salon plus grand — les autres restent spectateurs côté salon pour ce
   tour.
 - Les 3 jeux sont maintenant proposés dans le sélecteur de l'hôte.
+
+## Session 22 — Salon persistant, hôte contrôle le lancement, plus d'option "en ligne" dans les jeux
+
+Cinq points demandés, tous traités :
+
+### 1. Le salon ne perd plus son état entre deux parties
+**La vraie cause du "ça m'a forcé à quitter le salon"** : `OnlineLobby`
+gardait son état (code, sessionId, liste des joueurs) uniquement en
+mémoire locale. Dès qu'une partie se lançait, ce composant était
+démonté (remplacé par le jeu), puis remonté à zéro (retour à l'écran
+"Créer/Rejoindre") une fois la partie finie — toute la mémoire du salon
+était perdue. Corrigé : le salon (code + sessionId + rôle hôte) est
+maintenant sauvegardé dans `localStorage` dès sa création/jointure, et
+restauré automatiquement à chaque montage de `OnlineLobby` — que ce
+soit un retour depuis une partie OU un rechargement complet de la page.
+Nettoyé uniquement quand l'hôte termine réellement le salon (ou quand
+il est notifié comme terminé). Ça couvre aussi la persistance demandée
+(point 4) : le salon survit tant que l'hôte n'a pas cliqué "Terminer".
+
+### 2. Après une partie de Soit Connecté : retour au salon, pas dehors
+Conséquence directe du point 1 — une fois corrigé, revenir d'une partie
+affiche bien à nouveau l'écran du salon (liste des joueurs + scores à
+jour + sélecteur de jeu pour l'hôte), au lieu de la remettre à zéro.
+Le score de chaque joueur (`session_players.score`) est déjà cumulatif
+entre les parties (`submitGameResults` ajoute les points, ne les
+remplace pas) — donc le tableau se met bien à jour partie après partie.
+
+### 3. Undercover Artist et Qui est-ce ? : plus d'option "mode en ligne" en solo
+Leurs écrans "Local / En ligne" avec code de salon à créer/rejoindre à
+la main ont été retirés. En accès direct (sidebar), ces deux jeux ne
+proposent plus que le mode local — le mode en ligne n'existe désormais
+que via le bouton "Mode En Ligne" + un salon.
+
+### 4. Undercover Artist et Qui est-ce ? : même logique que Soit Connecté
+- **Compteur de joueurs en direct** : dans Undercover Artist, le nombre
+  de joueurs dans le salon est maintenant suivi en temps réel (avant,
+  une seule lecture au chargement — un joueur qui rejoignait après coup
+  n'apparaissait jamais). Affiché en lecture seule pendant la
+  configuration (plus de +/- manuel en mode salon, les noms viennent
+  des vrais joueurs).
+- **L'hôte décide du lancement** : gros bug trouvé dans Undercover
+  Artist — le canal temps réel ne se connectait qu'une fois la partie
+  commencée, donc le signal de démarrage de l'hôte partait dans le
+  vide. Corrigé, et un vrai bouton "Lancer la partie (X joueurs)" est
+  maintenant affiché côté hôte (désactivé tant qu'il n'y a pas au moins
+  3 joueurs).
+- Pour Qui est-ce ? : la partie démarrait **automatiquement** dès que
+  le 2e joueur rejoignait (aucun contrôle de l'hôte). Corrigé : l'hôte
+  voit maintenant "En attente du 2ᵉ joueur…" puis un bouton "Lancer la
+  partie" une fois que le 2ᵉ joueur est détecté (suivi en direct via
+  `session_players`, plus fiable que d'attendre uniquement son signal
+  réseau).
+
+### Limite connue
+Qui est-ce ? reste strictement un jeu à 2 joueurs : si plus de 2
+personnes rejoignent cette manche depuis le salon, seuls l'hôte et le
+premier arrivé participent (déjà signalé en session 21, toujours vrai).
+
+## Session 23 — Selects illisibles, renommage "Chili Party", Undercover ne révèle plus le rôle
+
+### 1. Texte invisible dans les menus déroulants (ordinateur)
+Sur Windows (Chrome/Edge), la liste déroulante native d'un `<select>`
+ignore souvent les couleurs sombres personnalisées et retombe sur du
+texte foncé sur fond clair. Ajouté une règle globale dans `globals.css`
+(`select option { background-color / color }`) qui force explicitement
+les couleurs sur TOUS les selects de l'appli, pas seulement ceux en
+classe `.input`.
+
+### 2. Renommage en "Chili Party"
+Toutes les mentions visibles ("La Caverne des Goats", "GOAT...") ont
+été remplacées : sidebar (logo desktop + mobile), écran de connexion,
+page d'accueil, titre d'onglet navigateur (`layout.tsx`), et le
+manifest PWA (nom affiché à l'installation). Nouveau logo généré : un
+piment rouge sur fond sombre arrondi
+(`public/icons/icon.svg` + PNG dérivés 192/512/apple-touch-icon),
+branché dans le manifest et les métadonnées Next.js (favicon +
+icône iOS). Les clés techniques internes (`caverne_user_id` en
+localStorage, etc.) n'ont pas été renommées — invisibles pour
+l'utilisateur, les changer aurait juste déconnecté tout le monde sans
+bénéfice.
+
+### 3. Undercover : le rôle n'est plus révélé sur la carte
+L'écran de distribution des cartes affichait littéralement "CIVIL" ou
+"UNDERCOVER" en toutes lettres au-dessus du mot — l'undercover savait
+donc immédiatement qu'il ne fallait pas répondre comme un civil.
+Retiré : civils et undercover voient exactement la même présentation
+(juste leur mot/image, sans étiquette de rôle). Seul Mister White
+continue de voir "MR. WHITE" affiché (cohérent avec la demande : lui
+seul est censé connaître son rôle).

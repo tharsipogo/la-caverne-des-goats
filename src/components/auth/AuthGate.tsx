@@ -45,7 +45,7 @@ function ChoiceScreen({ onSelect }: { onSelect: (s: Screen) => void }) {
     <Card className="max-w-md w-full text-center flex flex-col gap-5">
       <div>
         <span className="text-xs text-amber font-bold tracking-widest uppercase block">Bienvenue</span>
-        <h2 className="text-2xl font-black text-white mt-1">La Caverne des Goats</h2>
+        <h2 className="text-2xl font-black text-white mt-1">Chili Party</h2>
         <p className="text-xs text-muted mt-2">
           Un compte est nécessaire pour jouer en ligne avec tes amis. En invité, tu peux jouer en local.
         </p>
@@ -134,7 +134,7 @@ function RegisterScreen({ onBack }: { onBack: () => void }) {
         <h2 className="text-xl font-black text-white">Créer ton compte</h2>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input placeholder="Ton pseudo GOAT..." value={username} onChange={(e) => setUsername(e.target.value)} />
+        <Input placeholder="Ton pseudo..." value={username} onChange={(e) => setUsername(e.target.value)} />
         <Input
           placeholder="Choisis un code (4 à 6 chiffres)"
           type="password"

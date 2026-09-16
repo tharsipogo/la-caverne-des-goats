@@ -47,7 +47,7 @@ export default function HomePage() {
         </Card>
 
         <Card className="flex flex-col gap-3 text-center">
-          <h1 className="text-2xl font-black text-amber">La Caverne des GOATs</h1>
+          <h1 className="text-2xl font-black text-amber">🌶️ Chili Party</h1>
           <p className="text-xs text-muted">
             Choisis un jeu dans le menu à gauche, ou passe en <b className="text-[#4fc9c0]">Mode En Ligne</b> pour jouer
             en salon avec tes amis.

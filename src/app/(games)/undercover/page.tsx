@@ -314,9 +314,11 @@ export default function UndercoverPage() {
                   </div>
 
                   <div className="flex flex-col items-center gap-1.5 my-auto px-1">
-                    <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">
-                      {p.role === 'civil' ? 'CIVIL' : p.role === 'undercover' ? 'UNDERCOVER' : 'MR. WHITE'}
-                    </span>
+                    {p.role === 'mrwhite' && (
+                      <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">
+                        MR. WHITE
+                      </span>
+                    )}
                     {word ? (
                       <>
                         {word.image_url && (

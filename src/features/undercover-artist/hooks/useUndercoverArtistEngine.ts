@@ -14,7 +14,7 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
   const [lists, setLists] = useState<GameList[]>([]);
   const [listId, setListId] = useState('');
 
-  const [gameMode, setGameMode] = useState<GameMode>(sessionCode ? 'online' : 'menu');
+  const [gameMode, setGameMode] = useState<GameMode>(sessionCode ? 'online' : 'local');
   const [roomCode, setRoomCode] = useState(sessionCode || '');
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [isHost, setIsHost] = useState(!!isHostProp);
@@ -65,9 +65,12 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
     })();
   }, []);
 
-  // Résolution du salon (sessionCode -> sessionId + liste des vrais joueurs)
+  // Résolution du salon (sessionCode -> sessionId + liste des vrais joueurs,
+  // tenue à jour en temps réel tant que l'hôte configure la partie)
   useEffect(() => {
     if (!sessionCode) return;
+    let salonChannel: any;
+
     (async () => {
       const { data: session } = await supabase
         .from('game_sessions')
@@ -77,18 +80,33 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
       if (!session) return;
       setSessionId(session.id);
 
-      const { data: sPlayers } = await supabase
-        .from('session_players')
-        .select('*')
-        .eq('session_id', session.id)
-        .order('created_at', { ascending: true });
-
-      if (sPlayers && sPlayers.length > 0) {
+      const applyPlayers = (sPlayers: { user_id: string; name: string }[]) => {
+        if (sPlayers.length === 0) return;
         sessionPlayersRef.current = sPlayers.map((p) => ({ user_id: p.user_id, name: p.name }));
         setCount(sPlayers.length);
         setPlayerNames(sPlayers.map((p) => p.name));
-      }
+      };
+
+      const fetchPlayers = async () => {
+        const { data: sPlayers } = await supabase
+          .from('session_players')
+          .select('*')
+          .eq('session_id', session.id)
+          .order('created_at', { ascending: true });
+        if (sPlayers) applyPlayers(sPlayers);
+      };
+
+      await fetchPlayers();
+
+      salonChannel = supabase
+        .channel(`ua-salon-players:${session.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'session_players', filter: `session_id=eq.${session.id}` }, fetchPlayers)
+        .subscribe();
     })();
+
+    return () => {
+      if (salonChannel) supabase.removeChannel(salonChannel);
+    };
   }, [sessionCode]);
 
   useEffect(() => {

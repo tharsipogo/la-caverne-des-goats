@@ -1,7 +1,7 @@
 {
-  "name": "La Caverne des Goats",
-  "short_name": "Caverne Goats",
-  "description": "Blind Ranking, Tier List, Undercover et autres jeux entre goats.",
+  "name": "Chili Party",
+  "short_name": "Chili Party",
+  "description": "Blind Ranking, Tier List, Undercover et autres jeux entre amis.",
   "start_url": "/lists",
   "scope": "/",
   "display": "standalone",
