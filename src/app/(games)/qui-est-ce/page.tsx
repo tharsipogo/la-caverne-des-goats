@@ -161,7 +161,7 @@ export default function GuessWhoPage() {
 
   // Synchronisation Supabase Realtime
   useEffect(() => {
-    if (gameMode !== 'online' || !roomCode || phase === 'setup') return;
+    if (gameMode !== 'online' || !roomCode) return;
 
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
@@ -271,7 +271,7 @@ export default function GuessWhoPage() {
     setGuessMode([false, false]);
     setShowTargets([false, false]);
     setRevealInitialSecret([false, false]);
-    setPhase(isDesktop ? 'play' : 'secret_reveal');
+    setPhase('play');
   }
 
   async function createOnlineRoom() {

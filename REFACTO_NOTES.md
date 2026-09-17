@@ -642,3 +642,42 @@ Retiré : civils et undercover voient exactement la même présentation
 (juste leur mot/image, sans étiquette de rôle). Seul Mister White
 continue de voir "MR. WHITE" affiché (cohérent avec la demande : lui
 seul est censé connaître son rôle).
+
+## Session 24 — Grille manquante en ligne sur Qui est-ce ?
+
+Merci pour la capture — elle montrait clairement le vrai symptôme :
+"Cartes restantes : 20/20" s'affichait correctement (ce chiffre ne
+dépend pas de la grille), mais aucune des 20 cartes cliquables ne
+s'affichait en dessous — la liste des cartes (`gridItems`) était donc
+vide au moment de l'affichage.
+
+Cause trouvée : **même bug que celui déjà corrigé dans Undercover
+Artist** — le canal temps réel de Qui est-ce ? ne se connectait pas
+tant que la partie n'avait pas officiellement démarré
+(`phase === 'setup'` était exclu de la condition de connexion). Résultat
+possible : le message de lancement de l'hôte (contenant la grille et
+les cibles) pouvait partir alors que rien n'était encore prêt à le
+recevoir côté adverse. Corrigé en supprimant cette exclusion — le canal
+se connecte dès l'entrée en mode en ligne, comme pour les deux autres
+jeux.
+
+Le rendu minuscule/cassé de l'image de la cible sur ta capture n'a en
+revanche pas l'air d'être un bug de mise en page (le CSS force bien la
+taille) — plus probablement une image manquante ou de très mauvaise
+qualité sur cet item précis dans la base utilisée pour le test. Si ça
+persiste sur d'autres cartes après ce correctif, il faudra vérifier les
+URLs d'images de la base concernée.
+
+## Session 25 — Qui est-ce ? en local ne s'affichait pas du tout sur mobile
+
+Bug préexistant (pas introduit par les sessions précédentes) : au
+lancement d'une partie locale sur mobile, le code passait à une phase
+`'secret_reveal'` qui n'a **jamais eu d'écran associé** nulle part dans
+le fichier — ni avant ni après le début de ce chantier. Résultat :
+écran totalement vide dès qu'on lançait la partie sur mobile.
+
+Corrigé en supprimant cette phase inutilisée : le jeu va maintenant
+directement en phase de jeu, qui gère déjà correctement l'affichage
+tour par tour sur mobile (un seul plateau visible à la fois, celui du
+joueur actif — "Tour suivant" fait passer au joueur suivant), donc pas
+besoin d'écran de transition séparé.
