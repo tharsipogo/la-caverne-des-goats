@@ -27,6 +27,10 @@ export default function GuessWhoPage() {
   const [gridSize, setGridSize] = useState<number>(20);
   const [names, setNames] = useState<[string, string]>(['Joueur 1', 'Joueur 2']);
   const [phase, setPhase] = useState<Phase>('setup');
+  const phaseRef = useRef<Phase>('setup');
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   // Plateau
   const [gridItems, setGridItems] = useState<ListItem[]>([]);
@@ -36,12 +40,10 @@ export default function GuessWhoPage() {
   const [activePlayer, setActivePlayer] = useState<PIdx>(0);
   const [eliminated, setEliminated] = useState<[Set<string>, Set<string>]>([new Set(), new Set()]);
   const [showTargets, setShowTargets] = useState<[boolean, boolean]>([false, false]);
-  const [revealInitialSecret, setRevealInitialSecret] = useState<[boolean, boolean]>([false, false]);
   const [guessMode, setGuessMode] = useState<[boolean, boolean]>([false, false]);
 
   // Mode en Ligne
   const [roomCode, setRoomCode] = useState('');
-  const [joinCodeInput, setJoinCodeInput] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [myPlayerIdx, setMyPlayerIdx] = useState<PIdx>(0);
   const channelRef = useRef<any>(null);
@@ -113,6 +115,10 @@ export default function GuessWhoPage() {
       if (!amHost) setPhase('waiting');
 
       const applyPlayers = (sPlayers: { user_id: string; name: string }[]) => {
+        // Une fois la partie commencée, on ne touche plus aux noms/joueurs
+        // (évite qu'un nouvel arrivant dans le salon pour un futur tour
+        // perturbe une manche en cours).
+        if (phaseRef.current !== 'setup' && phaseRef.current !== 'waiting') return;
         const hostPlayer = sPlayers.find((p) => p.user_id === session.host_id);
         const guestPlayer = sPlayers.find((p) => p.user_id !== session.host_id);
         if (hostPlayer && guestPlayer) {
@@ -270,48 +276,7 @@ export default function GuessWhoPage() {
     setActivePlayer(0);
     setGuessMode([false, false]);
     setShowTargets([false, false]);
-    setRevealInitialSecret([false, false]);
     setPhase('play');
-  }
-
-  async function createOnlineRoom() {
-    // Déjà dans un salon (arrivée via le pont depuis la page d'accueil) :
-    // pas besoin de recréer une ligne "rooms", on a déjà le bon code.
-    if (roomCode) {
-      setIsHost(true);
-      setMyPlayerIdx(0);
-      setPhase('waiting');
-      return;
-    }
-
-    const code = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const { error } = await supabase.from('rooms').insert({
-      code,
-      list_id: listId,
-      grid_size: gridSize,
-      host_name: names[0],
-    });
-
-    if (error) return showAlert('Erreur', 'Impossible de créer le salon.');
-
-    setIsHost(true);
-    setMyPlayerIdx(0);
-    setRoomCode(code);
-    setPhase('waiting');
-  }
-
-  async function joinOnlineRoom() {
-    const code = joinCodeInput.trim().toUpperCase();
-    if (!code) return showAlert('Erreur', 'Entre un code de salon valide.');
-
-    const { data, error } = await supabase.from('rooms').select('*').eq('code', code).single();
-    if (error || !data) return showAlert('Erreur', 'Salon introuvable !');
-
-    setGridSize(data.grid_size);
-    setIsHost(false);
-    setMyPlayerIdx(1);
-    setRoomCode(code);
-    setPhase('waiting');
   }
 
   function toggleEliminate(pIdx: PIdx, itemId: string) {

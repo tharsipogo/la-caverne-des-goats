@@ -681,3 +681,47 @@ directement en phase de jeu, qui gère déjà correctement l'affichage
 tour par tour sur mobile (un seul plateau visible à la fois, celui du
 joueur actif — "Tour suivant" fait passer au joueur suivant), donc pas
 besoin d'écran de transition séparé.
+
+## Session 26 — Audit de stabilité complet
+
+Passe de relecture systématique (vérification stricte du code mort +
+relecture manuelle des fichiers à risque) avant de repartir sur de
+nouvelles fonctionnalités.
+
+### Bugs réels corrigés
+- `submitGameResults` (queries.ts) : vérifie maintenant que la session
+  est toujours "in_game" avant de distribuer les points — évite un
+  double comptage si l'hôte recharge sa page pile à la fin d'une
+  partie (le ref côté client qui empêchait ça se réinitialise à un
+  rechargement).
+- `endGameSession` : ne met plus à jour `games_played`/`online_wins`
+  si tous les joueurs ont un score de 0 (salon terminé sans qu'aucune
+  manche ait été jouée) — évitait sinon une "victoire" gratuite pour
+  l'hôte.
+- Undercover Artist : la mise à jour en direct des joueurs du salon
+  (pour le compteur pendant la configuration) pouvait redémarrer le
+  canal de jeu en pleine partie si quelqu'un rejoignait le salon pour
+  un tour futur pendant qu'une manche était en cours (dépendance
+  réactive inutile sur `playerNames` dans l'effet du canal). Corrigé
+  via une ref + un garde-fou qui arrête la synchronisation dès que la
+  partie a démarré. Même garde-fou ajouté côté Qui est-ce ? par
+  cohérence.
+
+### Nettoyage
+Fonctions et états devenus orphelins au fil des refontes (l'ancien
+système de salon "maison" de Qui est-ce ?, quelques imports inutilisés)
+supprimés — repérés via une vérification stricte temporaire
+(`noUnusedLocals`) puis tsconfig restauré à l'identique.
+
+### Limitations connues, non corrigées (arbitrage produit, pas des bugs)
+- PIN de connexion stocké en clair côté base (cohérent avec le reste
+  du projet, app entre amis).
+- Recharger la page **pendant** une manche (pas juste à la fin) ramène
+  à l'écran du salon plutôt que de replacer dans la partie en cours.
+- Un lien `/qui-est-ce?salon=CODE` ou `/undercover-artist` visité
+  directement par quelqu'un qui n'a pas rejoint le salon via l'écran
+  prévu peut afficher l'écran du jeu sans inscription réelle — risque
+  faible dans un contexte entre amis.
+- Quelques variables inutilisées pré-existantes sans impact
+  fonctionnel (`listName` dans Blind Test, `pIdx` dans Absolute
+  Cinema) — laissées telles quelles.

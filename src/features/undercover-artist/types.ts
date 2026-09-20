@@ -1,4 +1,3 @@
-import { GameList, ListItem } from '@/lib/types';
 import { ProfileRow } from '@/types/database';
 
 export type GameMode = 'menu' | 'local' | 'online';

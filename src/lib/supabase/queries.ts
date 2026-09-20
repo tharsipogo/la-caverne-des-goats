@@ -177,6 +177,12 @@ export async function returnSessionToLobby(sessionId: string) {
  * Puis renvoie tout le monde au salon.
  */
 export async function submitGameResults(sessionId: string, rankedUserIds: string[]) {
+  // Garde-fou : si la session n'est déjà plus "in_game" (quelqu'un a
+  // déjà soumis les résultats, ou l'hôte a rechargé sa page pile à la
+  // fin), on ne double-compte pas les points.
+  const session = await fetchSession(sessionId);
+  if (!session || session.status !== 'in_game') return;
+
   const n = rankedUserIds.length;
   if (n === 0) {
     await returnSessionToLobby(sessionId);
@@ -217,6 +223,11 @@ export async function endGameSession(sessionId: string) {
   if (players.length === 0) return;
 
   const topScore = Math.max(...players.map((p) => p.score));
+  // Personne n'a marqué le moindre point : aucune manche n'a été jouée
+  // dans ce salon (créé puis terminé directement, par exemple). On ne
+  // met à jour ni le nombre de parties jouées ni les victoires.
+  if (topScore === 0) return;
+
   const winners = players.filter((p) => p.score === topScore);
 
   await Promise.all(

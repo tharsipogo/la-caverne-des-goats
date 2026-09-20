@@ -9,7 +9,7 @@ export const CANVAS_W = 640;
 export const CANVAS_H = 400;
 
 export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
-  const { sessionCode, profile, isHost: isHostProp, onLeaveGame } = props;
+  const { sessionCode, profile, isHost: isHostProp } = props;
 
   const [lists, setLists] = useState<GameList[]>([]);
   const [listId, setListId] = useState('');
@@ -25,12 +25,20 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const salonResultsSubmitted = useRef(false);
   const sessionPlayersRef = useRef<{ user_id: string; name: string }[]>([]);
+  const playerNamesRef = useRef<string[]>([]);
+  const phaseRef = useRef<Phase>('setup');
 
   const [playerCount, setPlayerCount] = useState(5);
   const [playerNames, setPlayerNames] = useState<string[]>(Array.from({ length: 5 }, (_, i) => `Joueur ${i + 1}`));
   const [undercoverCount, setUndercoverCount] = useState(1);
+  useEffect(() => {
+    playerNamesRef.current = playerNames;
+  }, [playerNames]);
 
   const [phase, setPhase] = useState<Phase>('setup');
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
   const [word, setWord] = useState<ListItem | null>(null);
   const [mySecretWord, setMySecretWord] = useState<string | null>(null);
   const [myRole, setMyRole] = useState<Role>('civil');
@@ -82,6 +90,10 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
 
       const applyPlayers = (sPlayers: { user_id: string; name: string }[]) => {
         if (sPlayers.length === 0) return;
+        // Ne plus toucher aux joueurs une fois la partie commencée : on
+        // ne veut pas qu'un nouvel arrivant dans le salon (pour un futur
+        // tour) fasse recharger les données en pleine partie.
+        if (phaseRef.current !== 'setup') return;
         sessionPlayersRef.current = sPlayers.map((p) => ({ user_id: p.user_id, name: p.name }));
         setCount(sPlayers.length);
         setPlayerNames(sPlayers.map((p) => p.name));
@@ -176,7 +188,7 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
           channel.send({
             type: 'broadcast',
             event: 'guest_joined',
-            payload: { name: playerNames[0], userId: myUserId },
+            payload: { name: playerNamesRef.current[0], userId: myUserId },
           });
         }
       });
@@ -187,7 +199,7 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
         channelRef.current = null;
       }
     };
-  }, [gameMode, roomCode, phase, isHost, myUserId, playerNames]);
+  }, [gameMode, roomCode, phase, isHost, myUserId]);
 
   function drawRemoteLine(prevPos: { x: number; y: number }, currentPos: { x: number; y: number }) {
     const canvas = canvasRef.current;

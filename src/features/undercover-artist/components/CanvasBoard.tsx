@@ -1,5 +1,4 @@
 import { RefObject, LegacyRef } from 'react';
-import { Button } from '@/components/ui/Button';
 import { CANVAS_W, CANVAS_H } from '../hooks/useUndercoverArtistEngine';
 
 interface CanvasBoardProps {
