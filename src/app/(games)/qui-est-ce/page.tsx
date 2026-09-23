@@ -7,6 +7,8 @@ import { GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 import { GameConfigShell } from '@/components/game/GameConfigShell';
 import { PlayerNameField } from '@/components/game/PlayerNameField';
+import { HostBadge } from '@/components/game/HostBadge';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useAuth } from '@/lib/authContext';
 import { submitGameResults, returnSessionToLobby } from '@/lib/supabase/queries';
 
@@ -114,13 +116,19 @@ export default function GuessWhoPage() {
       setGameMode('online');
       if (!amHost) setPhase('waiting');
 
+      const chosenOpponentId = searchParams.get('opponent');
+
       const applyPlayers = (sPlayers: { user_id: string; name: string }[]) => {
         // Une fois la partie commencée, on ne touche plus aux noms/joueurs
         // (évite qu'un nouvel arrivant dans le salon pour un futur tour
         // perturbe une manche en cours).
         if (phaseRef.current !== 'setup' && phaseRef.current !== 'waiting') return;
         const hostPlayer = sPlayers.find((p) => p.user_id === session.host_id);
-        const guestPlayer = sPlayers.find((p) => p.user_id !== session.host_id);
+        // Si l'hôte a choisi un adversaire précis (salon à plus de 2
+        // joueurs), on ne prend que celui-là — sinon le premier arrivé.
+        const guestPlayer = chosenOpponentId
+          ? sPlayers.find((p) => p.user_id === chosenOpponentId)
+          : sPlayers.find((p) => p.user_id !== session.host_id);
         if (hostPlayer && guestPlayer) {
           salonPlayerIdsRef.current = [hostPlayer.user_id, guestPlayer.user_id];
           setGuestReady(true);
@@ -389,7 +397,7 @@ export default function GuessWhoPage() {
     setRoomCode('');
   };
 
-  if (loading) return <p className="text-muted p-4">Chargement...</p>;
+  if (loading) return <SkeletonCard />;
 
   const isMyTurn = gameMode === 'online' ? activePlayer === myPlayerIdx : true;
 
@@ -398,6 +406,7 @@ export default function GuessWhoPage() {
       className="relative flex flex-col min-h-[calc(100dvh-2rem)] overflow-x-hidden justify-between p-2 sm:p-4 w-full"
       onClick={() => setShowTargets([false, false])}
     >
+      {gameMode === 'online' && <HostBadge hostName={names[0]} />}
       {/* Modale Personnalisée */}
       {modalConfig.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">

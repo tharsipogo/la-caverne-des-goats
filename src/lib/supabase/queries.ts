@@ -45,6 +45,24 @@ export async function upsertProfile(profile: Partial<ProfileRow>): Promise<Profi
   return data;
 }
 
+export async function updateProfile(
+  userId: string,
+  updates: Partial<Pick<ProfileRow, 'username' | 'avatar_url' | 'pin'>>
+): Promise<ProfileRow> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Erreur updateProfile :', error);
+    throw error;
+  }
+  return data;
+}
+
 /* ==================== GAME SESSIONS (SALONS) ==================== */
 
 export async function createGameSession(hostId: string, hostProfile: ProfileRow) {

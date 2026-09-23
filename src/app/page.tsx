@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/lib/authContext';
 import { useOnlineMode } from '@/lib/onlineModeContext';
 import { OnlineLobby } from '@/components/lobby/OnlineLobby';
 import SoitConnecteContainer from '@/features/soit-connecte/SoitConnecteContainer';
 import UndercoverArtistContainer from '@/features/undercover-artist/UndercoverArtistContainer';
 import { Card } from '@/components/ui/Card';
+import { EditProfileModal } from '@/components/auth/EditProfileModal';
 import { ProfileRow } from '@/types/database';
 import { GameType } from '@/types/session';
 
@@ -20,30 +22,57 @@ export default function HomePage() {
   const [activeGame, setActiveGame] = useState<GameType | string>('');
   const [sessionCode, setSessionCode] = useState<string>('');
   const [isHost, setIsHost] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   if (!user) return null; // AuthGate s'en occupe
 
   // ---------- Mode local : tableau de bord + profil ----------
   if (!onlineMode) {
+    const wins = (user as ProfileRow).online_wins || 0;
+    const played = (user as ProfileRow).games_played || 0;
+    const winRate = played > 0 ? Math.round((wins / played) * 100) : null;
+
     return (
       <div className="max-w-xl w-full flex flex-col gap-6">
-        <Card className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={user.avatar_url} className="w-12 h-12 rounded-xl bg-[#1c1e26] p-1 border border-amber object-cover" alt="" />
-            <div>
-              <h2 className="font-bold text-white">{user.username}</h2>
-              {isGuest ? (
-                <span className="text-xs text-muted">Invité — jeux locaux uniquement</span>
-              ) : (
-                <span className="text-xs text-amber font-bold">
-                  🏆 {(user as ProfileRow).online_wins || 0} victoires · {(user as ProfileRow).games_played || 0} parties en ligne
-                </span>
-              )}
+        {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
+
+        <Card className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Image src={user.avatar_url} width={48} height={48} className="w-12 h-12 rounded-xl bg-[#1c1e26] p-1 border border-amber object-cover" alt="" unoptimized />
+              <div>
+                <h2 className="font-bold text-white">{user.username}</h2>
+                {isGuest && <span className="text-xs text-muted">Invité — jeux locaux uniquement</span>}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="text-xs text-muted hover:text-white" onClick={() => setShowEditProfile(true)}>
+                ✏️ Modifier
+              </button>
+              <button className="text-xs text-muted hover:text-white" onClick={logout}>
+                Déconnexion
+              </button>
             </div>
           </div>
-          <button className="text-xs text-muted hover:text-white" onClick={logout}>
-            Déconnexion
-          </button>
+
+          {!isGuest && (
+            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/10">
+              <div className="text-center">
+                <div className="text-xl font-black text-amber">{wins}</div>
+                <div className="text-[10px] text-muted uppercase tracking-wide">Victoires</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-black text-white">{played}</div>
+                <div className="text-[10px] text-muted uppercase tracking-wide">Parties</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-black" style={{ color: '#1eb996' }}>
+                  {winRate !== null ? `${winRate}%` : '—'}
+                </div>
+                <div className="text-[10px] text-muted uppercase tracking-wide">Taux de victoire</div>
+              </div>
+            </div>
+          )}
         </Card>
 
         <Card className="flex flex-col gap-3 text-center">

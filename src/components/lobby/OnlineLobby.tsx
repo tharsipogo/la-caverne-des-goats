@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import {
   createGameSession,
@@ -13,6 +14,7 @@ import {
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import { ProfileRow, SessionPlayerRow } from '@/types/database';
 import { GameType } from '@/types/session';
 
@@ -141,7 +143,15 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
     };
   }, [sessionId]);
 
+  const [showOpponentPicker, setShowOpponentPicker] = useState(false);
+
   const handleSelectGame = async (gameType: GameType) => {
+    if (gameType === 'qui-est-ce' && players.length > 2) {
+      // Plus de 2 joueurs dans le salon : l'hôte choisit qui affronte qui
+      // pour cette manche (le jeu ne se joue qu'à 2 à la fois).
+      setShowOpponentPicker(true);
+      return;
+    }
     await selectGameForSession(sessionId, gameType);
     if (gameType === 'qui-est-ce') {
       router.push(`/qui-est-ce?salon=${code}`);
@@ -149,6 +159,12 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
     }
     // L'hôte va directement configurer la partie, pas besoin de la modale.
     onStartGame(code, gameType, true);
+  };
+
+  const handlePickOpponent = async (opponentUserId: string) => {
+    setShowOpponentPicker(false);
+    await selectGameForSession(sessionId, 'qui-est-ce');
+    router.push(`/qui-est-ce?salon=${code}&opponent=${opponentUserId}`);
   };
 
   const handleJoinCurrentGame = async () => {
@@ -173,7 +189,7 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
   const sortedByScore = [...players].sort((a, b) => b.score - a.score);
 
   if (restoring) {
-    return <p className="text-muted text-sm text-center py-8">Chargement du salon…</p>;
+    return <SkeletonCard />;
   }
 
   if (step === 'menu') {
@@ -217,7 +233,7 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
             >
               <div className="flex items-center gap-3">
                 <span className="font-black text-muted w-5 text-center">{i + 1}</span>
-                <img src={p.avatar_url} className="w-9 h-9 rounded-full object-cover border border-white/20" alt="" />
+                <Image src={p.avatar_url} width={36} height={36} className="w-9 h-9 rounded-full object-cover border border-white/20" alt="" unoptimized />
                 <span className="font-bold text-sm text-white">{p.name}</span>
                 {i === 0 && <span>🏆</span>}
               </div>
@@ -274,7 +290,7 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
         {players.map((p) => (
           <div key={p.id} className="flex items-center justify-between p-2.5 bg-[#1c1e26] rounded-xl border border-white/10">
             <div className="flex items-center gap-3">
-              <img src={p.avatar_url} className="w-9 h-9 rounded-full object-cover border border-white/20" alt="" />
+              <Image src={p.avatar_url} width={36} height={36} className="w-9 h-9 rounded-full object-cover border border-white/20" alt="" unoptimized />
               <span className="font-bold text-sm text-white">{p.name}</span>
             </div>
             <span className="text-xs text-amber font-bold">{p.score} pts</span>
@@ -297,10 +313,27 @@ export function OnlineLobby({ profile, onStartGame }: OnlineLobbyProps) {
             </Button>
           </div>
           <p className="text-[11px] text-muted">
-            "Qui est-ce ?" se joue à 2 — seuls l'hôte et le premier joueur qui rejoint participeront.
+            "Qui est-ce ?" se joue à 2 — tu choisiras qui affronte qui si vous êtes plus de 2.
           </p>
           <Button variant="danger" size="sm" disabled={ending} onClick={handleEndSession}>
             {ending ? 'Fermeture…' : '🏁 Terminer le salon'}
+          </Button>
+        </div>
+      )}
+
+      {showOpponentPicker && (
+        <div className="border-t border-white/10 pt-4 flex flex-col gap-2">
+          <span className="text-xs text-muted block mb-1">Qui affronte qui pour cette manche ?</span>
+          {players
+            .filter((p) => p.user_id !== profile.user_id)
+            .map((p) => (
+              <Button key={p.id} size="sm" variant="secondary" className="justify-between" onClick={() => handlePickOpponent(p.user_id)}>
+                <span>Toi vs {p.name}</span>
+                <span>→</span>
+              </Button>
+            ))}
+          <Button size="sm" variant="ghost" onClick={() => setShowOpponentPicker(false)}>
+            Annuler
           </Button>
         </div>
       )}

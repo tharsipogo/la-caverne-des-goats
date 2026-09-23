@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { AvatarPicker, buildAvatarUrl } from '@/components/auth/AvatarPicker';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 
 type Screen = 'choice' | 'login' | 'register' | 'guest';
 
@@ -14,8 +15,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-muted text-sm">
-        Chargement…
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <SkeletonCard />
+        </div>
       </div>
     );
   }

@@ -6,6 +6,12 @@ const withPWA = withPWAInit({
   skipWaiting: true, // Force la PWA à appliquer immédiatement la nouvelle version déployée
 });
 
+// Autorise l'optimisation d'images (next/image) pour les images hébergées
+// sur le projet Supabase configuré et les avatars DiceBear.
+const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : undefined;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Garde les pages compilées en mémoire plus longtemps en dev (par défaut
@@ -14,6 +20,16 @@ const nextConfig = {
   onDemandEntries: {
     maxInactiveAge: 60 * 60 * 1000, // 1h au lieu de ~25s
     pagesBufferLength: 8, // garde plus de pages en mémoire simultanément
+  },
+  images: {
+    remotePatterns: [
+      ...(supabaseHostname ? [{ protocol: 'https', hostname: supabaseHostname }] : []),
+      { protocol: 'https', hostname: 'api.dicebear.com' },
+    ],
+    // Les avatars DiceBear sont des SVG ; Next les refuse par défaut
+    // (risque XSS générique) — sans danger ici, ce sont des avatars générés.
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
   },
 };
 

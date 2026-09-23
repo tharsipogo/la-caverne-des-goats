@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import { UndercoverArtistProps } from './types';
 import { GameConfigShell } from '@/components/game/GameConfigShell';
 import { PlayerNameField } from '@/components/game/PlayerNameField';
+import { HostBadge } from '@/components/game/HostBadge';
 
 export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, profile, isHost }: UndercoverArtistProps) {
   const engine = useUndercoverArtistEngine({ onLeaveGame, sessionCode, profile, isHost });
@@ -16,11 +17,13 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
   // 2. SETUP
   if (engine.phase === 'setup') {
     return (
-      <GameConfigShell
-        title="Configuration"
-        subtitle={engine.gameMode === 'local' ? 'Mode Local' : 'Mode En Ligne — Salon'}
-        onBack={engine.gameMode === 'online' ? onLeaveGame : undefined}
-      >
+      <>
+        {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name || engine.playerNames[0]} />}
+        <GameConfigShell
+          title="Configuration"
+          subtitle={engine.gameMode === 'local' ? 'Mode Local' : 'Mode En Ligne — Salon'}
+          onBack={engine.gameMode === 'online' ? onLeaveGame : undefined}
+        >
           <div>
             <label className="text-xs text-muted block mb-1.5">Base de mots</label>
             <select
@@ -115,6 +118,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
             <p className="text-center text-sm text-muted py-3">En attente que l'hôte lance la partie…</p>
           )}
       </GameConfigShell>
+      </>
     );
   }
 

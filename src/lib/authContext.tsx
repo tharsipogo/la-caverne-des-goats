@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { fetchProfileByUserId, fetchProfileByUsername, upsertProfile } from '@/lib/supabase/queries';
+import { fetchProfileByUserId, fetchProfileByUsername, upsertProfile, updateProfile as updateProfileQuery } from '@/lib/supabase/queries';
 import { ProfileRow } from '@/types/database';
 
 export interface GuestProfile {
@@ -21,6 +21,8 @@ interface AuthContextValue {
   login: (username: string, pin: string) => Promise<{ error?: string }>;
   continueAsGuest: (username: string, avatarUrl: string) => void;
   logout: () => void;
+  /** Modifie le pseudo/avatar/code du compte connecté (ou du profil invité). */
+  updateMyProfile: (updates: { username?: string; avatarUrl?: string; pin?: string }) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -114,10 +116,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const updateMyProfile: AuthContextValue['updateMyProfile'] = async (updates) => {
+    if (!user) return { error: 'Aucun profil connecté.' };
+
+    const isGuestUser = 'is_guest' in user && user.is_guest === true;
+
+    if (isGuestUser) {
+      const guest = user as GuestProfile;
+      const next: GuestProfile = {
+        ...guest,
+        username: updates.username?.trim() || guest.username,
+        avatar_url: updates.avatarUrl || guest.avatar_url,
+      };
+      localStorage.setItem(STORAGE_KEY_GUEST, JSON.stringify(next));
+      setUser(next);
+      return {};
+    }
+
+    if (updates.username && updates.username.trim() !== user.username) {
+      const trimmed = updates.username.trim();
+      if (!trimmed) return { error: 'Le pseudo ne peut pas être vide.' };
+      const existing = await fetchProfileByUsername(trimmed);
+      if (existing && existing.user_id !== user.user_id) return { error: 'Ce pseudo est déjà pris.' };
+    }
+    if (updates.pin && !/^\d{4,6}$/.test(updates.pin)) {
+      return { error: 'Le code doit faire 4 à 6 chiffres.' };
+    }
+
+    try {
+      const updated = await updateProfileQuery(user.user_id, {
+        ...(updates.username ? { username: updates.username.trim() } : {}),
+        ...(updates.avatarUrl ? { avatar_url: updates.avatarUrl } : {}),
+        ...(updates.pin ? { pin: updates.pin } : {}),
+      });
+      setUser(updated);
+      return {};
+    } catch {
+      return { error: 'Erreur lors de la mise à jour du profil.' };
+    }
+  };
+
   const isGuest = !!user && 'is_guest' in user && user.is_guest === true;
 
   return (
-    <AuthContext.Provider value={{ user, loading, isGuest, register, login, continueAsGuest, logout }}>
+    <AuthContext.Provider value={{ user, loading, isGuest, register, login, continueAsGuest, logout, updateMyProfile }}>
       {children}
     </AuthContext.Provider>
   );

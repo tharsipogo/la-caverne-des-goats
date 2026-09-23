@@ -725,3 +725,61 @@ supprimés — repérés via une vérification stricte temporaire
 - Quelques variables inutilisées pré-existantes sans impact
   fonctionnel (`listName` dans Blind Test, `pIdx` dans Absolute
   Cinema) — laissées telles quelles.
+
+## Session 27 — Améliorations (points 1, 3, 4, 7, 8, 9, 10)
+
+### 1. Écran d'erreur au lieu d'un écran blanc silencieux
+`src/app/error.tsx` (erreurs dans une page) et `src/app/global-error.tsx`
+(erreurs dans la mise en page racine elle-même) — désormais, un bug
+inattendu affiche un message clair avec un bouton "Réessayer" au lieu
+de planter l'appli en silence (exactement ce qui s'était passé avec
+l'écran vide de Qui est-ce ? il y a quelques sessions).
+
+### 3. `next/image` — portée volontairement réduite
+Domaines d'images autorisés configurés (`next.config.mjs`) pour le
+projet Supabase et les avatars DiceBear. Converti pour les avatars les
+plus visibles : profil sur la page d'accueil, liste des joueurs du
+salon. Les vignettes d'objets propres à chaque jeu (grilles, tier list,
+drag-and-drop...) restent en `<img>` classique — 39 occurrences au
+total dans des mises en page parfois complexes, converties à l'aveugle
+ça aurait été un risque disproportionné par rapport au gain réel.
+
+### 4. Badge "👑 Hôte" — complet sur 2 jeux sur 3
+Visible à toutes les phases pour Soit Connecté et Qui est-ce ?. Pour
+Undercover Artist, uniquement à l'écran de configuration : sa structure
+interne (plusieurs `return` séparés par phase) rendait risqué de
+l'ajouter partout sans repasser en revue chaque écran individuellement.
+
+### 7. Qui est-ce ? à plus de 2 joueurs dans le salon
+Plutôt que des duels en parallèle (gros chantier, coordination
+complexe entre plusieurs parties simultanées, risque élevé sans tests
+réels), l'hôte choisit maintenant explicitement qui affronte qui via un
+petit sélecteur dans le salon, au lieu d'un appariement automatique
+hôte + premier arrivé. Les vrais duels en parallèle restent une
+évolution possible mais plus lourde, à traiter séparément si voulu.
+
+### 8. Palmarès plus lisible
+Ajout du taux de victoire et d'une mise en page à 3 statistiques
+(victoires / parties / taux) sur la page de profil. Un historique
+détaillé par joué nécessiterait une nouvelle table en base
+(actuellement seuls les totaux cumulés existent) — pas fait ici,
+periph à évaluer si tu veux vraiment un historique complet.
+
+### 9. Modifier son pseudo/avatar après la création du compte
+Nouveau bouton "✏️ Modifier" sur la page de profil, ouvre une modale
+réutilisant le créateur de personnage. Fonctionne aussi pour les
+invités (pseudo/avatar stockés en local uniquement). Nouvelle fonction
+`updateProfile` côté requêtes Supabase.
+
+### 10. Écrans de chargement
+Composant `Skeleton`/`SkeletonCard` réutilisable, appliqué aux 3
+endroits à plus fort trafic : l'écran de connexion au démarrage de
+l'appli, la restauration du salon, et le chargement de Qui est-ce ?.
+Les autres écrans de chargement (listes de jeux individuels) sont
+généralement quasi-instantanés et n'ont pas été touchés.
+
+### ⚠️ Incident technique pendant cette session
+Le bac à sable s'est réinitialisé une fois en plein travail — les
+points 1 et 4 ont dû être refaits depuis un point de sauvegarde
+intermédiaire. Rien n'a été perdu côté toi, juste un peu de temps de
+ma part.
