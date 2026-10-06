@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -218,7 +220,7 @@ export default function VersusPage() {
     setInstantWinner(null);
   };
 
-  if (loading) return <p className="text-muted">Chargement...</p>;
+  if (loading) return <SkeletonCard />;
 
   const backgroundStyle: React.CSSProperties = terrain?.image_url
     ? {
@@ -391,7 +393,7 @@ export default function VersusPage() {
         <div className="flex flex-col items-center justify-center my-auto py-1">
           <div className="w-[190px] h-[220px] sm:w-[210px] sm:h-[240px] bg-[#141622] border-2 border-amber shadow-[0_0_30px_rgba(245,158,11,0.35)] rounded-2xl overflow-hidden relative">
             {currentCard?.image_url ? (
-              <img src={currentCard.image_url} className="w-full h-full object-cover" alt="" />
+              <Image src={currentCard.image_url} width={210} height={240} className="w-full h-full object-cover" alt="" />
             ) : (
               <div className="w-full h-full bg-surface2 flex items-center justify-center text-4xl">🎴</div>
             )}
@@ -605,7 +607,7 @@ function CardTile({ item, cardDetail, accent, isOnePiece }: any) {
       onMouseLeave={() => setShowFactions(false)}
     >
       {item.image_url ? (
-        <img src={item.image_url} className="w-full h-16 sm:h-20 object-cover rounded-lg" alt="" />
+        <Image src={item.image_url} width={128} height={80} className="w-full h-16 sm:h-20 object-cover rounded-lg" alt="" />
       ) : (
         <div className="w-full h-16 sm:h-20 rounded-lg bg-surface2 flex items-center justify-center text-sm">🎴</div>
       )}
@@ -657,7 +659,7 @@ function CoachCard({ coach, accent, size = 'md' }: any) {
   return (
     <div className={`${dims} rounded-xl overflow-hidden border-2 border-white/60 shrink-0 shadow-lg`} style={{ boxShadow: `0 0 15px ${accent}66` }}>
       {coach.image_url ? (
-        <img src={coach.image_url} className="w-full h-full object-cover" alt="" />
+        <Image src={coach.image_url} width={144} height={192} className="w-full h-full object-cover" alt="" />
       ) : (
         <div className="w-full h-full bg-surface2 flex items-center justify-center text-xs">🧑‍🏫</div>
       )}

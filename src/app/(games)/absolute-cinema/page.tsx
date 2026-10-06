@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
@@ -435,8 +436,10 @@ export default function AbsoluteCinemaPage() {
 
               <div className="w-full h-56 bg-[#0D0C10] rounded-xl overflow-hidden relative border border-white/10 shadow-inner">
                 {item.image_url ? (
-                  <img
+                  <Image
                     src={item.image_url}
+                    width={300}
+                    height={224}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     alt={item.name}
                   />
@@ -512,7 +515,7 @@ export default function AbsoluteCinemaPage() {
                   <div key={i} className="flex items-center gap-2 bg-[#18161E] p-1.5 rounded-xl border border-white/5">
                     <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-[#0D0C10] border border-[#D4AF37]/30 flex items-center justify-center">
                       {c.item?.image_url ? (
-                        <img src={c.item.image_url} className="w-full h-full object-cover" alt="" />
+                        <Image src={c.item.image_url} width={32} height={32} className="w-full h-full object-cover" alt="" />
                       ) : (
                         <span className="text-xs">{c.icon}</span>
                       )}

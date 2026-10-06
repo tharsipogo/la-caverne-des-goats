@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PlayerSubmission } from '../types';
@@ -32,7 +33,7 @@ export function RecapPhase({
         {submissions.map((sub) => (
           <Card key={sub.userId} className="flex flex-col gap-3">
             <div className="flex items-center gap-3 border-b border-white/10 pb-2">
-              <img src={sub.avatarUrl} className="w-10 h-10 rounded-xl bg-surface2 border border-amber object-cover" alt="" />
+              <Image src={sub.avatarUrl} width={40} height={40} className="w-10 h-10 rounded-xl bg-surface2 border border-amber object-cover" alt="" unoptimized />
               <span className="font-bold text-white text-sm">{sub.userName}</span>
             </div>
 

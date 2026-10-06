@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 // Valeurs officielles DiceBear 10.x "big-smile"
 const EYE_OPTIONS = [
@@ -97,9 +98,12 @@ export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex justify-center">
-        <img
+        <Image
           src={value || buildAvatarUrl({ eyes, mouth, hair, skin, hairColor, bg })}
           alt="Avatar"
+          width={80}
+          height={80}
+          unoptimized
           className="w-20 h-20 rounded-2xl bg-white/5 border-2 border-amber p-1 object-cover"
         />
       </div>

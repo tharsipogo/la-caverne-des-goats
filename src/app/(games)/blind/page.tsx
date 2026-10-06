@@ -1,5 +1,7 @@
 'use client';
 
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
@@ -114,7 +116,7 @@ export default function BlindPage() {
     setRevealedIndex(0);
   }
 
-  if (loading) return <p className="text-muted">Chargement...</p>;
+  if (loading) return <SkeletonCard />;
 
   const audioEl = <audio ref={audioRef} className="hidden" />;
 
@@ -159,10 +161,12 @@ export default function BlindPage() {
             <div className="flex flex-col items-center">
               <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border-2 border-slate-300 shadow-[0_0_30px_rgba(203,213,225,0.4)] bg-surface2">
                 {top3[1].image_url ? (
-                  <img
+                  <Image
                     src={top3[1].image_url}
                     alt={top3[1].name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-3xl">🎴</div>
@@ -182,10 +186,12 @@ export default function BlindPage() {
             <div className="flex flex-col items-center -translate-y-3">
               <div className="relative w-36 h-40 md:w-44 md:h-48 rounded-2xl overflow-hidden border-2 border-amber shadow-[0_0_40px_rgba(245,158,11,0.5)] bg-surface2">
                 {top3[0].image_url ? (
-                  <img
+                  <Image
                     src={top3[0].image_url}
                     alt={top3[0].name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-4xl">🎴</div>
@@ -205,10 +211,12 @@ export default function BlindPage() {
             <div className="flex flex-col items-center">
               <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border-2 border-[#cd7f32] shadow-[0_0_30px_rgba(205,127,50,0.4)] bg-surface2">
                 {top3[2].image_url ? (
-                  <img
+                  <Image
                     src={top3[2].image_url}
                     alt={top3[2].name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-3xl">🎴</div>
@@ -238,10 +246,13 @@ export default function BlindPage() {
                     {rank}
                   </span>
                   {it?.image_url ? (
-                    <img
+                    <Image
                       src={it.image_url}
+                      width={40}
+                      height={40}
                       className="w-10 h-10 object-cover rounded-lg shrink-0"
                       alt=""
+                      unoptimized
                     />
                   ) : (
                     <div className="w-10 h-10 bg-surface2 rounded-lg border border-white/10 shrink-0" />
@@ -286,7 +297,7 @@ export default function BlindPage() {
           <div className="flex flex-col items-center gap-4 w-[280px] shrink-0">
             <div className="w-[260px] min-h-[260px] bg-gradient-to-br from-surface2 to-surface border border-border rounded-2xl flex flex-col items-center justify-center p-5 text-center gap-3">
               {current.image_url ? (
-                <img src={current.image_url} className="w-full max-h-[190px] object-contain rounded-lg" alt="" />
+                <Image src={current.image_url} width={260} height={190} className="w-full max-h-[190px] object-contain rounded-lg" alt="" unoptimized />
               ) : (
                 <div className="text-4xl">{isAudio ? '🎧' : '🎴'}</div>
               )}

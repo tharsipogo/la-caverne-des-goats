@@ -33,3 +33,14 @@ export function SkeletonProfileRow() {
     </div>
   );
 }
+
+/** Squelette de liste — plusieurs lignes, pour un chargement intégré dans une page. */
+export function SkeletonList({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="flex flex-col gap-2 py-2">
+      {Array.from({ length: rows }, (_, i) => (
+        <Skeleton key={i} className="h-11 w-full" />
+      ))}
+    </div>
+  );
+}

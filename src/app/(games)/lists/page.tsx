@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem, ListType } from '@/lib/types';
 import { fetchListItemMeta, nameFromFilename, uploadItemAudio, uploadItemImage } from '@/lib/utils';
+import { SkeletonList } from '@/components/ui/Skeleton';
 
 interface ListMeta extends GameList {
   itemCount: number;
@@ -129,7 +131,7 @@ export default function ListsPage() {
       </div>
 
       {loading ? (
-        <p className="text-muted mt-6">Chargement...</p>
+        <SkeletonList rows={4} />
       ) : filtered.length === 0 ? (
         <p className="text-muted text-sm py-8 text-center">
           {lists.length === 0 ? "Aucune base pour l'instant — clique sur \"+ Nouvelle base\"." : 'Aucune base ne correspond à ta recherche.'}
@@ -140,7 +142,7 @@ export default function ListsPage() {
             <div key={l.id} className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-amberDim transition flex flex-col">
               <div className="relative h-32 bg-gradient-to-br from-surface2 to-bg flex items-center justify-center group">
                 {l.cover_image_url || l.thumbnailUrl ? (
-                  <img src={l.cover_image_url || l.thumbnailUrl!} className="w-full h-full object-cover" alt="" />
+                  <Image src={l.cover_image_url || l.thumbnailUrl!} fill className="object-cover" alt="" unoptimized />
                 ) : (
                   <span className="text-4xl opacity-30">{TYPE_ICON[l.type]}</span>
                 )}
@@ -555,14 +557,14 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
       {/* Liste des items */}
       <div className="panel max-h-[400px] overflow-y-auto">
         {loading ? (
-          <p className="text-muted">Chargement...</p>
+          <SkeletonList rows={3} />
         ) : items.length === 0 ? (
           <p className="text-muted text-sm py-6 text-center">Aucun item pour l'instant.</p>
         ) : (
           items.map((it) => (
             <div key={it.id} className="flex items-center gap-3 px-2.5 py-2 rounded-lg border border-border mb-2 bg-surface2">
               {it.image_url ? (
-                <img src={it.image_url} className="w-9 h-9 object-cover rounded-md" alt={it.name} />
+                <Image src={it.image_url} width={36} height={36} className="w-9 h-9 object-cover rounded-md" alt={it.name} unoptimized />
               ) : (
                 <div className="w-9 h-9 rounded-md bg-bg flex items-center justify-center text-muted text-sm shrink-0">
                   {list.type === 'image' ? '🖼' : list.type === 'audio' ? '🎵' : '✎'}

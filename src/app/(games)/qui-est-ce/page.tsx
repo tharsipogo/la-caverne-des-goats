@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
@@ -549,7 +550,9 @@ export default function GuessWhoPage() {
                     <div className="absolute left-0 top-full mt-1.5 z-50 bg-[#161822] border-2 border-[#e2645a] rounded-xl p-2 shadow-2xl flex flex-col items-center gap-1 w-28 animate-in fade-in zoom-in-95 duration-150">
                       <span className="text-[9px] text-[#e2645a] font-bold">Ta cible :</span>
                       {secrets[0]?.image_url ? (
-                        <img src={secrets[0].image_url} className="w-full h-16 object-cover rounded-md" alt="" />
+                        <div className="relative w-full h-16">
+                          <Image src={secrets[0].image_url} fill className="object-cover rounded-md" alt="" unoptimized />
+                        </div>
                       ) : (
                         <div className="w-full h-16 bg-surface2 rounded-md flex items-center justify-center text-xs">🎴</div>
                       )}
@@ -595,7 +598,9 @@ export default function GuessWhoPage() {
                     <div className="absolute right-0 top-full mt-1.5 z-50 bg-[#161822] border-2 border-[#4fc9c0] rounded-xl p-2 shadow-2xl flex flex-col items-center gap-1 w-28 animate-in fade-in zoom-in-95 duration-150">
                       <span className="text-[9px] text-[#4fc9c0] font-bold">Ta cible :</span>
                       {secrets[1]?.image_url ? (
-                        <img src={secrets[1].image_url} className="w-full h-16 object-cover rounded-md" alt="" />
+                        <div className="relative w-full h-16">
+                          <Image src={secrets[1].image_url} fill className="object-cover rounded-md" alt="" unoptimized />
+                        </div>
                       ) : (
                         <div className="w-full h-16 bg-surface2 rounded-md flex items-center justify-center text-xs">🎴</div>
                       )}
@@ -696,7 +701,7 @@ export default function GuessWhoPage() {
                         >
                           <div className="w-full aspect-square rounded-lg overflow-hidden bg-surface2 relative">
                             {item.image_url ? (
-                              <img src={item.image_url} className="w-full h-full object-cover" alt="" />
+                              <Image src={item.image_url} fill className="object-cover" alt="" unoptimized />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-xl">🎴</div>
                             )}
@@ -732,9 +737,9 @@ export default function GuessWhoPage() {
           <div className="grid grid-cols-2 gap-4 w-full bg-[#121420] border border-white/10 rounded-2xl p-4 shadow-xl">
             <div className="flex flex-col items-center gap-2">
               <span className="text-xs font-bold text-[#e2645a]">Carte de {names[0]}</span>
-              <div className="w-24 h-32 rounded-xl overflow-hidden border-2 border-[#e2645a]">
+              <div className="relative w-24 h-32 rounded-xl overflow-hidden border-2 border-[#e2645a]">
                 {secrets[0]?.image_url ? (
-                  <img src={secrets[0].image_url} className="w-full h-full object-cover" alt="" />
+                  <Image src={secrets[0].image_url} fill className="object-cover" alt="" unoptimized />
                 ) : (
                   <div className="w-full h-full bg-surface2 flex items-center justify-center">🎴</div>
                 )}
@@ -744,9 +749,9 @@ export default function GuessWhoPage() {
 
             <div className="flex flex-col items-center gap-2">
               <span className="text-xs font-bold text-[#4fc9c0]">Carte de {names[1]}</span>
-              <div className="w-24 h-32 rounded-xl overflow-hidden border-2 border-[#4fc9c0]">
+              <div className="relative w-24 h-32 rounded-xl overflow-hidden border-2 border-[#4fc9c0]">
                 {secrets[1]?.image_url ? (
-                  <img src={secrets[1].image_url} className="w-full h-full object-cover" alt="" />
+                  <Image src={secrets[1].image_url} fill className="object-cover" alt="" unoptimized />
                 ) : (
                   <div className="w-full h-full bg-surface2 flex items-center justify-center">🎴</div>
                 )}

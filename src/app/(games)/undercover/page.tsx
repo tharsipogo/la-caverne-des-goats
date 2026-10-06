@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
@@ -322,7 +323,7 @@ export default function UndercoverPage() {
                     {word ? (
                       <>
                         {word.image_url && (
-                          <img src={word.image_url} className="w-full max-h-20 object-contain rounded-md" alt="" />
+                          <Image src={word.image_url} width={160} height={80} className="w-full max-h-20 object-contain rounded-md" alt="" unoptimized />
                         )}
                         <span className="text-white font-black text-sm sm:text-base leading-tight break-words max-w-full">
                           {word.name}

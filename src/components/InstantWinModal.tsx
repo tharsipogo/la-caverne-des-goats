@@ -1,6 +1,7 @@
 'use client';
 
 import { ListItem } from '@/lib/types';
+import Image from 'next/image';
 
 interface InstantWinModalProps {
   winnerName: string;
@@ -36,7 +37,7 @@ export default function InstantWinModal({ winnerName, cards, accent, onClose }: 
               className="w-24 h-32 sm:w-28 sm:h-36 rounded-xl border-2 border-amber overflow-hidden relative shadow-[0_0_15px_rgba(245,158,11,0.4)]"
             >
               {card.image_url ? (
-                <img src={card.image_url} className="w-full h-full object-cover" alt="" />
+                <Image src={card.image_url} fill className="object-cover" alt="" unoptimized />
               ) : (
                 <div className="w-full h-full bg-surface2 flex items-center justify-center text-2xl">🎴</div>
               )}

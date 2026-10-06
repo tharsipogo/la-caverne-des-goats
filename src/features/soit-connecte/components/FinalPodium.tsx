@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { RankedPlayer } from '../types';
@@ -29,7 +30,7 @@ export function FinalPodium({ rankedData, cumulativeScores, isHost, onReturnToLo
           >
             <div className="flex items-center gap-3">
               <span className="font-black text-sm w-4">{rank}.</span>
-              <img src={player.avatar_url} className="w-9 h-9 rounded-xl border border-white/20 object-cover" alt="" />
+              <Image src={player.avatar_url} width={36} height={36} className="w-9 h-9 rounded-xl border border-white/20 object-cover" alt="" unoptimized />
               <span className="text-sm font-bold">{player.name}</span>
             </div>
 

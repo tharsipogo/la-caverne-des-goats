@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_TIER_LABELS, GameList, ListItem, TierAssignment, TierRow, TIER_COLOR_PALETTE } from '@/lib/types';
 import { fetchListItemMeta } from '@/lib/utils';
@@ -527,7 +528,7 @@ function ItemChip({
       style={{ width: 72 }}
     >
       {item.image_url ? (
-        <img src={item.image_url} className="w-full object-cover" style={{ height: 54 }} alt="" />
+        <Image src={item.image_url} width={72} height={54} className="w-full object-cover" style={{ height: 54 }} alt="" unoptimized />
       ) : (
         <div className="w-full flex items-center justify-center bg-surface text-lg" style={{ height: 54 }}>🎴</div>
       )}

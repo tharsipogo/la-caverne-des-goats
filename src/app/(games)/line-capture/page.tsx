@@ -1,5 +1,7 @@
 'use client';
 
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -371,7 +373,7 @@ export default function LineCapturePage() {
     setOppCardToSwap(null);
   }
 
-  if (loading) return <p className="text-muted p-8">Chargement de Line Capture...</p>;
+  if (loading) return <SkeletonCard />;
 
   // ================= 1. SETUP =================
   if (phase === 'setup') {
@@ -438,7 +440,7 @@ export default function LineCapturePage() {
                       isSelected ? 'border-amber bg-amber/20' : 'border-border bg-surface'
                     }`}
                   >
-                    {it.image_url && <img src={it.image_url} className="w-10 h-10 object-cover rounded-md" alt="" />}
+                    {it.image_url && <Image src={it.image_url} width={40} height={40} className="w-10 h-10 object-cover rounded-md" alt="" unoptimized />}
                     <span className="text-[10px] font-bold truncate max-w-full">{it.name}</span>
                   </button>
                 );
@@ -513,7 +515,7 @@ export default function LineCapturePage() {
                   }}
                 >
                   {item.image_url ? (
-                    <img src={item.image_url} className="w-full h-full object-cover rounded-xl" alt="" />
+                    <Image src={item.image_url} fill className="object-cover rounded-xl" alt="" unoptimized />
                   ) : (
                     <span className="text-xs font-bold text-center text-white">{item.name}</span>
                   )}
@@ -682,7 +684,7 @@ export default function LineCapturePage() {
                           myCardToSwap?.id === it.id ? 'border-amber bg-amber/20' : 'border-border bg-surface2'
                         }`}
                       >
-                        {it.image_url && <img src={it.image_url} className="w-10 h-10 object-cover rounded" alt="" />}
+                        {it.image_url && <Image src={it.image_url} width={40} height={40} className="w-10 h-10 object-cover rounded" alt="" unoptimized />}
                         <span className="truncate w-full text-[9px] font-bold text-white mt-1">{it.name}</span>
                       </button>
                     ))}
@@ -703,7 +705,7 @@ export default function LineCapturePage() {
                           oppCardToSwap?.id === it.id ? 'border-amber bg-amber/20' : 'border-border bg-surface2'
                         }`}
                       >
-                        {it.image_url && <img src={it.image_url} className="w-10 h-10 object-cover rounded" alt="" />}
+                        {it.image_url && <Image src={it.image_url} width={40} height={40} className="w-10 h-10 object-cover rounded" alt="" unoptimized />}
                         <span className="truncate w-full text-[9px] font-bold text-white mt-1">{it.name}</span>
                       </button>
                     ))}
@@ -760,7 +762,7 @@ export default function LineCapturePage() {
           <div className="flex flex-wrap gap-2 justify-center">
             {finalTeam1.map((it) => (
               <div key={it.id} className="bg-[#181a28] border border-white/10 rounded-lg p-1.5 w-24 text-center">
-                {it.image_url && <img src={it.image_url} className="w-full h-14 object-cover rounded-md" alt="" />}
+                {it.image_url && <Image src={it.image_url} width={96} height={56} className="w-full h-14 object-cover rounded-md" alt="" unoptimized />}
                 <div className="text-[10px] font-bold text-white truncate mt-1">{it.name}</div>
               </div>
             ))}
@@ -775,7 +777,7 @@ export default function LineCapturePage() {
           <div className="flex flex-wrap gap-2 justify-center">
             {finalTeam2.map((it) => (
               <div key={it.id} className="bg-[#181a28] border border-white/10 rounded-lg p-1.5 w-24 text-center">
-                {it.image_url && <img src={it.image_url} className="w-full h-14 object-cover rounded-md" alt="" />}
+                {it.image_url && <Image src={it.image_url} width={96} height={56} className="w-full h-14 object-cover rounded-md" alt="" unoptimized />}
                 <div className="text-[10px] font-bold text-white truncate mt-1">{it.name}</div>
               </div>
             ))}

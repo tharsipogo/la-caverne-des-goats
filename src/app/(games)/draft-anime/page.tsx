@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
 import { pickRandom } from '@/lib/utils';
@@ -359,9 +360,9 @@ export default function AnimeDraftPage() {
 
           {drawnCard && (
             <div className="flex items-center gap-3 bg-black/40 p-2.5 px-4 rounded-xl border border-white/10">
-              <div className="w-12 h-14 rounded-lg overflow-hidden bg-slate-800 border border-white/20 shrink-0">
+              <div className="relative w-12 h-14 rounded-lg overflow-hidden bg-slate-800 border border-white/20 shrink-0">
                 {drawnCard.image_url ? (
-                  <img src={drawnCard.image_url} className="w-full h-full object-cover" alt="" />
+                  <Image src={drawnCard.image_url} fill className="object-cover" alt="" unoptimized />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs">
                     {isNaruto ? '🌀' : '🏴‍☠️'}
@@ -456,9 +457,9 @@ export default function AnimeDraftPage() {
                         </div>
 
                         {cardInCat ? (
-                          <div className="w-8 h-8 rounded overflow-hidden bg-black/50 border border-white/10 shrink-0">
+                          <div className="relative w-8 h-8 rounded overflow-hidden bg-black/50 border border-white/10 shrink-0">
                             {cardInCat.image_url ? (
-                              <img src={cardInCat.image_url} className="w-full h-full object-cover" alt="" />
+                              <Image src={cardInCat.image_url} fill className="object-cover" alt="" unoptimized />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-[10px]">✨</div>
                             )}
@@ -524,9 +525,9 @@ export default function AnimeDraftPage() {
                   const card = b.cards[cat.key];
                   return (
                     <div key={cat.key} className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5">
-                      <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-black/50 border border-white/10 flex items-center justify-center">
+                      <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-black/50 border border-white/10 flex items-center justify-center">
                         {card?.image_url ? (
-                          <img src={card.image_url} className="w-full h-full object-cover" alt="" />
+                          <Image src={card.image_url} fill className="object-cover" alt="" unoptimized />
                         ) : (
                           <span className="text-xs">{cat.icon}</span>
                         )}

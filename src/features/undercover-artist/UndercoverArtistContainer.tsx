@@ -147,6 +147,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
 
     return (
       <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[75vh] gap-6 text-center py-6">
+        {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
         {engine.gameMode === 'online' ? (
           <Card glow className="max-w-sm w-full flex flex-col items-center gap-4">
             <span className="text-xs text-amber font-bold uppercase tracking-wider">TA CARTE SECRÈTE</span>
@@ -245,6 +246,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
 
     return (
       <div className="p-2 sm:p-4 max-w-4xl mx-auto w-full">
+        {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
         <div className="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-2">
           <div>
             <span className="text-xs text-amber font-bold uppercase block">
@@ -296,6 +298,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
   if (engine.phase === 'elim') {
     return (
       <div className="p-4 max-w-4xl mx-auto w-full">
+        {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
         <div className="mb-6 text-center">
           <span className="text-xs text-amber font-bold uppercase block">Discussion après 2 tours de dessin</span>
           <h1 className="text-3xl font-black text-white">Sélectionnez le joueur à éliminer</h1>
@@ -360,6 +363,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
 
     return (
       <div className="p-4 max-w-md mx-auto text-center flex flex-col items-center gap-5 my-auto">
+        {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
         <Card glow className="w-full flex flex-col items-center gap-4">
           <span className="text-xs text-amber font-bold uppercase tracking-wider">🕵️ ULTIME CHANCE !</span>
           <h2 className="text-xl font-bold text-white">
@@ -394,6 +398,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
   // 8. FIN DE PARTIE
   return (
     <div className="flex flex-col items-center gap-6 mt-10 text-center p-4 max-w-md mx-auto">
+      {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
       <Card glow className="w-full flex flex-col items-center gap-4">
         <span className="text-xs text-amber font-bold uppercase">Partie terminée</span>
         <h1 className="text-2xl font-black text-amber">

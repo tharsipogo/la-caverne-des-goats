@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -138,7 +140,7 @@ export default function BlindTestPage() {
     setPhase('setup');
   }
 
-  if (loading) return <p className="text-muted">Chargement...</p>;
+  if (loading) return <SkeletonCard />;
 
   const audioEl = <audio ref={audioRef} onEnded={reveal} className="hidden" />;
 
@@ -296,7 +298,7 @@ export default function BlindTestPage() {
             <div className="flex flex-col items-center gap-6 w-full max-w-md">
               <div className="relative w-[300px] h-[300px] sm:w-[340px] sm:h-[340px] bg-[#141622] border-2 border-amber/80 shadow-[0_0_30px_rgba(245,158,11,0.25)] rounded-3xl overflow-hidden flex flex-col items-center justify-center p-4">
                 {current.image_url ? (
-                  <img src={current.image_url} className="w-full h-full object-cover rounded-2xl" alt="" />
+                  <Image src={current.image_url} fill className="object-cover rounded-2xl" alt="" unoptimized />
                 ) : (
                   <div className="text-6xl">🎵</div>
                 )}

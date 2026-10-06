@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
@@ -499,7 +500,7 @@ export default function LeFivePage() {
             >
               <div className="w-full h-56 bg-[#0F1E16] rounded-xl overflow-hidden relative border border-slate-700/50">
                 {item.image_url ? (
-                  <img src={item.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={item.name} />
+                  <Image src={item.image_url} width={300} height={224} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={item.name} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-5xl opacity-40">⚽</div>
                 )}
@@ -576,7 +577,7 @@ export default function LeFivePage() {
                     >
                       <div className="w-10 h-10 rounded-full border-2 border-[#FF5500] bg-[#0A1610] shadow-2xl overflow-hidden flex items-center justify-center shrink-0">
                         {card?.image_url ? (
-                          <img src={card.image_url} className="w-full h-full object-cover" alt="" />
+                          <Image src={card.image_url} width={40} height={40} className="w-full h-full object-cover" alt="" />
                         ) : (
                           <span className="text-xs">⚽</span>
                         )}
