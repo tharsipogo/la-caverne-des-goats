@@ -10,9 +10,20 @@ import { UndercoverArtistProps } from './types';
 import { GameConfigShell } from '@/components/game/GameConfigShell';
 import { PlayerNameField } from '@/components/game/PlayerNameField';
 import { HostBadge } from '@/components/game/HostBadge';
+import { DisconnectBanner } from '@/components/game/DisconnectBanner';
 
 export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, profile, isHost }: UndercoverArtistProps) {
   const engine = useUndercoverArtistEngine({ onLeaveGame, sessionCode, profile, isHost });
+
+  // Noms des joueurs (hors moi-même) dont la présence Supabase est absente
+  // du dernier "sync" reçu — tant qu'on n'a reçu aucune synchro, on ne
+  // sait rien (évite un faux positif juste après le montage du canal).
+  function getDisconnectedNames(): string[] {
+    if (engine.gameMode !== 'online' || engine.onlineUserIds.size === 0) return [];
+    return engine.players
+      .filter((p) => p.userId && p.userId !== engine.myUserId && !engine.onlineUserIds.has(p.userId))
+      .map((p) => p.name);
+  }
 
   // 2. SETUP
   if (engine.phase === 'setup') {
@@ -148,6 +159,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
     return (
       <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[75vh] gap-6 text-center py-6">
         {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
+        {engine.gameMode === 'online' && <DisconnectBanner names={getDisconnectedNames()} />}
         {engine.gameMode === 'online' ? (
           <Card glow className="max-w-sm w-full flex flex-col items-center gap-4">
             <span className="text-xs text-amber font-bold uppercase tracking-wider">TA CARTE SECRÈTE</span>
@@ -247,6 +259,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
     return (
       <div className="p-2 sm:p-4 max-w-4xl mx-auto w-full">
         {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
+        {engine.gameMode === 'online' && <DisconnectBanner names={getDisconnectedNames()} />}
         <div className="mb-4 flex flex-col md:flex-row md:items-end justify-between gap-2">
           <div>
             <span className="text-xs text-amber font-bold uppercase block">
@@ -299,6 +312,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
     return (
       <div className="p-4 max-w-4xl mx-auto w-full">
         {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
+        {engine.gameMode === 'online' && <DisconnectBanner names={getDisconnectedNames()} />}
         <div className="mb-6 text-center">
           <span className="text-xs text-amber font-bold uppercase block">Discussion après 2 tours de dessin</span>
           <h1 className="text-3xl font-black text-white">Sélectionnez le joueur à éliminer</h1>
@@ -364,6 +378,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
     return (
       <div className="p-4 max-w-md mx-auto text-center flex flex-col items-center gap-5 my-auto">
         {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
+        {engine.gameMode === 'online' && <DisconnectBanner names={getDisconnectedNames()} />}
         <Card glow className="w-full flex flex-col items-center gap-4">
           <span className="text-xs text-amber font-bold uppercase tracking-wider">🕵️ ULTIME CHANCE !</span>
           <h2 className="text-xl font-bold text-white">
@@ -399,6 +414,7 @@ export default function UndercoverArtistContainer({ onLeaveGame, sessionCode, pr
   return (
     <div className="flex flex-col items-center gap-6 mt-10 text-center p-4 max-w-md mx-auto">
       {engine.gameMode === 'online' && <HostBadge hostName={engine.players[0]?.name} />}
+      {engine.gameMode === 'online' && <DisconnectBanner names={getDisconnectedNames()} />}
       <Card glow className="w-full flex flex-col items-center gap-4">
         <span className="text-xs text-amber font-bold uppercase">Partie terminée</span>
         <h1 className="text-2xl font-black text-amber">

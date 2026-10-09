@@ -83,3 +83,38 @@ create policy "public all session_players" on session_players for all using (tru
 
 drop policy if exists "public all soit_connecte_words" on soit_connecte_words;
 create policy "public all soit_connecte_words" on soit_connecte_words for all using (true) with check (true);
+
+-- ==========================================================================
+-- Session 29 : incréments de score atomiques (évite toute perte de point
+-- en cas d'appel concurrent — deux onglets ouverts, retry réseau, etc.)
+-- À exécuter en plus du reste de ce fichier si la base existe déjà.
+-- ==========================================================================
+
+create or replace function increment_session_player_score(
+  p_session_id uuid,
+  p_user_id text,
+  p_delta int
+) returns void
+language sql
+as $$
+  update session_players
+  set score = score + p_delta
+  where session_id = p_session_id and user_id = p_user_id;
+$$;
+
+create or replace function increment_profile_stats(
+  p_user_id text,
+  p_games_played_delta int,
+  p_online_wins_delta int
+) returns void
+language sql
+as $$
+  update profiles
+  set
+    games_played = coalesce(games_played, 0) + p_games_played_delta,
+    online_wins = coalesce(online_wins, 0) + p_online_wins_delta
+  where user_id = p_user_id;
+$$;
+
+grant execute on function increment_session_player_score(uuid, text, int) to anon, authenticated;
+grant execute on function increment_profile_stats(text, int, int) to anon, authenticated;

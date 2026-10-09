@@ -146,7 +146,7 @@ export default function HomePage() {
         <Card className="max-w-md mx-auto my-auto text-center flex flex-col gap-3">
           <h2 className="text-lg font-bold text-white">Ce jeu n'est pas encore disponible en salon</h2>
           <p className="text-xs text-muted">
-            Seul "Soit connecté" est jouable en ligne pour l'instant.
+            Seuls "Soit connecté", "Undercover Artist" et "Qui est-ce ?" sont jouables en ligne pour l'instant.
           </p>
           <button
             className="btn"

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { GameList, ListItem, ListType } from '@/lib/types';
 import { fetchListItemMeta, nameFromFilename, uploadItemAudio, uploadItemImage } from '@/lib/utils';
@@ -373,6 +374,7 @@ function NewBaseModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
 }
 
 function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
+  const router = useRouter();
   const [items, setItems] = useState<ListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -486,9 +488,14 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
         </span>
       </div>
 
-      <div className="mb-7">
-        <h1 className="font-serif text-3xl">{list.name}</h1>
-        <p className="text-muted mt-2 text-[14.5px]">{items.length} item{items.length > 1 ? 's' : ''}</p>
+      <div className="mb-7 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="font-serif text-3xl">{list.name}</h1>
+          <p className="text-muted mt-2 text-[14.5px]">{items.length} item{items.length > 1 ? 's' : ''}</p>
+        </div>
+        <button className="btn-secondary shrink-0" onClick={() => router.push(`/cartes?list=${list.id}`)}>
+          🎴 Créer des cartes
+        </button>
       </div>
 
       <div className="panel flex flex-col gap-5 mb-6">

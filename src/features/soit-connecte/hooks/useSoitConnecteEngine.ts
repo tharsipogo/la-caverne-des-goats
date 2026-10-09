@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fetchSoitConnecteWords, submitGameResults, returnSessionToLobby } from '@/lib/supabase/queries';
+import { attachPresenceTracking } from '@/lib/realtimePresence';
+import { useStableGameChannel } from '@/hooks/useStableGameChannel';
 import { GamePhase, PlayerSubmission, RankedPlayer, SoitConnecteProps } from '../types';
 
 export function useSoitConnecteEngine({ sessionCode, profile, isHost, onLeaveGame }: SoitConnecteProps) {
@@ -19,7 +21,12 @@ export function useSoitConnecteEngine({ sessionCode, profile, isHost, onLeaveGam
   const [timeLeft, setTimeLeft] = useState(90);
 
   const [cumulativeScores, setCumulativeScores] = useState<Record<string, number>>({});
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const channelRef = useRef<any>(null);
+  const userWordsRef = useRef(userWords);
+  useEffect(() => {
+    userWordsRef.current = userWords;
+  }, [userWords]);
 
   useEffect(() => {
     fetchSoitConnecteWords().then(setWordsDatabase);
@@ -50,43 +57,46 @@ export function useSoitConnecteEngine({ sessionCode, profile, isHost, onLeaveGam
     })();
   }, [sessionCode]);
 
-  useEffect(() => {
-    if (!sessionId) return;
-
-    const channel = supabase.channel(`soit_connecte:${sessionId}`, {
-      config: { broadcast: { self: true } },
-    });
-    channelRef.current = channel;
-
-    channel
-      .on('broadcast', { event: 'start_game' }, ({ payload }) => {
-        setTotalRounds(payload.totalRounds);
-        setCurrentRound(1);
-        setCurrentSecretWord(payload.secretWord);
-        setPhase('playing');
-        resetRoundData();
-      })
-      .on('broadcast', { event: 'next_round' }, ({ payload }) => {
-        setCurrentRound(payload.round);
-        setCurrentSecretWord(payload.secretWord);
-        setPhase('playing');
-        resetRoundData();
-      })
-      .on('broadcast', { event: 'submit_words' }, ({ payload }) => {
-        setSubmissions((prev) => {
-          const filtered = prev.filter((s) => s.userId !== payload.userId);
-          return [...filtered, payload];
+  useStableGameChannel(
+    channelRef,
+    sessionId ? `soit_connecte:${sessionId}` : null,
+    (channel) => {
+      channel
+        .on('broadcast', { event: 'start_game' }, ({ payload }: any) => {
+          setTotalRounds(payload.totalRounds);
+          setCurrentRound(1);
+          setCurrentSecretWord(payload.secretWord);
+          setPhase('playing');
+          resetRoundData();
+        })
+        .on('broadcast', { event: 'next_round' }, ({ payload }: any) => {
+          setCurrentRound(payload.round);
+          setCurrentSecretWord(payload.secretWord);
+          setPhase('playing');
+          resetRoundData();
+        })
+        .on('broadcast', { event: 'submit_words' }, ({ payload }: any) => {
+          setSubmissions((prev) => {
+            const filtered = prev.filter((s) => s.userId !== payload.userId);
+            return [...filtered, payload];
+          });
+        })
+        .on('broadcast', { event: 'return_to_lobby' }, () => {
+          onLeaveGame();
         });
-      })
-      .on('broadcast', { event: 'return_to_lobby' }, () => {
-        onLeaveGame();
-      })
-      .subscribe();
 
-    return () => {
-      if (channelRef.current) supabase.removeChannel(channelRef.current);
-    };
-  }, [sessionId]);
+      const track = attachPresenceTracking(channel, {
+        myUserId: profile.user_id,
+        myName: profile.username,
+        onChange: setOnlineUserIds,
+      });
+
+      return (status: string) => {
+        if (status === 'SUBSCRIBED') track();
+      };
+    },
+    { broadcastSelf: true }
+  );
 
   const resetRoundData = () => {
     setUserWords(Array(7).fill(''));
@@ -129,7 +139,7 @@ export function useSoitConnecteEngine({ sessionCode, profile, isHost, onLeaveGam
         userId: profile.user_id,
         userName: profile.username,
         avatarUrl: profile.avatar_url,
-        words: userWords.map((w) => w.trim().toLowerCase()),
+        words: userWordsRef.current.map((w) => w.trim().toLowerCase()),
       },
     });
   };
@@ -255,6 +265,7 @@ export function useSoitConnecteEngine({ sessionCode, profile, isHost, onLeaveGam
     submissions,
     players,
     cumulativeScores,
+    onlineUserIds,
     triggerValidation,
     handleHostStartGame,
     handleNextRound,

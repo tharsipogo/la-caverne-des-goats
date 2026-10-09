@@ -735,20 +735,8 @@ inattendu affiche un message clair avec un bouton "Réessayer" au lieu
 de planter l'appli en silence (exactement ce qui s'était passé avec
 l'écran vide de Qui est-ce ? il y a quelques sessions).
 
-### 3. `next/image` — portée volontairement réduite
-Domaines d'images autorisés configurés (`next.config.mjs`) pour le
-projet Supabase et les avatars DiceBear. Converti pour les avatars les
-plus visibles : profil sur la page d'accueil, liste des joueurs du
-salon. Les vignettes d'objets propres à chaque jeu (grilles, tier list,
-drag-and-drop...) restent en `<img>` classique — 39 occurrences au
-total dans des mises en page parfois complexes, converties à l'aveugle
-ça aurait été un risque disproportionné par rapport au gain réel.
-
-### 4. Badge "👑 Hôte" — complet sur 2 jeux sur 3
-Visible à toutes les phases pour Soit Connecté et Qui est-ce ?. Pour
-Undercover Artist, uniquement à l'écran de configuration : sa structure
-interne (plusieurs `return` séparés par phase) rendait risqué de
-l'ajouter partout sans repasser en revue chaque écran individuellement.
+### 3. `next/image` — complété (voir Session 28)
+### 4. Badge "👑 Hôte" — complété (voir Session 28)
 
 ### 7. Qui est-ce ? à plus de 2 joueurs dans le salon
 Plutôt que des duels en parallèle (gros chantier, coordination
@@ -783,3 +771,231 @@ Le bac à sable s'est réinitialisé une fois en plein travail — les
 points 1 et 4 ont dû être refaits depuis un point de sauvegarde
 intermédiaire. Rien n'a été perdu côté toi, juste un peu de temps de
 ma part.
+
+## Session 28 — Approfondissement des points 3, 4 et 10
+
+### 3. `next/image` — maintenant complet sur toute l'appli
+Toutes les balises `<img>` restantes (grilles de jeu, tier list,
+drag-and-drop, podiums, cartes piochées...) ont été converties en
+`<Image>` dans : draft-anime, lists, blind, qui-est-ce, line-capture,
+tier, undercover. Seule exception volontaire : l'aperçu de couverture
+de liste basé sur `URL.createObjectURL()` dans `lists/page.tsx` — une
+URL blob locale, que `next/image` ne sait pas charger.
+
+### 4. Badge "👑 Hôte" — complet sur les 3 jeux
+Undercover Artist a maintenant le badge sur chacune de ses phases
+(setup, reveal, draw, elim, undercover_guess, fin), pas seulement
+l'écran de configuration.
+
+### 10. Pas de changement supplémentaire
+Toujours les 3 endroits à fort trafic (voir Session 27) — jugé
+suffisant, pas de nouvelle demande dessus.
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur après ces
+changements.
+
+## Session 29 — Audit complet + correctifs de bugs réels
+
+Audit du code (indépendant, pas juste relecture des notes précédentes)
+pour trouver de vrais bugs avant d'ajouter de nouvelles fonctionnalités.
+
+### Bugs corrigés
+
+**1. [Critique] Soit connecté : les mots soumis automatiquement à la fin
+du chrono (90s) étaient toujours vides**, même si le joueur avait tapé
+quelque chose, s'il n'avait pas cliqué sur "✓ Valider mes mots" à la
+main. Cause : fermeture (closure) périmée — le `setInterval` du compte
+à rebours était créé une seule fois par manche et capturait `userWords`
+tel qu'il était juste après la réinitialisation (7 cases vides), sans
+jamais voir les saisies suivantes. Le bouton manuel fonctionnait, lui,
+car il recrée sa fonction à chaque rendu. Corrigé avec une ref
+(`userWordsRef`) tenue à jour en parallèle de l'état, lue à la place de
+l'état direct au moment de la validation automatique.
+(`src/features/soit-connecte/hooks/useSoitConnecteEngine.ts`)
+
+**2. [Élevé] Qui est-ce ? et Undercover Artist en ligne : le canal
+temps réel se démontait et se remontait à chaque changement de phase**
+(donc à chaque tour, pendant toute la partie), pas seulement au
+lancement. `phase` et `isHost` étaient dans les dépendances de l'effet
+qui crée le canal Supabase Realtime, alors que `phase` change
+précisément via les messages reçus sur ce canal — à chaque tour, les
+deux joueurs redémarraient donc leur abonnement, avec une fenêtre où un
+message envoyé pendant ce court instant pouvait se perdre
+silencieusement (ex : "c'est à ton tour" jamais reçu). C'est la même
+famille de bug déjà corrigée en session 21/24 pour la connexion
+initiale, mais elle touchait encore chaque transition de phase en
+cours de partie. Corrigé en sortant `phase`/`isHost` des dépendances et
+en les lisant via une ref à l'intérieur des handlers — le canal reste
+stable sur toute la durée de la partie.
+(`src/app/(games)/qui-est-ce/page.tsx`,
+`src/features/undercover-artist/hooks/useUndercoverArtistEngine.ts`)
+
+**3. [Moyen] Versus et Line Capture avaient encore l'ancien piège CSS
+mobile** (`h-full max-h-[calc(100vh-2rem)]` + `overflow-hidden`),
+déjà corrigé ailleurs en sessions 9/11/17 mais oublié sur ces deux
+jeux : sur mobile, `100vh` déborde l'espace visible réel (barre
+d'adresse) et `overflow-hidden` empêchait tout scroll si le contenu
+dépassait. Remis au même motif que les autres jeux :
+`min-h-[calc(100dvh-2rem)] overflow-x-hidden`.
+
+**4. Bouton de point (Blind Test) sans garde anti-double-clic** — un
+double-clic rapide sur "Qui a trouvé ?" pouvait attribuer 2 points au
+lieu d'1 pour la même manche. Ajout d'une ref de garde, réinitialisée à
+chaque nouvel extrait, homogène avec la protection déjà en place côté
+Soit connecté.
+
+**5. Code mort supprimé** : `src/lib/scoreUtils.ts` (fonction
+`addPointsToPlayer`, plus jamais appelée depuis l'intro de
+`submitGameResults`) ; et dans Undercover Artist, les fonctions
+`createOnlineRoom`/`joinOnlineRoom` + l'état `joinCodeInput` —
+vestiges de l'ancien système de salon "maison" basé sur une table
+`rooms` jamais nettoyée, remplacé depuis la session 21 par le vrai
+salon partagé. La table `rooms` n'est plus référencée nulle part dans
+le code.
+
+**6. Message trompeur sur la page d'accueil** : "Seul 'Soit connecté'
+est jouable en ligne pour l'instant" ne mentionnait plus les deux
+autres jeux branchés depuis la session 21. Corrigé.
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur après ces
+changements.
+
+### Pistes identifiées mais non traitées (à évaluer si tu veux)
+- Aucune détection de déconnexion réseau pendant une partie en ligne
+  (différent du cas déjà connu "reload = retour au salon") : si un
+  adversaire perd juste sa connexion sans recharger, l'autre reste
+  bloqué sans aucun indice. Une présence Supabase basique
+  (`channel.on('presence', ...)`) permettrait d'afficher "Adversaire
+  déconnecté" après quelques secondes.
+- Les incréments de score (`submitGameResults`) sont "lire puis
+  écrire" en deux étapes plutôt qu'un incrément atomique côté base
+  (RPC Postgres) — pas un risque réel aujourd'hui vu les gardes en
+  place, mais à garder en tête si des appels concurrents deviennent
+  possibles un jour.
+- La logique de canal temps réel est dupliquée (et légèrement
+  différente) entre les 3 jeux en ligne ; après le correctif du bug
+  n°2, ce serait le bon moment pour la factoriser dans un hook partagé
+  si un 4e jeu en ligne est prévu.
+
+## Session 30 — Les 3 pistes de la session précédente, traitées
+
+### 1. Détection de déconnexion (présence Supabase)
+Nouveau module `src/lib/realtimePresence.ts` (`attachPresenceTracking`)
+branché sur le canal de chacun des 3 jeux en ligne (Soit Connecté,
+Undercover Artist, Qui est-ce ?) : chaque joueur "track" sa propre
+présence une fois abonné, et chacun reçoit la liste des présences en
+direct. Nouveau composant `src/components/game/DisconnectBanner.tsx`
+affiché dès qu'un autre joueur connu de la partie disparaît de cette
+liste — "⚠️ Adversaire semble déconnecté·e" pour Qui est-ce ?,
+"⚠️ Déconnectés : ..." pour les parties à plus de 2 joueurs (Undercover
+Artist, Soit Connecté). Protection contre le faux positif juste après
+le montage du canal (on attend d'avoir reçu au moins une synchro avant
+d'afficher quoi que ce soit). Limite connue : ça détecte une vraie
+coupure réseau/fermeture d'onglet, pas un simple "l'autre ne joue
+plus" — et le délai de détection dépend du timeout de présence
+Supabase côté serveur (pas configuré ici, valeur par défaut).
+
+### 2. Incréments de score atomiques
+Deux fonctions SQL ajoutées à `supabase/migration_online_mode.sql` :
+`increment_session_player_score` et `increment_profile_stats`
+(`create or replace function`, donc rejouable sans risque sur une base
+existante — **à exécuter manuellement sur Supabase si la base a été
+créée avant cette session**, cette migration n'est pas appliquée
+automatiquement). `submitGameResults` et `endGameSession`
+(`src/lib/supabase/queries.ts`) appellent désormais `supabase.rpc(...)`
+au lieu de lire le score puis réécrire score+gain en deux allers-retours
+séparés — l'incrément se fait en une seule opération côté base, donc
+plus aucune fenêtre où un appel concurrent pourrait écraser le travail
+d'un autre.
+
+### 3. Logique de canal temps réel factorisée
+Nouveau hook `src/hooks/useStableGameChannel.ts`, utilisé par les 3
+jeux en ligne à la place de leur bloc `supabase.channel(...) +
+.subscribe() + removeChannel` dupliqué (et légèrement différent)
+jusqu'ici. Il porte la règle de stabilité dont l'absence avait causé le
+bug n°2 de la session 29 (ne jamais recréer le canal sur un changement
+de phase/hôte) directement dans son code et sa documentation, pour
+qu'un futur jeu en ligne ne puisse pas la réintroduire par erreur.
+Chaque jeu lui passe toujours sa propre logique métier (quels
+`broadcast` écouter, que faire une fois abonné) sans changement de
+comportement — seule la mécanique de création/destruction du canal a
+été centralisée, pas la logique de jeu elle-même (plus risqué à
+factoriser vu les différences réelles entre les 3 jeux).
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur après ces
+changements. Les 3 effets convertis ont été relus ligne à ligne contre
+leur version précédente pour confirmer qu'aucun handler n'a été perdu
+dans la conversion.
+
+### ⚠️ Action manuelle requise
+Les deux nouvelles fonctions SQL (`increment_session_player_score`,
+`increment_profile_stats`) doivent être exécutées sur la base Supabase
+existante — copie la fin de `supabase/migration_online_mode.sql`
+(à partir du commentaire "Session 29 : incréments de score
+atomiques") dans l'éditeur SQL de Supabase. Sans ça, les appels
+`supabase.rpc(...)` échoueront (fonction introuvable) et plus aucun
+point ne sera attribué en ligne.
+
+## Session 31 — Système de création de cartes
+
+### Objectif
+Permettre de transformer n'importe quelle base (`lists`/`items`) en un
+jeu de "cartes" avec un design commun, réutilisable plus tard par
+n'importe quel futur jeu nécessitant des cartes (le composant
+`<GameCard>` ne connaît que `item` + `template`, aucune logique
+spécifique à un jeu).
+
+### Schéma
+Nouvelle table `card_templates` (`supabase/migration_card_templates.sql`,
+**à exécuter manuellement sur Supabase**) : une ligne par base
+(`list_id` unique), un `config` JSONB. `src/lib/supabase/cardTemplates.ts`
+expose `fetchCardTemplate`, `saveCardTemplate` (upsert sur `list_id`) et
+`fetchCardTemplateOrDefault` (pour qu'un jeu ait toujours une mise en
+page valide même si l'hôte n'a jamais ouvert l'éditeur).
+
+### Design de la carte (⚠️ changé en cours de session)
+Une première version générique (fond/cadre/zone image/zone texte en %,
+réglables via des curseurs numériques) a été abandonnée avant livraison
+sur demande explicite, au profit du design "carte à collectionner"
+actuellement en place : fond métallique sombre, coups de pinceau manga
+en SVG, bannière "fumée" discrète sous l'image pour le nom (jamais de
+chevauchement), **sans système de rareté**. Seules deux couleurs sont
+personnalisables — tout le reste de la mise en page est fixe :
+- `CardTemplateConfig = { accentColor, nameColor }` (`src/lib/types.ts`)
+- `accentColor` pilote les coups de pinceau / accents métalliques via
+  la variable CSS `--card-accent-color` (utilisée en `currentColor`
+  dans le SVG et en `color-mix()` dans les ombres/bordures).
+- `nameColor` pilote uniquement le texte du nom via `--card-name-color`.
+- Police du nom : "Permanent Marker" (ajoutée à l'import Google Fonts
+  existant dans `globals.css`, à côté de Fredoka/Nunito déjà utilisées).
+
+`src/components/game/GameCard.tsx` : composant générique (reçoit
+`item` + `template`), à réutiliser tel quel par un futur jeu de cartes.
+Tout le CSS du design (`.card-shell`, `.art-frame`, `.brush-*`,
+`.name-banner`, `.card-title`, et les contrôles `.color-swatch`/
+`.custom-color` de l'éditeur) vit dans `globals.css`.
+
+### Éditeur (`src/app/(games)/cartes/page.tsx`)
+Sélecteur de base (`?list=ID`), aperçu en direct avec bouton "item
+suivant" pour parcourir les items de la base, bouton d'enregistrement.
+Les réglages se limitent à deux sélecteurs de couleur (`ColorPalette`) —
+"Détails de la carte" et "Couleur du nom" — chacun avec des pastilles
+prédéfinies + un sélecteur de couleur personnalisée (`<input
+type="color">` caché derrière un bouton rond).
+
+Point d'entrée : bouton "🎴 Créer des cartes" sur la page d'une base
+(`src/app/(games)/lists/page.tsx`), qui route vers `/cartes?list=ID`.
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes
+statiques générées, dont `/cartes`). Vérifié qu'aucune trace de
+`rarity`/`--rarity-color` ni des anciens champs génériques
+(`CardBackground`/`CardFrame`/`CardImageZone`/`CardTextZone`) ne
+subsiste dans le code.
+
+### ⚠️ Action manuelle requise
+Exécuter `supabase/migration_card_templates.sql` dans l'éditeur SQL de
+Supabase (nouvelle table, pas appliquée automatiquement).

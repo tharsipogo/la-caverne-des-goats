@@ -7,6 +7,7 @@ import { RecapPhase } from './components/RecapPhase';
 import { FinalPodium } from './components/FinalPodium';
 import { SoitConnecteProps } from './types';
 import { HostBadge } from '@/components/game/HostBadge';
+import { DisconnectBanner } from '@/components/game/DisconnectBanner';
 
 export default function SoitConnecteContainer(props: SoitConnecteProps) {
   const engine = useSoitConnecteEngine(props);
@@ -14,9 +15,20 @@ export default function SoitConnecteContainer(props: SoitConnecteProps) {
   // le salon avant que quiconque puisse le rejoindre).
   const hostName = engine.players[0]?.name;
 
+  // Joueurs (hors moi-même) absents du dernier "sync" de présence reçu —
+  // tant qu'on n'a reçu aucune synchro, on ne sait rien (évite un faux
+  // positif juste après le montage du canal).
+  const disconnectedNames =
+    engine.onlineUserIds.size === 0
+      ? []
+      : engine.players
+          .filter((p) => p.id !== props.profile.user_id && !engine.onlineUserIds.has(p.id))
+          .map((p) => p.name);
+
   return (
     <div className="w-full">
       <HostBadge hostName={hostName} />
+      <DisconnectBanner names={disconnectedNames} />
       {engine.phase === 'setup' && (
         <SetupPhase
           isHost={props.isHost}

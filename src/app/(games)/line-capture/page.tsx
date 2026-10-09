@@ -458,7 +458,7 @@ export default function LineCapturePage() {
     const activeColor = PLAYER_COLORS[activePlayer].hex;
 
     return (
-      <div className="flex flex-col h-full max-h-[calc(100vh-2rem)] justify-between rounded-2xl p-4 overflow-hidden">
+      <div className="flex flex-col min-h-[calc(100dvh-2rem)] overflow-x-hidden justify-between rounded-2xl p-4">
         {/* Bandeau de jeu */}
         <div className="flex items-center justify-between bg-[#121420] border-2 rounded-2xl p-3.5 shadow-xl" style={{ borderColor: activeColor }}>
           <div className="flex items-center gap-3">
@@ -616,7 +616,7 @@ export default function LineCapturePage() {
     const needsOppCard = Boolean(selectedEventCard && ['discard_target', 'discard_cross', 'swap_weak', 'swap_strong', 'heist'].includes(selectedEventCard.type));
 
     return (
-      <div className="flex flex-col h-full max-h-[calc(100vh-2rem)] justify-between rounded-2xl p-4 overflow-y-auto">
+      <div className="flex flex-col min-h-[calc(100dvh-2rem)] overflow-x-hidden justify-between rounded-2xl p-4">
         <div className="text-center">
           <div className="text-[10px] font-bold text-amber uppercase tracking-wider">CARTE ÉVÉNEMENT</div>
           <h1 className="font-serif text-2xl font-black text-white">
@@ -747,7 +747,7 @@ export default function LineCapturePage() {
 
   // ================= 4. END =================
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-2rem)] justify-between rounded-2xl p-4 overflow-hidden">
+    <div className="flex flex-col min-h-[calc(100dvh-2rem)] overflow-x-hidden justify-between rounded-2xl p-4">
       <div className="text-center">
         <div className="text-[10px] font-bold text-amber uppercase tracking-wider">PARTIE TERMINÉE</div>
         <h1 className="font-serif text-2xl font-black text-amber">Line Capture</h1>

@@ -363,7 +363,7 @@ export default function VersusPage() {
     const cardsDistributed = teams[0].length + teams[1].length;
 
     return (
-      <div className="flex flex-col h-full max-h-[calc(100vh-2rem)] justify-between rounded-2xl p-4 md:p-6 overflow-hidden" style={backgroundStyle}>
+      <div className="flex flex-col min-h-[calc(100dvh-2rem)] overflow-x-hidden justify-between rounded-2xl p-4 md:p-6" style={backgroundStyle}>
         <div>
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -482,7 +482,7 @@ export default function VersusPage() {
     : [];
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-2rem)] justify-between rounded-2xl p-3 md:p-5 overflow-y-auto relative" style={backgroundStyle}>
+    <div className="flex flex-col min-h-[calc(100dvh-2rem)] overflow-x-hidden justify-between rounded-2xl p-3 md:p-5 relative" style={backgroundStyle}>
       
       {/* Modal de victoire instantanée */}
       {instantWinner !== null && (

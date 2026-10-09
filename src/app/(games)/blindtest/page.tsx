@@ -38,6 +38,7 @@ export default function BlindTestPage() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const awardedRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -81,6 +82,7 @@ export default function BlindTestPage() {
     const track = tracks[index];
     if (!audio || !track?.audio_url) return;
     clearTimer();
+    awardedRef.current = false;
     audio.src = track.audio_url;
     audio.currentTime = 0;
     audio.play().catch(() => {});
@@ -115,6 +117,9 @@ export default function BlindTestPage() {
   }
 
   function awardPoint(playerIndex: number | null) {
+    if (awardedRef.current) return;
+    awardedRef.current = true;
+
     const updated = players.map((p, i) => (i === playerIndex ? { ...p, score: p.score + 1 } : p));
     setPlayers(updated);
 

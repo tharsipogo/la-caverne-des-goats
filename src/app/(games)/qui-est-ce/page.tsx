@@ -12,6 +12,9 @@ import { HostBadge } from '@/components/game/HostBadge';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useAuth } from '@/lib/authContext';
 import { submitGameResults, returnSessionToLobby } from '@/lib/supabase/queries';
+import { attachPresenceTracking } from '@/lib/realtimePresence';
+import { useStableGameChannel } from '@/hooks/useStableGameChannel';
+import { DisconnectBanner } from '@/components/game/DisconnectBanner';
 
 type GameMode = 'menu' | 'local' | 'online';
 type Phase = 'setup' | 'secret_reveal' | 'play' | 'last_chance' | 'end' | 'waiting';
@@ -48,6 +51,10 @@ export default function GuessWhoPage() {
   // Mode en Ligne
   const [roomCode, setRoomCode] = useState('');
   const [isHost, setIsHost] = useState(false);
+  const isHostRef = useRef(false);
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
   const [myPlayerIdx, setMyPlayerIdx] = useState<PIdx>(0);
   const channelRef = useRef<any>(null);
 
@@ -71,6 +78,7 @@ export default function GuessWhoPage() {
   const salonPlayerIdsRef = useRef<[string, string] | null>(null);
   const salonResultsSubmitted = useRef(false);
   const [guestReady, setGuestReady] = useState(false);
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -175,61 +183,60 @@ export default function GuessWhoPage() {
   }, [phase, salonSessionId, isHost, winnerIdx]);
 
   // Synchronisation Supabase Realtime
-  useEffect(() => {
-    if (gameMode !== 'online' || !roomCode) return;
+  useStableGameChannel(
+    channelRef,
+    gameMode === 'online' && roomCode ? `room:${roomCode}` : null,
+    (channel) => {
+      channel
+        .on('broadcast', { event: 'game_init' }, ({ payload }: any) => {
+          setGridItems(payload.grid);
+          setSecrets([payload.secret1, payload.secret2]);
+          setNames([payload.hostName, payload.guestName]);
+          setPhase('play');
+        })
+        .on('broadcast', { event: 'switch_turn' }, ({ payload }: any) => {
+          if (payload?.phase) setPhase(payload.phase);
+          setActivePlayer((prev: PIdx) => (prev === 0 ? 1 : 0));
+          setGuessMode([false, false]);
+          setShowTargets([false, false]);
+        })
+        .on('broadcast', { event: 'game_over' }, ({ payload }: any) => {
+          setWinnerMessage(payload.message);
+          setWinnerIdx(payload.winnerIdx ?? null);
+          setPhase('end');
+        });
 
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-    }
-
-    const channel = supabase.channel(`room:${roomCode}`, {
-      config: { broadcast: { self: false } },
-    });
-    channelRef.current = channel;
-
-    channel
-      .on('broadcast', { event: 'game_init' }, ({ payload }) => {
-        setGridItems(payload.grid);
-        setSecrets([payload.secret1, payload.secret2]);
-        setNames([payload.hostName, payload.guestName]);
-        setPhase('play');
-      })
-      .on('broadcast', { event: 'switch_turn' }, ({ payload }) => {
-        if (payload?.phase) setPhase(payload.phase);
-        setActivePlayer((prev) => (prev === 0 ? 1 : 0));
-        setGuessMode([false, false]);
-        setShowTargets([false, false]);
-      })
-      .on('broadcast', { event: 'game_over' }, ({ payload }) => {
-        setWinnerMessage(payload.message);
-        setWinnerIdx(payload.winnerIdx ?? null);
-        setPhase('end');
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED' && !isHost) {
-          channel.send({
-            type: 'broadcast',
-            event: 'guest_joined',
-            payload: { guestName: names[1] },
-          });
-        }
-      });
-
-    if (isHost) {
-      channel.on('broadcast', { event: 'guest_joined' }, ({ payload }) => {
-        const guestName = payload.guestName || 'Joueur 2';
-        setNames((prev) => [prev[0], guestName]);
-        setGuestReady(true);
-      });
-    }
-
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+      if (isHostRef.current) {
+        channel.on('broadcast', { event: 'guest_joined' }, ({ payload }: any) => {
+          const guestName = payload.guestName || 'Joueur 2';
+          setNames((prev) => [prev[0], guestName]);
+          setGuestReady(true);
+        });
       }
-    };
-  }, [gameMode, roomCode, phase, isHost]);
+
+      const myUserId = user?.user_id;
+      const track = myUserId
+        ? attachPresenceTracking(channel, {
+            myUserId,
+            myName: names[myPlayerIdx] || 'Joueur',
+            onChange: setOnlineUserIds,
+          })
+        : null;
+
+      return (status: string) => {
+        if (status === 'SUBSCRIBED') {
+          if (!isHostRef.current) {
+            channel.send({
+              type: 'broadcast',
+              event: 'guest_joined',
+              payload: { guestName: names[1] },
+            });
+          }
+          track?.();
+        }
+      };
+    }
+  );
 
   async function hostStartGame() {
     if (gridItems.length > 0) return;
@@ -408,6 +415,16 @@ export default function GuessWhoPage() {
       onClick={() => setShowTargets([false, false])}
     >
       {gameMode === 'online' && <HostBadge hostName={names[0]} />}
+      {gameMode === 'online' && (phase === 'play' || phase === 'last_chance') && (() => {
+        const ids = salonPlayerIdsRef.current;
+        if (!ids) return null;
+        const opponentId = ids[myPlayerIdx === 0 ? 1 : 0];
+        const opponentName = names[myPlayerIdx === 0 ? 1 : 0];
+        // Tant qu'on n'a reçu aucune synchro de présence, on ne sait rien
+        // (évite un faux positif juste après le montage du canal).
+        if (onlineUserIds.size === 0 || !opponentId || onlineUserIds.has(opponentId)) return null;
+        return <DisconnectBanner names={[opponentName]} />;
+      })()}
       {/* Modale Personnalisée */}
       {modalConfig.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">

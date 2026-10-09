@@ -207,18 +207,17 @@ export async function submitGameResults(sessionId: string, rankedUserIds: string
     return;
   }
 
-  const players = await fetchSessionPlayers(sessionId);
-
+  // Incrément atomique côté base (RPC) plutôt qu'un "lire puis écrire" —
+  // évite toute perte de point si cette fonction était un jour appelée
+  // deux fois en parallèle (deux onglets, retry réseau...).
   await Promise.all(
     rankedUserIds.map((userId, index) => {
-      const player = players.find((p) => p.user_id === userId);
-      if (!player) return Promise.resolve();
       const gained = n - index;
-      return supabase
-        .from('session_players')
-        .update({ score: player.score + gained })
-        .eq('session_id', sessionId)
-        .eq('user_id', userId);
+      return supabase.rpc('increment_session_player_score', {
+        p_session_id: sessionId,
+        p_user_id: userId,
+        p_delta: gained,
+      });
     })
   );
 
@@ -248,18 +247,15 @@ export async function endGameSession(sessionId: string) {
 
   const winners = players.filter((p) => p.score === topScore);
 
+  // Incrément atomique côté base (RPC) — même raison que submitGameResults.
   await Promise.all(
-    players.map(async (p) => {
-      const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', p.user_id).single();
-      if (!profile) return;
+    players.map((p) => {
       const isWinner = winners.some((w) => w.user_id === p.user_id);
-      await supabase
-        .from('profiles')
-        .update({
-          games_played: (profile.games_played || 0) + 1,
-          online_wins: (profile.online_wins || 0) + (isWinner ? 1 : 0),
-        })
-        .eq('user_id', p.user_id);
+      return supabase.rpc('increment_profile_stats', {
+        p_user_id: p.user_id,
+        p_games_played_delta: 1,
+        p_online_wins_delta: isWinner ? 1 : 0,
+      });
     })
   );
 }

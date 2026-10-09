@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 import { submitGameResults, returnSessionToLobby } from '@/lib/supabase/queries';
+import { attachPresenceTracking } from '@/lib/realtimePresence';
+import { useStableGameChannel } from '@/hooks/useStableGameChannel';
 import { GameMode, Phase, Player, Role, UndercoverArtistProps } from '../types';
 
 export const CANVAS_W = 640;
@@ -16,8 +18,11 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
 
   const [gameMode, setGameMode] = useState<GameMode>(sessionCode ? 'online' : 'local');
   const [roomCode, setRoomCode] = useState(sessionCode || '');
-  const [joinCodeInput, setJoinCodeInput] = useState('');
   const [isHost, setIsHost] = useState(!!isHostProp);
+  const isHostRef = useRef(!!isHostProp);
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
   const [myUserId] = useState(() => profile?.user_id || Math.random().toString(36).substring(2, 9));
   const channelRef = useRef<any>(null);
 
@@ -27,6 +32,8 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
   const sessionPlayersRef = useRef<{ user_id: string; name: string }[]>([]);
   const playerNamesRef = useRef<string[]>([]);
   const phaseRef = useRef<Phase>('setup');
+
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
 
   const [playerCount, setPlayerCount] = useState(5);
   const [playerNames, setPlayerNames] = useState<string[]>(Array.from({ length: 5 }, (_, i) => `Joueur ${i + 1}`));
@@ -121,85 +128,81 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
     };
   }, [sessionCode]);
 
-  useEffect(() => {
-    if (gameMode !== 'online' || !roomCode) return;
+  useStableGameChannel(
+    channelRef,
+    gameMode === 'online' && roomCode ? `room:${roomCode}` : null,
+    (channel) => {
+      channel
+        .on('broadcast', { event: 'game_init' }, ({ payload }: any) => {
+          setWord(payload.word);
+          setPlayers(payload.players);
+          setFirstPlayer(payload.firstPlayer);
 
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-    }
-
-    const channel = supabase.channel(`room:${roomCode}`, {
-      config: { broadcast: { self: false } },
-    });
-    channelRef.current = channel;
-
-    channel
-      .on('broadcast', { event: 'game_init' }, ({ payload }) => {
-        setWord(payload.word);
-        setPlayers(payload.players);
-        setFirstPlayer(payload.firstPlayer);
-
-        const me = payload.players.find((p: Player) => p.userId === myUserId);
-        if (me) {
-          setMyRole(me.role);
-          setMySecretWord(me.role === 'civil' ? payload.word.name : null);
-        }
-        setPhase('reveal');
-      })
-      .on('broadcast', { event: 'start_draw_phase' }, ({ payload }) => {
-        setDrawQueue(payload.queue);
-        setDrawIdx(0);
-        setDrawerReady(false);
-        setTurnInRound(1);
-        setStrokeHistory([]);
-        setPhase('draw');
-      })
-      .on('broadcast', { event: 'draw_point' }, ({ payload }) => {
-        drawRemoteLine(payload.prevPos, payload.currentPos);
-      })
-      .on('broadcast', { event: 'next_drawer' }, ({ payload }) => {
-        setDrawIdx(payload.nextIdx);
-        setTurnInRound(payload.turnInRound);
-        setDrawerReady(false);
-        if (payload.phase) setPhase(payload.phase);
-      })
-      .on('broadcast', { event: 'start_undercover_guess' }, ({ payload }) => {
-        setPlayers(payload.nextPlayers);
-        setLastReveal(payload.lastReveal);
-        setEliminatedUndercover(payload.target);
-        setPhase('undercover_guess');
-      })
-      .on('broadcast', { event: 'player_eliminated' }, ({ payload }) => {
-        setPlayers(payload.nextPlayers);
-        setLastReveal(payload.lastReveal);
-        if (payload.winner) {
-          setWinner(payload.winner);
-          setPhase('end');
-        } else {
-          setDrawQueue(payload.nextQueue);
+          const me = payload.players.find((p: Player) => p.userId === myUserId);
+          if (me) {
+            setMyRole(me.role);
+            setMySecretWord(me.role === 'civil' ? payload.word.name : null);
+          }
+          setPhase('reveal');
+        })
+        .on('broadcast', { event: 'start_draw_phase' }, ({ payload }: any) => {
+          setDrawQueue(payload.queue);
           setDrawIdx(0);
+          setDrawerReady(false);
           setTurnInRound(1);
-          setRoundNumber((r) => r + 1);
+          setStrokeHistory([]);
           setPhase('draw');
-        }
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED' && !isHost) {
-          channel.send({
-            type: 'broadcast',
-            event: 'guest_joined',
-            payload: { name: playerNamesRef.current[0], userId: myUserId },
-          });
-        }
+        })
+        .on('broadcast', { event: 'draw_point' }, ({ payload }: any) => {
+          drawRemoteLine(payload.prevPos, payload.currentPos);
+        })
+        .on('broadcast', { event: 'next_drawer' }, ({ payload }: any) => {
+          setDrawIdx(payload.nextIdx);
+          setTurnInRound(payload.turnInRound);
+          setDrawerReady(false);
+          if (payload.phase) setPhase(payload.phase);
+        })
+        .on('broadcast', { event: 'start_undercover_guess' }, ({ payload }: any) => {
+          setPlayers(payload.nextPlayers);
+          setLastReveal(payload.lastReveal);
+          setEliminatedUndercover(payload.target);
+          setPhase('undercover_guess');
+        })
+        .on('broadcast', { event: 'player_eliminated' }, ({ payload }: any) => {
+          setPlayers(payload.nextPlayers);
+          setLastReveal(payload.lastReveal);
+          if (payload.winner) {
+            setWinner(payload.winner);
+            setPhase('end');
+          } else {
+            setDrawQueue(payload.nextQueue);
+            setDrawIdx(0);
+            setTurnInRound(1);
+            setRoundNumber((r) => r + 1);
+            setPhase('draw');
+          }
+        });
+
+      const track = attachPresenceTracking(channel, {
+        myUserId,
+        myName: playerNamesRef.current[isHostRef.current ? 0 : 1] || 'Joueur',
+        onChange: setOnlineUserIds,
       });
 
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-    };
-  }, [gameMode, roomCode, phase, isHost, myUserId]);
+      return (status: string) => {
+        if (status === 'SUBSCRIBED') {
+          if (!isHostRef.current) {
+            channel.send({
+              type: 'broadcast',
+              event: 'guest_joined',
+              payload: { name: playerNamesRef.current[0], userId: myUserId },
+            });
+          }
+          track();
+        }
+      };
+    }
+  );
 
   function drawRemoteLine(prevPos: { x: number; y: number }, currentPos: { x: number; y: number }) {
     const canvas = canvasRef.current;
@@ -261,34 +264,6 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
     setRoundNumber(1);
     setTurnInRound(1);
     setPhase('reveal');
-  }
-
-  async function createOnlineRoom() {
-    const code = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const { error } = await supabase.from('rooms').insert({
-      code,
-      list_id: listId,
-      grid_size: 1,
-      host_name: playerNames[0],
-    });
-
-    if (error) return alert('Erreur lors de la création du salon.');
-
-    setIsHost(true);
-    setRoomCode(code);
-    setPhase('waiting');
-  }
-
-  async function joinOnlineRoom() {
-    const code = joinCodeInput.trim().toUpperCase();
-    if (!code) return alert('Entre un code de salon valide.');
-
-    const { data, error } = await supabase.from('rooms').select('*').eq('code', code).single();
-    if (error || !data) return alert('Salon introuvable !');
-
-    setIsHost(false);
-    setRoomCode(code);
-    setPhase('waiting');
   }
 
   async function startOnlineGame() {
@@ -612,10 +587,9 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
     gameMode,
     setGameMode,
     roomCode,
-    joinCodeInput,
-    setJoinCodeInput,
     isHost,
     myUserId,
+    onlineUserIds,
     playerCount,
     setCount,
     playerNames,
@@ -646,8 +620,6 @@ export function useUndercoverArtistEngine(props: UndercoverArtistProps = {}) {
     setUndercoverGuessInput,
     winner,
     startLocalGame,
-    createOnlineRoom,
-    joinOnlineRoom,
     startOnlineGame,
     toggleCard,
     startDrawingPhase,
