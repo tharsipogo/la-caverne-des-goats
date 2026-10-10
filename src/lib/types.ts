@@ -59,6 +59,6 @@ export interface CardTemplate {
 }
 
 export const DEFAULT_CARD_TEMPLATE_CONFIG: CardTemplateConfig = {
-  accentColor: '#f5a623',
+  accentColor: '#f5a20a',
   nameColor: '#ffffff',
 };

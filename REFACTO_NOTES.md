@@ -999,3 +999,40 @@ subsiste dans le code.
 ### ⚠️ Action manuelle requise
 Exécuter `supabase/migration_card_templates.sql` dans l'éditeur SQL de
 Supabase (nouvelle table, pas appliquée automatiquement).
+
+## Session 32 — Carte à collectionner : fidélité exacte au design de référence
+
+L'utilisateur a fourni un second exemple (code React/CSS complet) de la
+carte attendue, avec une image de référence. Le rendu de la session 31
+était dans le bon esprit (métal sombre, pinceau SVG, bannière nom, pas
+de rareté) mais pas pixel-fidèle. Cette session remplace entièrement le
+SVG et le CSS pour coller à l'exemple fourni :
+
+- `src/components/game/GameCard.tsx` : SVG de décoration repris quasi à
+  l'identique (filtres `feTurbulence`/`feDisplacementMap` pour le bord
+  rugueux, dégradé `brush-ink`, motif `brush-halftone`, fibres, points
+  de pinceau, éclaboussures), coins décoratifs sur la zone image
+  (`brush-art-frame::before/::after`), et un nouveau bandeau "œuvre" en
+  bas de carte (prop `workName`, optionnelle — alimentée par le nom de
+  la base dans l'éditeur).
+- Variable CSS renommée `--card-accent-color` → `--card-accent` pour
+  coller exactement au nom demandé.
+- `src/app/globals.css` : bloc carte entièrement réécrit avec les
+  classes `brush-*` de la référence (fond métallique multi-dégradés,
+  zone image avec grille + vignette, nom en Permanent Marker, bandeau
+  œuvre avec traits "pinceau" en `clip-path`, palette de couleurs
+  `brush-palette`/`brush-swatch`/`brush-custom-color`).
+- `src/app/(games)/cartes/page.tsx` : le composant `Palette` de
+  l'éditeur reprend exactement le composant fourni (pastilles rondes +
+  sélecteur de couleur personnalisée superposé), couleurs par défaut
+  alignées sur celles de la référence (accent `#f5a20a`, nom `#ffffff`).
+
+GameCard reste un composant d'affichage pur (pas d'upload d'image
+dedans) : l'illustration vient toujours de `item.image_url`, déjà
+géré par le système de bases existant — fidèle à l'esprit "illustration
+importable" de la demande sans dupliquer la logique d'upload.
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
+Confirmé qu'aucune trace de rareté ni des anciennes classes génériques
+ne subsiste.

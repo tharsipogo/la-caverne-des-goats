@@ -101,169 +101,383 @@ select option {
 }
 
 /* ==================== CARTES À COLLECTIONNER ====================
- * Design "carte" réutilisable : métal sombre + coups de pinceau manga
- * (colorés via --card-accent-color) + bannière "fumée" discrète pour le
- * nom (colorée via --card-name-color). Pas de système de rareté. */
+ * Design "carte TCG" fidèle à la référence fournie : métal sombre +
+ * coups de pinceau manga en SVG (colorés via --card-accent) + nom en
+ * Permanent Marker (coloré via --card-name-color) + bandeau "œuvre".
+ * Pas de système de rareté — seules ces deux couleurs changent le rendu,
+ * tout le reste de la mise en page est fixe. */
 
 :root {
-  --card-accent-color: #f5a623;
+  --card-accent: #f5a20a;
   --card-name-color: #ffffff;
 }
 
-.card-shell {
-  --card-radius: 16px;
-  container-type: inline-size;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  aspect-ratio: 320 / 447;
-  padding: 10px;
-  border-radius: var(--card-radius);
-  background:
-    radial-gradient(120% 140% at 20% 0%, rgba(255, 255, 255, 0.07), transparent 55%),
-    linear-gradient(165deg, #1b1d2b 0%, #10111c 55%, #070810 100%);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--card-accent-color) 34%, transparent),
-    0 14px 30px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+.brush-card-wrapper {
+  width: 100%;
+  max-width: 320px;
 }
 
-.art-frame {
+.brush-card {
   position: relative;
-  flex: 1;
-  border-radius: 10px;
+  z-index: 0;
+  width: 100%;
+  aspect-ratio: 63 / 88;
   overflow: hidden;
-  background: #0b0d16;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--card-accent-color) 45%, transparent);
-}
-
-.art-frame-border {
-  border-radius: 10px;
+  padding: 12px;
+  border-radius: 20px;
+  background-color: #101322;
+  background-image:
+    linear-gradient(180deg, rgba(7, 9, 20, 0.48), rgba(7, 9, 20, 0.84)),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--card-accent) 28%, #121522) 0%,
+      transparent 32%,
+      transparent 66%,
+      color-mix(in srgb, var(--card-accent) 18%, #121522) 100%
+    ),
+    linear-gradient(
+      115deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 22%,
+      transparent 34%,
+      rgba(255, 255, 255, 0.03) 62%,
+      transparent 78%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.018) 0,
+      rgba(255, 255, 255, 0.018) 1px,
+      rgba(0, 0, 0, 0.025) 1px,
+      rgba(0, 0, 0, 0.025) 3px
+    );
+  background-blend-mode: multiply, screen, screen, soft-light;
   box-shadow:
-    inset 0 0 18px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1.5px color-mix(in srgb, var(--card-accent-color) 55%, transparent);
+    0 18px 45px rgba(0, 0, 0, 0.55),
+    0 0 15px color-mix(in srgb, var(--card-accent) 38%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--card-accent) 7%, transparent),
+    inset 2px 2px 1px rgba(255, 255, 255, 0.18),
+    inset -3px -3px 2px rgba(0, 0, 0, 0.46);
 }
 
-.brush-strokes {
-  color: var(--card-accent-color);
-  opacity: 0.78;
-  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--card-accent-color) 60%, transparent));
+.brush-card::after {
+  content: '';
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 18%, rgba(255, 255, 255, 0.065) 38%, transparent 52%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.12);
 }
+
+.brush-decoration {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--card-accent);
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--card-accent) 36%, transparent));
+}
+
 .brush-ink {
   mix-blend-mode: screen;
 }
-.brush-dry-lines {
-  stroke: color-mix(in srgb, var(--card-accent-color) 80%, white 10%);
+
+.brush-fibers {
+  fill: none;
+  stroke: color-mix(in srgb, var(--card-accent) 70%, white);
+  stroke-width: 2.2;
+  stroke-linecap: round;
   stroke-dasharray: 24 5 7 11 42 4;
-  opacity: 0.38;
-}
-.brush-halftone {
-  color: color-mix(in srgb, var(--card-accent-color) 62%, #080a13);
-  opacity: 0.32;
-}
-.brush-splatters {
-  fill: currentColor;
-  opacity: 0.68;
+  opacity: 0.4;
 }
 
-.name-banner {
-  flex: none;
+.brush-dots {
+  color: color-mix(in srgb, var(--card-accent) 64%, #080a13);
+  opacity: 0.38;
+}
+.brush-dots-bottom {
+  opacity: 0.3;
+}
+
+.brush-splatters {
+  opacity: 0.74;
+  filter: drop-shadow(0 0 3px var(--card-accent));
+}
+
+.brush-art-frame {
+  position: relative;
+  z-index: 10;
+}
+.brush-art-frame::before,
+.brush-art-frame::after {
+  content: '';
+  position: absolute;
+  z-index: 4;
+  width: 52px;
+  height: 52px;
+  pointer-events: none;
+  border: 2px solid var(--card-accent);
+  opacity: 0.65;
+  filter: drop-shadow(0 0 5px var(--card-accent));
+}
+.brush-art-frame::before {
+  top: -4px;
+  left: -3px;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 15px 0 0;
+}
+.brush-art-frame::after {
+  right: -3px;
+  bottom: -4px;
+  border-top: 0;
+  border-left: 0;
+  border-radius: 0 0 15px;
+}
+
+.brush-image-zone {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 0;
+  border-radius: 15px;
+  background-color: #0c1f28;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--card-accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--card-accent) 8%, transparent) 1px, transparent 1px),
+    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--card-accent) 15%, transparent), transparent 48%),
+    linear-gradient(145deg, rgba(16, 37, 48, 0.9), rgba(8, 14, 26, 0.95));
+  background-size: 22px 22px, 22px 22px, 100% 100%, 100% 100%;
+  box-shadow:
+    inset 0 0 30px rgba(4, 7, 16, 0.72),
+    0 0 10px color-mix(in srgb, var(--card-accent) 16%, transparent);
+}
+
+.brush-card-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brush-image-empty {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 10px;
-  min-height: 34px;
+  flex-direction: column;
+  padding: 24px;
+  text-align: center;
 }
-.name-style-smoke {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(7, 9, 20, 0.22) 20%,
-    rgba(7, 9, 20, 0.22) 80%,
-    transparent
-  );
+.brush-add-button {
+  display: flex;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid color-mix(in srgb, var(--card-accent) 70%, white);
+  border-radius: 18px;
+  background: var(--card-accent);
+  color: #111426;
+  font-size: 30px;
+  font-weight: 900;
+  box-shadow:
+    3px 4px 0 #080a13,
+    0 0 14px color-mix(in srgb, var(--card-accent) 42%, transparent);
+  transform: rotate(-5deg);
+}
+.brush-add-label {
+  color: var(--card-accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.brush-file-types {
+  margin-top: 8px;
+  color: #858aa0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
-.card-title {
-  font-family: 'Permanent Marker', cursive;
-  font-size: clamp(14px, 5.5cqw, 22px);
+.brush-name-zone {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  min-height: 48px;
+  margin: 12px 18px 0;
+  padding: 0 20px;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.brush-card-name {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
   color: var(--card-name-color);
-  text-shadow: none;
+  font-family: 'Permanent Marker', cursive;
+  font-size: clamp(15px, 6cqw, 20px);
+  font-weight: 400;
+  letter-spacing: 0.045em;
   text-align: center;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  line-height: 1.1;
-  max-width: 100%;
+  text-shadow: none;
+  outline: none;
   overflow-wrap: anywhere;
+}
+.brush-card-name::placeholder {
+  color: color-mix(in srgb, var(--card-name-color) 52%, transparent);
+}
+
+.brush-work-zone {
+  position: absolute;
+  z-index: 10;
+  right: 24px;
+  bottom: 12px;
+  left: 24px;
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  gap: 8px;
+}
+.brush-work-zone::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -4px -6px;
+  border-radius: 7px;
+  background: rgba(7, 9, 20, 0.28);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--card-accent) 9%, transparent);
+}
+.brush-work-line {
+  height: 5px;
+  flex: 1;
+  opacity: 0.75;
+  background-color: var(--card-accent);
+  background-image: repeating-linear-gradient(
+    94deg,
+    transparent 0 13px,
+    rgba(7, 9, 20, 0.7) 14px 17px,
+    transparent 18px 25px
+  );
+  clip-path: polygon(
+    0 34%, 12% 18%, 25% 43%, 40% 9%, 55% 38%, 72% 17%, 88% 42%, 100% 23%,
+    96% 71%, 82% 57%, 68% 89%, 51% 61%, 34% 83%, 18% 58%, 3% 78%
+  );
+  transform: rotate(-1.5deg);
+}
+.brush-work-line-right {
+  transform: rotate(1.5deg) scaleX(-1);
+}
+.brush-work-name {
+  flex: none;
+  max-width: 55%;
+  min-width: 0;
+  color: var(--card-accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* -------- Sélecteurs de couleur (éditeur de cartes) -------- */
-.customization-panel {
+.brush-controls {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
-.color-control {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.brush-control-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
-.color-control legend {
-  @apply text-[13px] font-semibold text-white mb-1;
+.brush-control-group legend {
+  @apply text-[13px] font-semibold text-white mb-2.5;
 }
-.color-swatches {
+.brush-control-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.brush-palette {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  align-items: center;
 }
-.color-swatch {
-  width: 30px;
-  height: 30px;
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.color-swatch:hover {
-  transform: scale(1.08);
-}
-.color-swatch[aria-pressed='true'] {
-  border-color: #fff;
-  box-shadow: 0 0 0 2px #07091a, 0 0 0 4px currentColor;
-}
-.custom-color {
+.brush-swatch,
+.brush-custom-color {
   position: relative;
+  display: block;
   width: 30px;
   height: 30px;
-  border-radius: 9999px;
   overflow: hidden;
-  cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
   padding: 0;
   border: 2px solid transparent;
+  border-radius: 9999px;
+  cursor: pointer;
 }
-.custom-color[aria-pressed='true'] {
-  border-color: #fff;
+.brush-swatch {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 4px 8px rgba(0, 0, 0, 0.24);
+  transition: border-color 160ms ease, transform 160ms ease;
 }
-.custom-color input[type='color'] {
+.brush-swatch:hover {
+  transform: translateY(-1px);
+}
+.brush-swatch.is-active {
+  border-color: #ffffff;
+}
+.brush-swatch:focus-visible,
+.brush-custom-color:focus-within {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+.brush-custom-color input {
   position: absolute;
   inset: -4px;
   width: calc(100% + 8px);
   height: calc(100% + 8px);
-  border: none;
+  opacity: 0;
   cursor: pointer;
-  background: none;
 }
-.custom-color-preview {
+.brush-custom-preview {
   position: absolute;
   inset: 0;
-  border-radius: 9999px;
+  background-image: linear-gradient(
+    135deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.58) 39% 47%,
+    transparent 48%
+  );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   pointer-events: none;
 }
-.panel-separator {
-  border-top: 1px solid var(--tw-color-border, #292d3e);
-  margin: 2px 0;
+.brush-custom-preview::after {
+  content: '+';
+  position: absolute;
+  right: 3px;
+  bottom: -1px;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }

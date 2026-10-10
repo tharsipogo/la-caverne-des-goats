@@ -10,23 +10,8 @@ import { GameConfigShell } from '@/components/game/GameConfigShell';
 import { GameCard } from '@/components/game/GameCard';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 
-const accentColors = [
-  { label: 'Orange', value: '#f5a20a' },
-  { label: 'Rose', value: '#ff3f68' },
-  { label: 'Turquoise', value: '#14b89a' },
-  { label: 'Bleu', value: '#38a8ff' },
-  { label: 'Violet', value: '#d95cff' },
-  { label: 'Blanc métallique', value: '#c6ccd8' },
-];
-
-const nameColors = [
-  { label: 'Blanc', value: '#ffffff' },
-  { label: 'Crème', value: '#ffe7b2' },
-  { label: 'Orange', value: '#f5a20a' },
-  { label: 'Rose', value: '#ff6b89' },
-  { label: 'Turquoise', value: '#58d8c0' },
-  { label: 'Bleu clair', value: '#8bd0ff' },
-];
+const accentColors = ['#f5a20a', '#ff3f68', '#14b89a', '#38a8ff', '#d95cff', '#c6ccd8'];
+const nameColors = ['#ffffff', '#ffe7b2', '#f5a20a', '#ff6b89', '#58d8c0', '#8bd0ff'];
 
 export default function CardTemplateEditorPage() {
   const router = useRouter();
@@ -143,7 +128,7 @@ export default function CardTemplateEditorPage() {
             </select>
 
             <div className="w-[220px]">
-              <GameCard item={previewItem} template={config} className="shadow-2xl" />
+              <GameCard item={previewItem} template={config} workName={currentList?.name} className="shadow-2xl" />
             </div>
 
             <button
@@ -159,22 +144,28 @@ export default function CardTemplateEditorPage() {
           </div>
 
           {/* Réglages */}
-          <div className="flex-1 flex flex-col gap-6 min-w-0 customization-panel">
-            <ColorPalette
-              legend="Détails de la carte"
-              colors={accentColors}
-              value={config.accentColor}
-              onChange={(value) => setConfig((c) => ({ ...c, accentColor: value }))}
-            />
+          <div className="flex-1 flex flex-col gap-6 min-w-0 brush-controls">
+            <fieldset className="brush-control-group">
+              <legend>Couleur des détails</legend>
+              <Palette
+                ariaLabel="Choisir la couleur des détails"
+                colors={accentColors}
+                value={config.accentColor}
+                onChange={(value) => setConfig((c) => ({ ...c, accentColor: value }))}
+              />
+            </fieldset>
 
-            <div className="panel-separator" />
+            <div className="brush-control-divider" />
 
-            <ColorPalette
-              legend="Couleur du nom"
-              colors={nameColors}
-              value={config.nameColor}
-              onChange={(value) => setConfig((c) => ({ ...c, nameColor: value }))}
-            />
+            <fieldset className="brush-control-group">
+              <legend>Couleur du nom</legend>
+              <Palette
+                ariaLabel="Choisir la couleur du nom"
+                colors={nameColors}
+                value={config.nameColor}
+                onChange={(value) => setConfig((c) => ({ ...c, nameColor: value }))}
+              />
+            </fieldset>
           </div>
         </div>
       )}
@@ -182,55 +173,41 @@ export default function CardTemplateEditorPage() {
   );
 }
 
-function ColorPalette({
-  legend,
+function Palette({
+  ariaLabel,
   colors,
   value,
   onChange,
 }: {
-  legend: string;
-  colors: { label: string; value: string }[];
+  ariaLabel: string;
+  colors: string[];
   value: string;
-  onChange: (value: string) => void;
+  onChange: (color: string) => void;
 }) {
-  const isPreset = colors.some((c) => c.value.toLowerCase() === value.toLowerCase());
-
-  function handleCustomColor(e: ChangeEvent<HTMLInputElement>) {
-    onChange(e.target.value);
-  }
-
   return (
-    <fieldset className="color-control">
-      <legend>{legend}</legend>
-      <div className="color-swatches" role="group" aria-label={legend}>
-        {colors.map((c) => (
-          <button
-            key={c.value}
-            type="button"
-            className="color-swatch"
-            style={{ backgroundColor: c.value, color: c.value }}
-            aria-pressed={value.toLowerCase() === c.value.toLowerCase()}
-            aria-label={c.label}
-            title={c.label}
-            onClick={() => onChange(c.value)}
-          />
-        ))}
+    <div className="brush-palette" aria-label={ariaLabel}>
+      {colors.map((color) => (
+        <button
+          key={color}
+          aria-label={`Choisir la couleur ${color}`}
+          aria-pressed={value.toLowerCase() === color.toLowerCase()}
+          className={`brush-swatch ${value.toLowerCase() === color.toLowerCase() ? 'is-active' : ''}`}
+          onClick={() => onChange(color)}
+          style={{ backgroundColor: color }}
+          type="button"
+        />
+      ))}
 
-        <label
-          className="custom-color"
-          style={{ color: value }}
-          aria-pressed={!isPreset}
-          title="Couleur personnalisée"
-        >
-          <span className="custom-color-preview" style={{ backgroundColor: !isPreset ? value : '#20223a' }} />
-          <input
-            type="color"
-            aria-label="Couleur personnalisée"
-            value={value}
-            onChange={handleCustomColor}
-          />
-        </label>
-      </div>
-    </fieldset>
+      <label className="brush-custom-color">
+        <span className="sr-only">{ariaLabel}</span>
+        <input
+          aria-label={ariaLabel}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
+          type="color"
+          value={value}
+        />
+        <span aria-hidden="true" className="brush-custom-preview" style={{ backgroundColor: value }} />
+      </label>
+    </div>
   );
 }
