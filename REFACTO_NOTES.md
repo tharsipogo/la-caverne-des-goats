@@ -1036,3 +1036,47 @@ importable" de la demande sans dupliquer la logique d'upload.
 `npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
 Confirmé qu'aucune trace de rareté ni des anciennes classes génériques
 ne subsiste.
+
+## Session 33 — Carte TCG : améliorations visuelles
+
+Suite aux suggestions données à l'utilisateur, toutes ont été implémentées
+sur `<GameCard>` (`src/components/game/GameCard.tsx`) et le CSS associé
+(`src/app/globals.css`), plus deux nouveaux composants. Toutes les
+nouvelles props sont optionnelles — aucun jeu existant n'est affecté.
+
+- **Cadre** : les deux équerres CSS (`::before`/`::after`) remplacées par
+  un composant `<CornerOrnament>` (SVG, deux points + traits fins) ; ajout
+  d'un listel interne (`.brush-card-listel`) en `--card-accent`.
+- **Grain** : léger bruit via `radial-gradient`s superposés en
+  `mix-blend-mode: overlay`, opacité 5 % (`.brush-card-grain`).
+- **Holo/tilt au survol** : la carte s'incline en 3D en suivant le
+  curseur (`--tilt-x`/`--tilt-y` posés en JS via `onPointerMove`, lus par
+  `transform: perspective() rotateX() rotateY()`) et un halo radial
+  "foil" (`.brush-foil`, `mix-blend-mode: color-dodge`) suit le curseur.
+  Désactivable via la prop `disableTilt` (utilisée automatiquement par
+  `<FlippableGameCard>` pour ne pas entrer en conflit avec le flip).
+  Respecte `prefers-reduced-motion`, ignoré au toucher (`pointerType`).
+- **Halo actif** : prop `active` → `box-shadow` renforcé, pour signaler
+  une carte sélectionnée dans un jeu.
+- **Bandeau type / description** : props optionnelles `cardType` (bandeau
+  en haut) et `description` (texte sous le nom).
+- **Numéro de carte** : props `cardNumber`/`totalCards` → "003/048" ;
+  fusionné dans le bandeau "œuvre" existant si `workName` est fourni
+  (pour éviter toute collision visuelle), sinon affiché seul en bas.
+- **Nom auto-adapté** : taille de police calculée selon la longueur du
+  nom (`nameFontSize()`), plus un léger `text-shadow` pour la lisibilité
+  quel que soit `--card-name-color`.
+- **Dos de carte** : nouveau composant `GameCardBack.tsx` — même carcasse
+  (grain, listel) mais contenu neutre (anneaux SVG + monogramme optionnel
+  via `--card-name-color`), pour les jeux qui cachent une carte avant
+  révélation.
+- **Retournement 3D** : nouveau composant `FlippableGameCard.tsx` —
+  bascule entre `GameCardBack` et `GameCard` via `transform-style:
+  preserve-3d` + `rotateY(180deg)` piloté par la prop `revealed`.
+- Identifiants SVG du pinceau (`rough-brush-edge`, `brush-halftone`,
+  `brush-ink`) rendus uniques par instance via `useId()`, pour éviter
+  toute collision si plusieurs cartes s'affichent sur la même page (ex.
+  une main de cartes dans un futur jeu).
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
