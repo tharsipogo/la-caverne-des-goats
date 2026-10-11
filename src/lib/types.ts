@@ -22,6 +22,11 @@ export interface ListItem {
   image_url: string | null;
   audio_url: string | null;
   created_at: string;
+  /** Centre du cadrage de l'image dans une carte, en % (50/50 = centré). */
+  image_crop_x?: number;
+  image_crop_y?: number;
+  /** Facteur de zoom de l'image dans une carte (1 = taille normale). */
+  image_zoom?: number;
 }
 
 export interface TierAssignment {

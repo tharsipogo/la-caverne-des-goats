@@ -13,6 +13,11 @@ type CardThemeStyle = CSSProperties & {
 interface GameCardItem {
   name: string;
   image_url?: string | null;
+  /** Centre du cadrage dans la zone image, en % (50/50 = centré, par défaut). */
+  image_crop_x?: number;
+  image_crop_y?: number;
+  /** Facteur de zoom de l'image (1 = taille normale, par défaut). */
+  image_zoom?: number;
 }
 
 interface GameCardProps {
@@ -195,13 +200,30 @@ export function GameCard({
 
         {cardType && <div className="brush-type-banner">{cardType}</div>}
 
+        <div className="brush-name-zone">
+          <span className="brush-card-name" style={{ fontSize: nameFontSize(item.name) }}>
+            {item.name}
+          </span>
+        </div>
+
         <div className="brush-art-frame">
           <CornerOrnament className="brush-corner brush-corner-tl" />
           <CornerOrnament className="brush-corner brush-corner-br" flip />
 
           <div className="brush-image-zone">
             {item.image_url ? (
-              <Image src={item.image_url} alt="" fill className="brush-card-image" unoptimized />
+              <Image
+                src={item.image_url}
+                alt=""
+                fill
+                className="brush-card-image"
+                unoptimized
+                style={{
+                  objectPosition: `${item.image_crop_x ?? 50}% ${item.image_crop_y ?? 50}%`,
+                  transform: `scale(${item.image_zoom ?? 1})`,
+                  transformOrigin: `${item.image_crop_x ?? 50}% ${item.image_crop_y ?? 50}%`,
+                }}
+              />
             ) : (
               <span className="brush-image-empty">
                 <span className="brush-add-button" aria-hidden="true">
@@ -212,12 +234,6 @@ export function GameCard({
               </span>
             )}
           </div>
-        </div>
-
-        <div className="brush-name-zone">
-          <span className="brush-card-name" style={{ fontSize: nameFontSize(item.name) }}>
-            {item.name}
-          </span>
         </div>
 
         {description && <p className="brush-description">{description}</p>}

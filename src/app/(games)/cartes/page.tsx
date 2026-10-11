@@ -27,6 +27,15 @@ export default function CardTemplateEditorPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Cadrage (position + zoom) de l'image de l'item actuellement
+  // prévisualisé — propre à chaque item, enregistré séparément du
+  // modèle de carte (qui lui est commun à toute la base).
+  const [cropX, setCropX] = useState(50);
+  const [cropY, setCropY] = useState(50);
+  const [zoom, setZoom] = useState(1);
+  const [cropSaving, setCropSaving] = useState(false);
+  const [cropSaved, setCropSaved] = useState(false);
+
   // Liste des bases disponibles (pour le sélecteur, si on arrive ici
   // sans ?list=... déjà choisi).
   useEffect(() => {
@@ -55,6 +64,15 @@ export default function CardTemplateEditorPage() {
     })();
   }, [listId]);
 
+  // Recharge le cadrage affiché quand on change d'item ou de base.
+  useEffect(() => {
+    const it = items[previewIndex];
+    setCropX(it?.image_crop_x ?? 50);
+    setCropY(it?.image_crop_y ?? 50);
+    setZoom(it?.image_zoom ?? 1);
+    setCropSaved(false);
+  }, [previewIndex, items]);
+
   function selectList(id: string) {
     setListId(id);
     router.replace(`/cartes?list=${id}`);
@@ -70,8 +88,34 @@ export default function CardTemplateEditorPage() {
     setTimeout(() => setSaved(false), 2500);
   }
 
+  async function handleSaveCrop() {
+    const it = items[previewIndex];
+    if (!it) return;
+    setCropSaving(true);
+    setCropSaved(false);
+    const { error } = await supabase
+      .from('items')
+      .update({ image_crop_x: cropX, image_crop_y: cropY, image_zoom: zoom })
+      .eq('id', it.id);
+    if (!error) {
+      setItems((prev) =>
+        prev.map((p) => (p.id === it.id ? { ...p, image_crop_x: cropX, image_crop_y: cropY, image_zoom: zoom } : p))
+      );
+      setCropSaved(true);
+      setTimeout(() => setCropSaved(false), 2500);
+    }
+    setCropSaving(false);
+  }
+
+  function resetCrop() {
+    setCropX(50);
+    setCropY(50);
+    setZoom(1);
+  }
+
   const currentList = lists.find((l) => l.id === listId) || null;
-  const previewItem = items[previewIndex] || { name: 'Exemple de nom', image_url: null };
+  const rawPreviewItem = items[previewIndex] || { name: 'Exemple de nom', image_url: null };
+  const previewItem = { ...rawPreviewItem, image_crop_x: cropX, image_crop_y: cropY, image_zoom: zoom };
 
   if (loading && listId) return <SkeletonCard />;
 
@@ -166,10 +210,99 @@ export default function CardTemplateEditorPage() {
                 onChange={(value) => setConfig((c) => ({ ...c, nameColor: value }))}
               />
             </fieldset>
+
+            {rawPreviewItem.image_url && (
+              <>
+                <div className="brush-control-divider" />
+
+                <fieldset className="brush-control-group flex flex-col gap-3">
+                  <legend>Cadrage de l'image — « {rawPreviewItem.name} »</legend>
+
+                  <SliderField
+                    label="Position horizontale"
+                    value={cropX}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onChange={setCropX}
+                  />
+                  <SliderField
+                    label="Position verticale"
+                    value={cropY}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onChange={setCropY}
+                  />
+                  <SliderField
+                    label="Zoom"
+                    value={zoom}
+                    min={1}
+                    max={3}
+                    step={0.05}
+                    format={(v) => `${v.toFixed(2)}×`}
+                    onChange={setZoom}
+                  />
+
+                  <div className="flex items-center gap-2 mt-1">
+                    <button className="btn-secondary text-[12.5px] px-3 py-1.5" onClick={resetCrop} type="button">
+                      ↺ Recentrer
+                    </button>
+                    <button
+                      className="btn text-[12.5px] px-3 py-1.5"
+                      onClick={handleSaveCrop}
+                      disabled={cropSaving}
+                      type="button"
+                    >
+                      {cropSaving ? 'Enregistrement…' : cropSaved ? '✓ Cadrage enregistré' : 'Enregistrer le cadrage'}
+                    </button>
+                  </div>
+                  <p className="text-muted text-[11.5px]">
+                    Propre à cet item — change d'item pour cadrer son image séparément.
+                  </p>
+                </fieldset>
+              </>
+            )}
           </div>
         </div>
       )}
     </GameConfigShell>
+  );
+}
+
+function SliderField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  format,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  format?: (v: number) => string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-[12.5px] text-muted">
+      <span className="flex items-center justify-between">
+        <span>{label}</span>
+        <span className="text-text font-semibold">{format ? format(value) : Math.round(value)}</span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-amber"
+      />
+    </label>
   );
 }
 

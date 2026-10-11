@@ -388,6 +388,7 @@ select option {
 .brush-art-frame {
   position: relative;
   z-index: 10;
+  margin-top: 10px;
 }
 
 .brush-corner {

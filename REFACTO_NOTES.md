@@ -1102,3 +1102,51 @@ gravée" :
 
 ### Vérification
 `npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
+
+## Session 35 — Recadrage/zoom de l'image par item
+
+Ajout d'un contrôle pour repositionner et agrandir/rétrécir l'image
+d'un item dans la zone image de sa carte, sans avoir à retoucher le
+fichier lui-même.
+
+- `supabase/migration_image_crop.sql` (**à exécuter manuellement sur
+  Supabase**) : ajoute `image_crop_x`, `image_crop_y` (centre du
+  cadrage en %, défaut 50/50 = centré) et `image_zoom` (défaut 1) à la
+  table `items`. C'est une propriété de l'item (comme son image), pas
+  du modèle de carte — chaque item se cadre indépendamment.
+- `src/lib/types.ts` : `ListItem` gagne ces trois champs optionnels.
+- `src/components/game/GameCard.tsx` : l'image utilise désormais
+  `objectPosition`/`transform: scale()` (centrés sur le même point via
+  `transformOrigin`) dérivés de `item.image_crop_x/y/zoom`, avec des
+  valeurs par défaut (50/50/1) identiques au rendu d'avant cette
+  session — aucune carte existante n'est affectée tant que son cadrage
+  n'a pas été réglé explicitement.
+- `src/app/(games)/cartes/page.tsx` : nouvelle section "Cadrage de
+  l'image" (visible seulement si l'item prévisualisé a une image) avec
+  trois curseurs (position horizontale, position verticale, zoom
+  1×–3×), un bouton "Recentrer" et un bouton d'enregistrement dédié
+  (écrit directement sur la ligne de l'item dans `items`, indépendamment
+  du bouton "Enregistrer le modèle" qui lui sauvegarde les couleurs
+  partagées par toute la base). L'aperçu reflète les réglages en direct
+  avant l'enregistrement.
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
+
+### ⚠️ Action manuelle requise
+Exécuter `supabase/migration_image_crop.sql` dans l'éditeur SQL de
+Supabase (nouvelles colonnes sur `items`, pas appliqué automatiquement).
+
+## Session 36 — Inversion nom / image
+
+Le nom (plaque gravée) est désormais affiché au-dessus de la zone
+image, au lieu d'en dessous. Changement purement d'ordre dans
+`src/components/game/GameCard.tsx` (le bandeau `cardType` reste
+au-dessus de tout) ; `.brush-art-frame` a gagné un `margin-top: 10px`
+dans `globals.css` pour conserver l'espacement visuel (avant, cet
+espacement venait de `.brush-name-zone`, qui était en second). Le
+bandeau "œuvre" et le numéro de carte restent ancrés en bas (positions
+absolues, non affectées par ce changement).
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
