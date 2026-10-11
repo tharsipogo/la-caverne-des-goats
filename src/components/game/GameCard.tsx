@@ -51,8 +51,8 @@ function pad3(n: number): string {
  * Rendu d'une carte à collectionner façon TCG : carte métallique sombre,
  * coups de pinceau manga en SVG (colorés via --card-accent), listel
  * interne, coins ornés, grain subtil, effet holo/tilt au survol de la
- * souris, zone d'illustration, nom en Permanent Marker (coloré via
- * --card-name-color) et bandeau "œuvre" en bas. Pas de système de
+ * souris, zone d'illustration, nom sur plaque gravée en Luckiest Guy
+ * (coloré via --card-name-color) et bandeau "œuvre" en bas. Pas de système de
  * rareté. Composant générique — réutilisable tel quel par n'importe quel
  * futur jeu de cartes ; les props au-delà de `item`/`template` sont
  * toutes optionnelles et n'affectent rien si elles ne sont pas fournies.

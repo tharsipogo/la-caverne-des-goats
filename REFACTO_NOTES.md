@@ -1080,3 +1080,25 @@ nouvelles props sont optionnelles — aucun jeu existant n'est affecté.
 
 ### Vérification
 `npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
+
+## Session 34 — Nom de carte : plaque gravée
+
+L'utilisateur n'aimait pas l'affichage du nom (bandeau "fumée" très
+discret, Permanent Marker en majuscules). Trois variantes visuelles lui
+ont été montrées dans un artifact à part ; il a choisi l'option "plaque
+gravée" :
+
+- `src/app/globals.css` : `.brush-name-zone` devient une vraie plaque
+  (fond dégradé clair→sombre + ombre interne haute/basse pour l'effet
+  gravé, liseré en `--card-accent`) au lieu du dégradé horizontal
+  presque invisible d'avant.
+- Police du nom : **Luckiest Guy** (remplace Permanent Marker pour le
+  nom — Permanent Marker reste utilisée pour le monogramme du dos de
+  carte dans `GameCardBack`, donc toujours importée), en **casse
+  normale** (`text-transform: none`) au lieu de tout-majuscules, pour ne
+  plus écraser les noms un peu longs.
+- Ombre du texte ajustée pour un effet "gravé" (liseré sombre en dessous,
+  clair au-dessus) cohérent avec la plaque.
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).

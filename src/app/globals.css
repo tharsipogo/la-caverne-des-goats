@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,600&family=IBM+Plex+Mono:wght@500&family=Permanent+Marker&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,600&family=IBM+Plex+Mono:wght@500&family=Permanent+Marker&family=Luckiest+Guy&display=swap');
 
 html, body {
   padding: 0;
@@ -482,13 +482,15 @@ select option {
 .brush-name-zone {
   position: relative;
   z-index: 10;
-  display: flex;
-  min-height: 48px;
-  margin: 12px 18px 0;
-  padding: 0 20px;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
+  margin: 10px 14px 0;
+  padding: 7px 14px;
+  border-radius: 10px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.25));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.55),
+    0 0 0 1px color-mix(in srgb, var(--card-accent) 38%, transparent);
 }
 
 .brush-card-name {
@@ -498,13 +500,13 @@ select option {
   border: 0;
   background: transparent;
   color: var(--card-name-color);
-  font-family: 'Permanent Marker', cursive;
-  font-size: clamp(15px, 6cqw, 20px);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: clamp(14px, 6.4cqw, 19px);
   font-weight: 400;
-  letter-spacing: 0.045em;
+  letter-spacing: 0.02em;
   text-align: center;
-  text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 10px rgba(0, 0, 0, 0.25);
+  text-transform: none;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.12);
   outline: none;
   overflow-wrap: anywhere;
 }
