@@ -18,7 +18,7 @@ import { DisconnectBanner } from '@/components/game/DisconnectBanner';
 import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
 import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
 import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
-import { GameCard } from '@/components/game/GameCard';
+import { ScaledGameCard } from '@/components/game/ScaledGameCard';
 
 type GameMode = 'menu' | 'local' | 'online';
 type Phase = 'setup' | 'secret_reveal' | 'play' | 'last_chance' | 'end' | 'waiting';
@@ -605,7 +605,7 @@ export default function GuessWhoPage() {
                       <span className="text-[9px] text-[#e2645a] font-bold">Ta cible :</span>
                       {displayMode === 'card' && secrets[0] ? (
                         <div className="w-full">
-                          <GameCard item={secrets[0]} template={mergeCardConfig(secrets[0], deckTemplate)} disableTilt />
+                          <ScaledGameCard item={secrets[0]} template={mergeCardConfig(secrets[0], deckTemplate)} disableTilt />
                         </div>
                       ) : secrets[0]?.image_url ? (
                         <div className="relative w-full h-16">
@@ -659,7 +659,7 @@ export default function GuessWhoPage() {
                       <span className="text-[9px] text-[#4fc9c0] font-bold">Ta cible :</span>
                       {displayMode === 'card' && secrets[1] ? (
                         <div className="w-full">
-                          <GameCard item={secrets[1]} template={mergeCardConfig(secrets[1], deckTemplate)} disableTilt />
+                          <ScaledGameCard item={secrets[1]} template={mergeCardConfig(secrets[1], deckTemplate)} disableTilt />
                         </div>
                       ) : secrets[1]?.image_url ? (
                         <div className="relative w-full h-16">
@@ -805,7 +805,7 @@ export default function GuessWhoPage() {
               <span className="text-xs font-bold text-[#e2645a]">Carte de {names[0]}</span>
               {displayMode === 'card' && secrets[0] ? (
                 <div className="w-24">
-                  <GameCard item={secrets[0]} template={mergeCardConfig(secrets[0], deckTemplate)} disableTilt />
+                  <ScaledGameCard item={secrets[0]} template={mergeCardConfig(secrets[0], deckTemplate)} disableTilt />
                 </div>
               ) : (
                 <>
@@ -825,7 +825,7 @@ export default function GuessWhoPage() {
               <span className="text-xs font-bold text-[#4fc9c0]">Carte de {names[1]}</span>
               {displayMode === 'card' && secrets[1] ? (
                 <div className="w-24">
-                  <GameCard item={secrets[1]} template={mergeCardConfig(secrets[1], deckTemplate)} disableTilt />
+                  <ScaledGameCard item={secrets[1]} template={mergeCardConfig(secrets[1], deckTemplate)} disableTilt />
                 </div>
               ) : (
                 <>

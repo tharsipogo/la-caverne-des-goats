@@ -11,7 +11,7 @@ import { PlayerNameField } from '@/components/game/PlayerNameField';
 import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
 import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
 import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
-import { GameCard } from '@/components/game/GameCard';
+import { ScaledGameCard } from '@/components/game/ScaledGameCard';
 
 type Role = 'civil' | 'undercover' | 'mrwhite';
 
@@ -344,7 +344,7 @@ export default function UndercoverPage() {
                       </span>
                     )}
                     <div className="w-full">
-                      <GameCard item={word} template={mergeCardConfig(word, deckTemplate)} disableTilt />
+                      <ScaledGameCard item={word} template={mergeCardConfig(word, deckTemplate)} disableTilt />
                     </div>
                     <button
                       onClick={() => toggleCard(p)}

@@ -91,8 +91,14 @@ export default function CardTemplateEditorPage() {
     if (!listId) return;
     setSaving(true);
     setSaved(false);
-    await saveCardTemplate(listId, config);
+    const result = await saveCardTemplate(listId, config);
     setSaving(false);
+    if (!result) {
+      alert(
+        "Erreur à l'enregistrement des couleurs par défaut du deck. Détail dans la console du navigateur (F12)."
+      );
+      return;
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
@@ -114,7 +120,14 @@ export default function CardTemplateEditorPage() {
         card_name_color: nameOverride,
       })
       .eq('id', it.id);
-    if (!error) {
+    if (error) {
+      console.error('Erreur enregistrement réglages carte :', error);
+      alert(
+        `Erreur à l'enregistrement de cette carte : ${error.message}\n\n` +
+          "Si l'erreur mentionne une colonne manquante (card_accent_color, card_name_color...), " +
+          'il faut exécuter supabase/migration_card_deck.sql dans l\'éditeur SQL de Supabase.'
+      );
+    } else {
       setItems((prev) =>
         prev.map((p) =>
           p.id === it.id
@@ -147,7 +160,10 @@ export default function CardTemplateEditorPage() {
     setValidating(true);
     const next = !it.card_validated;
     const { error } = await setItemCardValidated(it.id, next);
-    if (!error) {
+    if (error) {
+      console.error('Erreur validation carte :', error);
+      alert(`Erreur à la validation de cette carte : ${error.message}`);
+    } else {
       setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, card_validated: next } : p)));
     }
     setValidating(false);

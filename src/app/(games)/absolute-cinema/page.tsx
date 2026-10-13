@@ -8,7 +8,7 @@ import { pickRandom } from '@/lib/utils';
 import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
 import { countValidatedCards, DisplayMode, mergeCardConfig } from '@/lib/supabase/cardDeck';
 import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
-import { GameCard } from '@/components/game/GameCard';
+import { ScaledGameCard } from '@/components/game/ScaledGameCard';
 
 type Phase = 'setup' | 'draft' | 'end';
 
@@ -492,7 +492,7 @@ export default function AbsoluteCinemaPage() {
                 className="group flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
               >
                 <div className="w-full max-w-[220px]">
-                  <GameCard item={item} template={templateForCategory(currentCat.key)} disableTilt />
+                  <ScaledGameCard item={item} template={templateForCategory(currentCat.key)} disableTilt />
                 </div>
                 <span className="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] group-hover:bg-[#D4AF37] group-hover:text-black transition-all">
                   Sélectionner

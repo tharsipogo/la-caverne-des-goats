@@ -1248,3 +1248,66 @@ y compris les 6 jeux intégrés.
 Exécuter `supabase/migration_card_deck.sql` dans l'éditeur SQL de
 Supabase (nouvelles colonnes `card_validated`, `card_accent_color`,
 `card_name_color` sur `items` — pas appliqué automatiquement).
+
+## Session 38 — Correction : cartes tronquées dans les emplacements étroits
+
+Bug remonté avec capture d'écran (Undercover, popup de distribution) : en
+dessous d'environ 180px de large, `GameCard` affichait un rendu coupé —
+plaque du nom et image visibles, mais bandeau "œuvre", coins ornés et bas
+de carte disparus. Cause : les marges/paddings internes de `GameCard`
+(`globals.css`, famille `.brush-*`) sont en pixels fixes, pas relatifs à
+la largeur de la carte ; en dessous d'environ 180px, ce "chaînage" fixe ne
+tient plus dans la hauteur de la carte (`aspect-ratio: 63/88`) et se fait
+tronquer par son `overflow: hidden`.
+
+- `src/components/game/ScaledGameCard.tsx` (nouveau) : variante de
+  `<GameCard>` pour les emplacements étroits (popup, bandeau compact,
+  podium, vignette de pioche...). Affiche toujours la carte à sa taille
+  interne "sûre" (220px, où tout le contenu tient), puis la réduit
+  visuellement avec `transform: scale()` — calculé via `ResizeObserver`
+  sur le conteneur réel, donc compatible avec des largeurs responsives
+  type `w-28 md:w-32`. La carte entière reste donc visible, juste plus
+  petite, sans jamais rogner son contenu.
+- Tous les emplacements de `<GameCard>` ajoutés en Session 37 dans les 6
+  jeux intégrés (Blind, Draft Anime, Qui est-ce ?, Undercover, Versus,
+  Absolute Cinema) utilisent désormais `<ScaledGameCard>` à la place.
+  Seul l'aperçu plein format de l'éditeur `/cartes` garde `<GameCard>`
+  directement (il est déjà assez large).
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
+
+## Session 39 — Erreurs silencieuses dans l'éditeur de cartes
+
+Bug remonté : après avoir choisi une couleur personnalisée pour une
+carte et cliqué sur "Enregistrer les réglages de cette carte", la
+couleur revient au jaune/ambre par défaut après avoir validé la carte.
+
+Diagnostic : l'écriture Supabase de `handleSaveItemSettings` pouvait
+échouer silencieusement (erreur ignorée, pas de message). L'aperçu
+affichait quand même la couleur choisie juste après (il lit l'état
+local `itemAccent`/`itemNameColor`, pas l'item sauvegardé), donnant
+l'impression que ça avait marché. Mais comme l'écriture avait
+réellement échoué, `card_accent_color` restait `null` en base ; au clic
+suivant sur "Valider cette carte" (qui, lui, réussit et met à jour la
+liste locale des items), l'effet qui resynchronise les champs affichés
+avec l'item réel se redéclenche et relit la vraie valeur en base —
+`null` → retombe sur la couleur par défaut du deck. Le clic sur
+"Valider" n'est pas la cause, juste le premier moment où l'échec
+silencieux devient visible.
+
+- `src/app/(games)/cartes/page.tsx` : les trois actions d'écriture
+  (couleurs par défaut du deck, réglages d'une carte, validation d'une
+  carte) affichent désormais une alerte explicite avec le message
+  d'erreur Supabase en cas d'échec, au lieu de l'avaler silencieusement.
+  Si l'erreur mentionne une colonne manquante, le message renvoie vers
+  `supabase/migration_card_deck.sql`.
+
+### ⚠️ À vérifier côté utilisateur
+Si l'erreur réapparaît, le message affiché donnera le détail exact
+(ex. colonne manquante → `migration_card_deck.sql` n'a peut-être pas
+été exécuté en entier sur le projet Supabase ; policy RLS → à vérifier
+sur la table `items`).
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).

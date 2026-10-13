@@ -15,7 +15,7 @@ import { getPlayerColor } from '@/lib/playerColors';
 import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
 import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
 import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
-import { GameCard } from '@/components/game/GameCard';
+import { ScaledGameCard } from '@/components/game/ScaledGameCard';
 
 type Phase = 'setup' | 'round' | 'end';
 type RoundStage = 'open' | 'respond';
@@ -421,7 +421,7 @@ export default function VersusPage() {
         <div className="flex flex-col items-center justify-center my-auto py-1">
           {displayMode === 'card' && currentCard ? (
             <div className="w-[190px] sm:w-[210px]">
-              <GameCard item={currentCard} template={mergeCardConfig(currentCard, deckTemplate)} disableTilt />
+              <ScaledGameCard item={currentCard} template={mergeCardConfig(currentCard, deckTemplate)} disableTilt />
             </div>
           ) : (
             <>

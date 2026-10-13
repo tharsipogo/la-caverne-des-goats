@@ -8,7 +8,7 @@ import { pickRandom } from '@/lib/utils';
 import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
 import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
 import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
-import { GameCard } from '@/components/game/GameCard';
+import { ScaledGameCard } from '@/components/game/ScaledGameCard';
 
 type Phase = 'setup' | 'draft' | 'end';
 type GameMode = 'classic' | 'sabotage';
@@ -390,7 +390,7 @@ export default function AnimeDraftPage() {
             <div className="flex items-center gap-3 bg-black/40 p-2.5 px-4 rounded-xl border border-white/10">
               {displayMode === 'card' ? (
                 <div className="w-20 shrink-0">
-                  <GameCard
+                  <ScaledGameCard
                     item={drawnCard}
                     template={mergeCardConfig(drawnCard, deckTemplate)}
                     disableTilt

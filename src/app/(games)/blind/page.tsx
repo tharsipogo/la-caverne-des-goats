@@ -9,7 +9,7 @@ import { pickRandom } from '@/lib/utils';
 import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
 import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
 import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
-import { GameCard } from '@/components/game/GameCard';
+import { ScaledGameCard } from '@/components/game/ScaledGameCard';
 
 type Slot = ListItem | null;
 
@@ -183,7 +183,7 @@ export default function BlindPage() {
             <div className="flex flex-col items-center">
               {displayMode === 'card' ? (
                 <div className="w-28 md:w-32">
-                  <GameCard item={top3[1]} template={mergeCardConfig(top3[1], deckTemplate)} disableTilt className="shadow-[0_0_30px_rgba(203,213,225,0.3)]" />
+                  <ScaledGameCard item={top3[1]} template={mergeCardConfig(top3[1], deckTemplate)} disableTilt className="shadow-[0_0_30px_rgba(203,213,225,0.3)]" />
                 </div>
               ) : (
                 <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border-2 border-slate-300 shadow-[0_0_30px_rgba(203,213,225,0.4)] bg-surface2">
@@ -214,7 +214,7 @@ export default function BlindPage() {
             <div className="flex flex-col items-center -translate-y-3">
               {displayMode === 'card' ? (
                 <div className="w-32 md:w-40">
-                  <GameCard item={top3[0]} template={mergeCardConfig(top3[0], deckTemplate)} disableTilt active className="shadow-[0_0_40px_rgba(245,158,11,0.4)]" />
+                  <ScaledGameCard item={top3[0]} template={mergeCardConfig(top3[0], deckTemplate)} disableTilt active className="shadow-[0_0_40px_rgba(245,158,11,0.4)]" />
                 </div>
               ) : (
                 <div className="relative w-36 h-40 md:w-44 md:h-48 rounded-2xl overflow-hidden border-2 border-amber shadow-[0_0_40px_rgba(245,158,11,0.5)] bg-surface2">
@@ -245,7 +245,7 @@ export default function BlindPage() {
             <div className="flex flex-col items-center">
               {displayMode === 'card' ? (
                 <div className="w-28 md:w-32">
-                  <GameCard item={top3[2]} template={mergeCardConfig(top3[2], deckTemplate)} disableTilt className="shadow-[0_0_30px_rgba(205,127,50,0.3)]" />
+                  <ScaledGameCard item={top3[2]} template={mergeCardConfig(top3[2], deckTemplate)} disableTilt className="shadow-[0_0_30px_rgba(205,127,50,0.3)]" />
                 </div>
               ) : (
                 <div className="relative w-32 h-36 md:w-36 md:h-40 rounded-2xl overflow-hidden border-2 border-[#cd7f32] shadow-[0_0_30px_rgba(205,127,50,0.4)] bg-surface2">
@@ -337,7 +337,7 @@ export default function BlindPage() {
           <div className="flex flex-col items-center gap-4 w-[280px] shrink-0">
             {displayMode === 'card' ? (
               <div className="w-[220px]">
-                <GameCard item={current} template={mergeCardConfig(current, deckTemplate)} workName={listName} disableTilt className="shadow-2xl" />
+                <ScaledGameCard item={current} template={mergeCardConfig(current, deckTemplate)} workName={listName} disableTilt className="shadow-2xl" />
               </div>
             ) : (
               <div className="w-[260px] min-h-[260px] bg-gradient-to-br from-surface2 to-surface border border-border rounded-2xl flex flex-col items-center justify-center p-5 text-center gap-3">
