@@ -5,13 +5,17 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { GameList, ListItem } from '@/lib/types';
+import { CardTemplateConfig, DEFAULT_CARD_TEMPLATE_CONFIG, GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 import { calculateTeamScore, FACTIONS } from '@/lib/synergies';
 import InstantWinModal from '@/components/InstantWinModal';
 import { GameConfigShell } from '@/components/game/GameConfigShell';
 import { PlayerNameField } from '@/components/game/PlayerNameField';
 import { getPlayerColor } from '@/lib/playerColors';
+import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
+import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
+import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
+import { GameCard } from '@/components/game/GameCard';
 
 type Phase = 'setup' | 'round' | 'end';
 type RoundStage = 'open' | 'respond';
@@ -57,6 +61,20 @@ export default function VersusPage() {
 
   // Effet d'animation de surenchère
   const [bidPulse, setBidPulse] = useState(false);
+
+  // Mode d'affichage images / cartes
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('image');
+  const [deckTemplate, setDeckTemplate] = useState<CardTemplateConfig>(DEFAULT_CARD_TEMPLATE_CONFIG);
+  const deckAvailable = useCardDeckAvailable(listId);
+
+  useEffect(() => {
+    if (!listId) return;
+    (async () => setDeckTemplate(await fetchCardTemplateOrDefault(listId)))();
+  }, [listId]);
+
+  useEffect(() => {
+    if (!deckAvailable) setDisplayMode('image');
+  }, [deckAvailable]);
 
   const currentListName = lists.find((l) => l.id === listId)?.name || '';
   const isOnePieceBase = currentListName.toLowerCase().includes('one piece');
@@ -173,13 +191,18 @@ export default function VersusPage() {
   async function start() {
     if (!listId) return;
     const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
-    if (!items || items.length < TEAM_SIZE * 2) {
-      return alert(`Il faut au moins ${TEAM_SIZE * 2} items dans cette base.`);
+    const pool = displayMode === 'card' ? (items as ListItem[] || []).filter((i) => i.card_validated) : (items as ListItem[] || []);
+    if (!items || pool.length < TEAM_SIZE * 2) {
+      return alert(
+        displayMode === 'card'
+          ? `Il faut au moins ${TEAM_SIZE * 2} cartes validées dans le deck.`
+          : `Il faut au moins ${TEAM_SIZE * 2} items dans cette base.`
+      );
     }
 
     setNames([names[0].trim() || 'Joueur 1', names[1].trim() || 'Joueur 2']);
     setInstantWinner(null);
-    playRound(0, [startBudget, startBudget], [[], []], shuffle(items as ListItem[]));
+    playRound(0, [startBudget, startBudget], [[], []], shuffle(pool));
   }
 
   function handleBid(amount: number, bidder: PIdx) {
@@ -251,6 +274,11 @@ export default function VersusPage() {
                   <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
+              {deckAvailable && (
+                <div className="mt-2">
+                  <DisplayModeToggle mode={displayMode} onChange={setDisplayMode} available={deckAvailable} />
+                </div>
+              )}
             </div>
 
             <div className="flex gap-6 flex-wrap">
@@ -391,16 +419,24 @@ export default function VersusPage() {
 
         {/* Carte en jeu */}
         <div className="flex flex-col items-center justify-center my-auto py-1">
-          <div className="w-[190px] h-[220px] sm:w-[210px] sm:h-[240px] bg-[#141622] border-2 border-amber shadow-[0_0_30px_rgba(245,158,11,0.35)] rounded-2xl overflow-hidden relative">
-            {currentCard?.image_url ? (
-              <Image src={currentCard.image_url} width={210} height={240} className="w-full h-full object-cover" alt="" />
-            ) : (
-              <div className="w-full h-full bg-surface2 flex items-center justify-center text-4xl">🎴</div>
-            )}
-          </div>
-          <div className="font-serif text-xl font-bold text-white text-center max-w-[240px] mt-2 drop-shadow-md">
-            {currentCard?.name}
-          </div>
+          {displayMode === 'card' && currentCard ? (
+            <div className="w-[190px] sm:w-[210px]">
+              <GameCard item={currentCard} template={mergeCardConfig(currentCard, deckTemplate)} disableTilt />
+            </div>
+          ) : (
+            <>
+              <div className="w-[190px] h-[220px] sm:w-[210px] sm:h-[240px] bg-[#141622] border-2 border-amber shadow-[0_0_30px_rgba(245,158,11,0.35)] rounded-2xl overflow-hidden relative">
+                {currentCard?.image_url ? (
+                  <Image src={currentCard.image_url} width={210} height={240} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <div className="w-full h-full bg-surface2 flex items-center justify-center text-4xl">🎴</div>
+                )}
+              </div>
+              <div className="font-serif text-xl font-bold text-white text-center max-w-[240px] mt-2 drop-shadow-md">
+                {currentCard?.name}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Console d'enchère avec effet visuel d'impulsion lors de la mise */}

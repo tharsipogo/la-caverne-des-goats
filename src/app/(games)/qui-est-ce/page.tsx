@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { GameList, ListItem } from '@/lib/types';
+import { CardTemplateConfig, DEFAULT_CARD_TEMPLATE_CONFIG, GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 import { GameConfigShell } from '@/components/game/GameConfigShell';
 import { PlayerNameField } from '@/components/game/PlayerNameField';
@@ -15,6 +15,10 @@ import { submitGameResults, returnSessionToLobby } from '@/lib/supabase/queries'
 import { attachPresenceTracking } from '@/lib/realtimePresence';
 import { useStableGameChannel } from '@/hooks/useStableGameChannel';
 import { DisconnectBanner } from '@/components/game/DisconnectBanner';
+import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
+import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
+import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
+import { GameCard } from '@/components/game/GameCard';
 
 type GameMode = 'menu' | 'local' | 'online';
 type Phase = 'setup' | 'secret_reveal' | 'play' | 'last_chance' | 'end' | 'waiting';
@@ -50,6 +54,19 @@ export default function GuessWhoPage() {
 
   // Mode en Ligne
   const [roomCode, setRoomCode] = useState('');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('image');
+  const [deckTemplate, setDeckTemplate] = useState<CardTemplateConfig>(DEFAULT_CARD_TEMPLATE_CONFIG);
+  const deckAvailable = useCardDeckAvailable(listId);
+
+  useEffect(() => {
+    if (!listId) return;
+    (async () => setDeckTemplate(await fetchCardTemplateOrDefault(listId)))();
+  }, [listId]);
+
+  useEffect(() => {
+    if (!deckAvailable) setDisplayMode('image');
+  }, [deckAvailable]);
+
   const [isHost, setIsHost] = useState(false);
   const isHostRef = useRef(false);
   useEffect(() => {
@@ -192,6 +209,7 @@ export default function GuessWhoPage() {
           setGridItems(payload.grid);
           setSecrets([payload.secret1, payload.secret2]);
           setNames([payload.hostName, payload.guestName]);
+          if (payload.displayMode) setDisplayMode(payload.displayMode);
           setPhase('play');
         })
         .on('broadcast', { event: 'switch_turn' }, ({ payload }: any) => {
@@ -242,9 +260,17 @@ export default function GuessWhoPage() {
     if (gridItems.length > 0) return;
 
     const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
-    if (!items || items.length < gridSize) return showAlert('Base trop petite', `Il faut au moins ${gridSize} items dans la base choisie.`);
+    const pool = displayMode === 'card' ? (items as ListItem[] || []).filter((i) => i.card_validated) : (items as ListItem[] || []);
+    if (!items || pool.length < gridSize) {
+      return showAlert(
+        'Base trop petite',
+        displayMode === 'card'
+          ? `Il faut au moins ${gridSize} cartes validées dans le deck.`
+          : `Il faut au moins ${gridSize} items dans la base choisie.`
+      );
+    }
 
-    const grid = shuffle(items as ListItem[]).slice(0, gridSize);
+    const grid = shuffle(pool).slice(0, gridSize);
     const secret1 = pickRandom(grid, 1)[0];
     let secret2 = pickRandom(grid, 1)[0];
     while (secret2.id === secret1.id) {
@@ -257,7 +283,7 @@ export default function GuessWhoPage() {
     channelRef.current?.send({
       type: 'broadcast',
       event: 'game_init',
-      payload: { grid, secret1, secret2, hostName: names[0], guestName: names[1] },
+      payload: { grid, secret1, secret2, hostName: names[0], guestName: names[1], displayMode },
     });
 
     setPhase('play');
@@ -274,12 +300,18 @@ export default function GuessWhoPage() {
   async function startLocalGame() {
     if (!listId) return;
     const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
-    if (!items || items.length < gridSize) {
-      showAlert('Erreur', `Il faut au moins ${gridSize} items dans cette base.`);
+    const pool = displayMode === 'card' ? (items as ListItem[] || []).filter((i) => i.card_validated) : (items as ListItem[] || []);
+    if (!items || pool.length < gridSize) {
+      showAlert(
+        'Erreur',
+        displayMode === 'card'
+          ? `Il faut au moins ${gridSize} cartes validées dans le deck.`
+          : `Il faut au moins ${gridSize} items dans cette base.`
+      );
       return;
     }
 
-    const selectedGrid = shuffle(items as ListItem[]).slice(0, gridSize);
+    const selectedGrid = shuffle(pool).slice(0, gridSize);
     const secret1 = pickRandom(selectedGrid, 1)[0];
     let secret2 = pickRandom(selectedGrid, 1)[0];
     while (secret2.id === secret1.id) {
@@ -489,6 +521,11 @@ export default function GuessWhoPage() {
                   <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
+              {deckAvailable && (
+                <div className="mt-3">
+                  <DisplayModeToggle mode={displayMode} onChange={setDisplayMode} available={deckAvailable} />
+                </div>
+              )}
             </div>
 
             {gameMode === 'local' ? (
@@ -566,16 +603,22 @@ export default function GuessWhoPage() {
                   {showTargets[0] && (
                     <div className="absolute left-0 top-full mt-1.5 z-50 bg-[#161822] border-2 border-[#e2645a] rounded-xl p-2 shadow-2xl flex flex-col items-center gap-1 w-28 animate-in fade-in zoom-in-95 duration-150">
                       <span className="text-[9px] text-[#e2645a] font-bold">Ta cible :</span>
-                      {secrets[0]?.image_url ? (
+                      {displayMode === 'card' && secrets[0] ? (
+                        <div className="w-full">
+                          <GameCard item={secrets[0]} template={mergeCardConfig(secrets[0], deckTemplate)} disableTilt />
+                        </div>
+                      ) : secrets[0]?.image_url ? (
                         <div className="relative w-full h-16">
                           <Image src={secrets[0].image_url} fill className="object-cover rounded-md" alt="" unoptimized />
                         </div>
                       ) : (
                         <div className="w-full h-16 bg-surface2 rounded-md flex items-center justify-center text-xs">🎴</div>
                       )}
-                      <span className="text-[10px] font-black text-white truncate w-full text-center">
-                        {secrets[0]?.name}
-                      </span>
+                      {displayMode !== 'card' && (
+                        <span className="text-[10px] font-black text-white truncate w-full text-center">
+                          {secrets[0]?.name}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -614,16 +657,22 @@ export default function GuessWhoPage() {
                   {showTargets[1] && (
                     <div className="absolute right-0 top-full mt-1.5 z-50 bg-[#161822] border-2 border-[#4fc9c0] rounded-xl p-2 shadow-2xl flex flex-col items-center gap-1 w-28 animate-in fade-in zoom-in-95 duration-150">
                       <span className="text-[9px] text-[#4fc9c0] font-bold">Ta cible :</span>
-                      {secrets[1]?.image_url ? (
+                      {displayMode === 'card' && secrets[1] ? (
+                        <div className="w-full">
+                          <GameCard item={secrets[1]} template={mergeCardConfig(secrets[1], deckTemplate)} disableTilt />
+                        </div>
+                      ) : secrets[1]?.image_url ? (
                         <div className="relative w-full h-16">
                           <Image src={secrets[1].image_url} fill className="object-cover rounded-md" alt="" unoptimized />
                         </div>
                       ) : (
                         <div className="w-full h-16 bg-surface2 rounded-md flex items-center justify-center text-xs">🎴</div>
                       )}
-                      <span className="text-[10px] font-black text-white truncate w-full text-center">
-                        {secrets[1]?.name}
-                      </span>
+                      {displayMode !== 'card' && (
+                        <span className="text-[10px] font-black text-white truncate w-full text-center">
+                          {secrets[1]?.name}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -754,26 +803,42 @@ export default function GuessWhoPage() {
           <div className="grid grid-cols-2 gap-4 w-full bg-[#121420] border border-white/10 rounded-2xl p-4 shadow-xl">
             <div className="flex flex-col items-center gap-2">
               <span className="text-xs font-bold text-[#e2645a]">Carte de {names[0]}</span>
-              <div className="relative w-24 h-32 rounded-xl overflow-hidden border-2 border-[#e2645a]">
-                {secrets[0]?.image_url ? (
-                  <Image src={secrets[0].image_url} fill className="object-cover" alt="" unoptimized />
-                ) : (
-                  <div className="w-full h-full bg-surface2 flex items-center justify-center">🎴</div>
-                )}
-              </div>
-              <span className="text-xs font-bold text-white">{secrets[0]?.name}</span>
+              {displayMode === 'card' && secrets[0] ? (
+                <div className="w-24">
+                  <GameCard item={secrets[0]} template={mergeCardConfig(secrets[0], deckTemplate)} disableTilt />
+                </div>
+              ) : (
+                <>
+                  <div className="relative w-24 h-32 rounded-xl overflow-hidden border-2 border-[#e2645a]">
+                    {secrets[0]?.image_url ? (
+                      <Image src={secrets[0].image_url} fill className="object-cover" alt="" unoptimized />
+                    ) : (
+                      <div className="w-full h-full bg-surface2 flex items-center justify-center">🎴</div>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-white">{secrets[0]?.name}</span>
+                </>
+              )}
             </div>
 
             <div className="flex flex-col items-center gap-2">
               <span className="text-xs font-bold text-[#4fc9c0]">Carte de {names[1]}</span>
-              <div className="relative w-24 h-32 rounded-xl overflow-hidden border-2 border-[#4fc9c0]">
-                {secrets[1]?.image_url ? (
-                  <Image src={secrets[1].image_url} fill className="object-cover" alt="" unoptimized />
-                ) : (
-                  <div className="w-full h-full bg-surface2 flex items-center justify-center">🎴</div>
-                )}
-              </div>
-              <span className="text-xs font-bold text-white">{secrets[1]?.name}</span>
+              {displayMode === 'card' && secrets[1] ? (
+                <div className="w-24">
+                  <GameCard item={secrets[1]} template={mergeCardConfig(secrets[1], deckTemplate)} disableTilt />
+                </div>
+              ) : (
+                <>
+                  <div className="relative w-24 h-32 rounded-xl overflow-hidden border-2 border-[#4fc9c0]">
+                    {secrets[1]?.image_url ? (
+                      <Image src={secrets[1].image_url} fill className="object-cover" alt="" unoptimized />
+                    ) : (
+                      <div className="w-full h-full bg-surface2 flex items-center justify-center">🎴</div>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-white">{secrets[1]?.name}</span>
+                </>
+              )}
             </div>
           </div>
 

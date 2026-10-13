@@ -4,10 +4,14 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { GameList, ListItem } from '@/lib/types';
+import { CardTemplateConfig, DEFAULT_CARD_TEMPLATE_CONFIG, GameList, ListItem } from '@/lib/types';
 import { fetchListItemMeta, pickRandom, shuffle } from '@/lib/utils';
 import { Topbar } from '@/components/layout/Topbar';
 import { PlayerNameField } from '@/components/game/PlayerNameField';
+import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
+import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
+import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
+import { GameCard } from '@/components/game/GameCard';
 
 type Role = 'civil' | 'undercover' | 'mrwhite';
 
@@ -43,6 +47,18 @@ export default function UndercoverPage() {
   const [mrWhiteGuess, setMrWhiteGuess] = useState('');
   const [winner, setWinner] = useState<null | 'civils' | 'undercovers' | 'mrwhite'>(null);
   const [lastReveal, setLastReveal] = useState<{ name: string; role: Role } | null>(null);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('image');
+  const [deckTemplate, setDeckTemplate] = useState<CardTemplateConfig>(DEFAULT_CARD_TEMPLATE_CONFIG);
+  const deckAvailable = useCardDeckAvailable(listId);
+
+  useEffect(() => {
+    if (!listId) return;
+    (async () => setDeckTemplate(await fetchCardTemplateOrDefault(listId)))();
+  }, [listId]);
+
+  useEffect(() => {
+    if (!deckAvailable) setDisplayMode('image');
+  }, [deckAvailable]);
 
   useEffect(() => {
     (async () => {
@@ -75,11 +91,16 @@ export default function UndercoverPage() {
       return;
     }
     const { data: items } = await supabase.from('items').select('*').eq('list_id', listId);
-    if (!items || items.length < 2) {
-      alert('Il faut au moins 2 items dans cette base.');
+    const pool = displayMode === 'card' ? (items as ListItem[] || []).filter((i) => i.card_validated) : (items as ListItem[] || []);
+    if (!items || pool.length < 2) {
+      alert(
+        displayMode === 'card'
+          ? 'Il faut au moins 2 cartes validées dans le deck.'
+          : 'Il faut au moins 2 items dans cette base.'
+      );
       return;
     }
-    const [wordA, wordB] = pickRandom(items as ListItem[], 2);
+    const [wordA, wordB] = pickRandom(pool, 2);
     setCivilWord(wordA);
     setUndercoverWord(wordB);
 
@@ -210,6 +231,9 @@ export default function UndercoverPage() {
                     <option key={l.id} value={l.id}>{l.name}</option>
                   ))}
                 </select>
+                {deckAvailable && (
+                  <DisplayModeToggle mode={displayMode} onChange={setDisplayMode} available={deckAvailable} className="mt-1 self-start" />
+                )}
               </ConfigCard>
 
               <ConfigCard label="Joueurs">
@@ -305,6 +329,32 @@ export default function UndercoverPage() {
 
             if (isBeingViewed) {
               // Carte retournée (Révélée)
+              if (word && displayMode === 'card') {
+                return (
+                  <div
+                    key={p.id}
+                    className="w-36 sm:w-40 bg-[#171a29] border-2 border-amber shadow-[0_0_20px_rgba(245,158,11,0.25)] rounded-2xl flex flex-col items-center gap-2 overflow-hidden p-2.5 transition-all"
+                  >
+                    <div className="text-amber font-bold text-xs truncate w-full text-center">
+                      {p.name}
+                    </div>
+                    {p.role === 'mrwhite' && (
+                      <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">
+                        MR. WHITE
+                      </span>
+                    )}
+                    <div className="w-full">
+                      <GameCard item={word} template={mergeCardConfig(word, deckTemplate)} disableTilt />
+                    </div>
+                    <button
+                      onClick={() => toggleCard(p)}
+                      className="btn-secondary btn-small w-full"
+                    >
+                      J'ai vu ✓
+                    </button>
+                  </div>
+                );
+              }
               return (
                 <div
                   key={p.id}

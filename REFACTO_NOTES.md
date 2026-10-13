@@ -1150,3 +1150,101 @@ absolues, non affectées par ce changement).
 
 ### Vérification
 `npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
+
+## Session 37 — Deck de cartes par base + mode Images/Cartes dans les jeux
+
+Grosse fonctionnalité : chaque base peut désormais se constituer un
+"deck de cartes" (sous-ensemble de ses items validés individuellement
+en carte, avec couleurs personnalisables par carte), et 6 jeux où
+l'image est centrale proposent un choix "🖼️ Images / 🎴 Cartes" qui
+pioche dans ce deck plutôt que dans les images brutes.
+
+### Schéma & logique métier
+
+- `supabase/migration_card_deck.sql` (**à exécuter manuellement sur
+  Supabase**) : ajoute `items.card_validated` (boolean, défaut false),
+  `items.card_accent_color` et `items.card_name_color` (text,
+  nullable) — une carte non personnalisée hérite des couleurs par
+  défaut du modèle de la base.
+- `src/lib/types.ts` : `ListItem` gagne `card_validated?`,
+  `card_accent_color?`, `card_name_color?`.
+- `src/lib/supabase/cardDeck.ts` (nouveau) : toute la logique du
+  "deck" — `mergeCardConfig()` (couleurs effectives d'une carte :
+  surcharge si définie, sinon couleurs du modèle de la base),
+  `setItemCardValidated()`, `setItemCardColors()`,
+  `fetchValidatedCardItems()`, `countValidatedCards()`, et le hook
+  `useCardDeckAvailable(listId)` qui dit si le deck d'une base contient
+  au moins une carte (c'est le seuil choisi pour rendre le deck
+  utilisable dans un jeu — **pas besoin que 100% des items soient
+  validés**, le deck grandit au fur et à mesure).
+- `src/components/game/DisplayModeToggle.tsx` (nouveau) : le switch
+  "🖼️ Images / 🎴 Cartes" réutilisé dans tous les jeux intégrés ; reste
+  caché tant qu'aucune carte n'est validée dans la base concernée.
+
+### Éditeur `/cartes`
+
+Réécrit pour piloter tout le cycle de vie du deck :
+- bouton de validation par item (bascule `card_validated`) ;
+- case "couleurs personnalisées pour cette carte" + palettes pour
+  surcharger `card_accent_color`/`card_name_color` (sinon la carte
+  suit les couleurs par défaut de la base, modifiables à tout moment —
+  le deck reste customisable après coup, couleurs comme cadrage) ;
+  sauvegarde combinée via `handleSaveItemSettings` ;
+  une grille affiche tous les items de la base avec badge
+  validé/non-validé, et un en-tête "Deck de cartes — X/Y validée(s)"
+  avec indicateur "✓ Utilisable dans les jeux en mode « Cartes »" dès
+  qu'au moins une carte est validée.
+
+### Intégration dans les jeux
+
+Les jeux où l'image est centrale (choix de l'utilisateur) ont reçu le
+toggle Images/Cartes ; Tier et Line Capture en sont volontairement
+exclus (miniatures petites/fonctionnelles, pas un bon fit pour des
+cartes TCG pleines).
+
+- **Blind** : toggle dans l'écran de config (affiché seulement si le
+  deck est utilisable) ; la pioche filtre sur `card_validated` en mode
+  cartes ; la carte révélée en cours de manche et le podium (#1/#2/#3)
+  en fin de partie passent en `<GameCard>` ; le reste du classement
+  (4+) reste en miniatures.
+- **Draft Anime** : même principe — pioche filtrée par
+  `card_validated`, la carte piochée affichée dans le bandeau d'info
+  passe en `<GameCard>` compact en mode cartes. Les icônes de
+  catégories sur les plateaux (trop petites) restent des images.
+- **Qui est-ce ?** : la grille de 12-20 cartes reste en miniatures
+  (indispensable pour la lisibilité du plateau), mais la carte secrète
+  révélée dans le popup "Ma cible" et les deux cartes secrètes
+  affichées en fin de partie passent en `<GameCard>`. Le mode
+  d'affichage choisi par l'hôte est synchronisé à l'invité via le
+  payload `game_init` du canal realtime (sinon l'hôte et l'invité
+  auraient pu voir des rendus différents).
+- **Undercover** : la carte-mot retournée pendant la distribution
+  (`isBeingViewed`) passe en `<GameCard>` en mode cartes ; la pioche
+  des deux mots (civil/undercover) filtre sur `card_validated`.
+- **Versus** : la carte mise aux enchères affichée au centre de
+  l'écran passe en `<GameCard>` ; la pioche filtre sur
+  `card_validated`. Les tuiles d'équipe en fin de partie (`CardTile`)
+  restent des miniatures — elles affichent des stats de synergie
+  superposées, incompatibles avec le gabarit `GameCard`. Les coachs et
+  terrains (bases séparées, sans notion de deck) ne sont pas concernés.
+- **Absolute Cinema** : cas le plus complexe — 7 catégories, chacune
+  liée à sa propre base. Le toggle est unique et global (un seul choix
+  Images/Cartes pour toute la partie), visible dès qu'**au moins une**
+  des bases sélectionnées a au moins une carte validée ; chaque
+  catégorie pioche dans son propre pool filtré par `card_validated` et
+  affiche sa propre carte avec le modèle de couleurs de **sa** base
+  (`templateForCategory()`, car chaque catégorie = une base
+  différente). Si une catégorie n'a aucune carte validée alors que le
+  mode Cartes est actif, le message existant "Aucune carte disponible"
+  s'affiche normalement pour cette étape (dégradation déjà prévue par
+  l'écran de jeu). Le récapitulatif final garde ses petites vignettes
+  (32×32, trop petites pour des `GameCard`).
+
+### Vérification
+`npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes),
+y compris les 6 jeux intégrés.
+
+### ⚠️ Action manuelle requise
+Exécuter `supabase/migration_card_deck.sql` dans l'éditeur SQL de
+Supabase (nouvelles colonnes `card_validated`, `card_accent_color`,
+`card_name_color` sur `items` — pas appliqué automatiquement).

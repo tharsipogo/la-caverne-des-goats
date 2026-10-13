@@ -3,8 +3,12 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { GameList, ListItem } from '@/lib/types';
+import { CardTemplateConfig, DEFAULT_CARD_TEMPLATE_CONFIG, GameList, ListItem } from '@/lib/types';
 import { pickRandom } from '@/lib/utils';
+import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
+import { countValidatedCards, DisplayMode, mergeCardConfig } from '@/lib/supabase/cardDeck';
+import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
+import { GameCard } from '@/components/game/GameCard';
 
 type Phase = 'setup' | 'draft' | 'end';
 
@@ -67,6 +71,31 @@ export default function AbsoluteCinemaPage() {
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
   const [currentChoices, setCurrentChoices] = useState<ListItem[]>([]);
 
+  // Mode d'affichage images / cartes (global — s'applique à toutes les catégories)
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('image');
+  const [deckAvailable, setDeckAvailable] = useState(false);
+  const [templatesByList, setTemplatesByList] = useState<Record<string, CardTemplateConfig>>({});
+
+  useEffect(() => {
+    const listIds = Array.from(new Set(Object.values(bases).filter(Boolean)));
+    if (listIds.length === 0) {
+      setDeckAvailable(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const counts = await Promise.all(listIds.map((id) => countValidatedCards(id)));
+      if (!cancelled) setDeckAvailable(counts.some((n) => n > 0));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bases]);
+
+  useEffect(() => {
+    if (!deckAvailable) setDisplayMode('image');
+  }, [deckAvailable]);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('lists').select('*').order('name');
@@ -118,6 +147,15 @@ export default function AbsoluteCinemaPage() {
 
     setLoadedItems(itemMap);
 
+    if (displayMode === 'card') {
+      const templateResults = await Promise.all(listIdsToFetch.map((id) => fetchCardTemplateOrDefault(id)));
+      const templateMap: Record<string, CardTemplateConfig> = {};
+      listIdsToFetch.forEach((id, i) => {
+        templateMap[id] = templateResults[i];
+      });
+      setTemplatesByList(templateMap);
+    }
+
     const initialTeams: PlayerTeam[] = playerNames.slice(0, playerCount).map((name) => ({
       name: name.trim() || 'Joueur',
     }));
@@ -147,9 +185,20 @@ export default function AbsoluteCinemaPage() {
       availablePool = itemsMap[listId] || [];
     }
 
-    const filteredPool = availablePool.filter((item) => !used.has(item.id));
+    let filteredPool = availablePool.filter((item) => !used.has(item.id));
+    if (displayMode === 'card') filteredPool = filteredPool.filter((item) => item.card_validated);
     const choices = pickRandom(filteredPool, Math.min(3, filteredPool.length));
     setCurrentChoices(choices);
+  }
+
+  /** Template de carte à appliquer à un item selon la base dont il provient (chaque catégorie a sa propre base). */
+  function templateForCategory(catKey: string): CardTemplateConfig {
+    if (catKey === 'actor2') {
+      return templatesByList[bases.actor2ListId] || DEFAULT_CARD_TEMPLATE_CONFIG;
+    }
+    const cat = CATEGORIES.find((c) => c.key === catKey);
+    const listId = cat ? bases[cat.baseKey as keyof typeof bases] : '';
+    return templatesByList[listId] || DEFAULT_CARD_TEMPLATE_CONFIG;
   }
 
   function selectItem(item: ListItem) {
@@ -245,6 +294,15 @@ export default function AbsoluteCinemaPage() {
               </div>
             ))}
           </div>
+
+          {deckAvailable && (
+            <div>
+              <label className="text-xs uppercase tracking-wider font-extrabold text-[#D4AF37] block mb-2">
+                Mode d'affichage
+              </label>
+              <DisplayModeToggle mode={displayMode} onChange={setDisplayMode} available={deckAvailable} />
+            </div>
+          )}
 
           <div className="border-t border-[#D4AF37]/20 pt-5 flex flex-col gap-4">
             <h2 className="text-xs uppercase tracking-widest font-black text-[#D4AF37]">
@@ -426,37 +484,52 @@ export default function AbsoluteCinemaPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-auto">
-          {currentChoices.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => selectItem(item)}
-              className="group bg-[#141218] hover:bg-[#1C1824] border-2 border-[#D4AF37]/20 hover:border-[#D4AF37] rounded-2xl p-4 flex flex-col items-center gap-4 transition-all duration-300 text-center hover:-translate-y-1 shadow-xl relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-[#D4AF37]/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          {currentChoices.map((item) =>
+            displayMode === 'card' ? (
+              <button
+                key={item.id}
+                onClick={() => selectItem(item)}
+                className="group flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="w-full max-w-[220px]">
+                  <GameCard item={item} template={templateForCategory(currentCat.key)} disableTilt />
+                </div>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] group-hover:bg-[#D4AF37] group-hover:text-black transition-all">
+                  Sélectionner
+                </span>
+              </button>
+            ) : (
+              <button
+                key={item.id}
+                onClick={() => selectItem(item)}
+                className="group bg-[#141218] hover:bg-[#1C1824] border-2 border-[#D4AF37]/20 hover:border-[#D4AF37] rounded-2xl p-4 flex flex-col items-center gap-4 transition-all duration-300 text-center hover:-translate-y-1 shadow-xl relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-[#D4AF37]/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-              <div className="w-full h-56 bg-[#0D0C10] rounded-xl overflow-hidden relative border border-white/10 shadow-inner">
-                {item.image_url ? (
-                  <Image
-                    src={item.image_url}
-                    width={300}
-                    height={224}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    alt={item.name}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-5xl opacity-40">🍿</div>
-                )}
-              </div>
+                <div className="w-full h-56 bg-[#0D0C10] rounded-xl overflow-hidden relative border border-white/10 shadow-inner">
+                  {item.image_url ? (
+                    <Image
+                      src={item.image_url}
+                      width={300}
+                      height={224}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      alt={item.name}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-5xl opacity-40">🍿</div>
+                  )}
+                </div>
 
-              <div className="font-serif font-bold text-white text-base group-hover:text-[#D4AF37] transition-colors">
-                {item.name}
-              </div>
+                <div className="font-serif font-bold text-white text-base group-hover:text-[#D4AF37] transition-colors">
+                  {item.name}
+                </div>
 
-              <span className="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] group-hover:bg-[#D4AF37] group-hover:text-black transition-all">
-                Sélectionner
-              </span>
-            </button>
-          ))}
+                <span className="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] group-hover:bg-[#D4AF37] group-hover:text-black transition-all">
+                  Sélectionner
+                </span>
+              </button>
+            )
+          )}
         </div>
 
         {currentChoices.length === 0 && (

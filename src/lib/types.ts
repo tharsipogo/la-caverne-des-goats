@@ -27,6 +27,11 @@ export interface ListItem {
   image_crop_y?: number;
   /** Facteur de zoom de l'image dans une carte (1 = taille normale). */
   image_zoom?: number;
+  /** Fait partie du deck de cartes de sa base (validée item par item). */
+  card_validated?: boolean;
+  /** Surcharge de couleur propre à cette carte (null = hérite du deck). */
+  card_accent_color?: string | null;
+  card_name_color?: string | null;
 }
 
 export interface TierAssignment {

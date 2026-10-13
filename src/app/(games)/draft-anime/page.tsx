@@ -3,8 +3,12 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
-import { GameList, ListItem } from '@/lib/types';
+import { CardTemplateConfig, DEFAULT_CARD_TEMPLATE_CONFIG, GameList, ListItem } from '@/lib/types';
 import { pickRandom } from '@/lib/utils';
+import { fetchCardTemplateOrDefault } from '@/lib/supabase/cardTemplates';
+import { DisplayMode, mergeCardConfig, useCardDeckAvailable } from '@/lib/supabase/cardDeck';
+import { DisplayModeToggle } from '@/components/game/DisplayModeToggle';
+import { GameCard } from '@/components/game/GameCard';
 
 type Phase = 'setup' | 'draft' | 'end';
 type GameMode = 'classic' | 'sabotage';
@@ -68,6 +72,11 @@ export default function AnimeDraftPage() {
 
   const [selectedTargetPlayerIdx, setSelectedTargetPlayerIdx] = useState<number>(0);
 
+  // Mode d'affichage images / cartes
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('image');
+  const [deckTemplate, setDeckTemplate] = useState<CardTemplateConfig>(DEFAULT_CARD_TEMPLATE_CONFIG);
+  const deckAvailable = useCardDeckAvailable(listId);
+
   const activeCategories = THEME_CATEGORIES[theme];
 
   useEffect(() => {
@@ -100,10 +109,24 @@ export default function AnimeDraftPage() {
     })();
   }, [listId]);
 
+  useEffect(() => {
+    if (!listId) return;
+    (async () => setDeckTemplate(await fetchCardTemplateOrDefault(listId)))();
+  }, [listId]);
+
+  useEffect(() => {
+    if (!deckAvailable) setDisplayMode('image');
+  }, [deckAvailable]);
+
   function startGame() {
+    const poolItems = displayMode === 'card' ? allItems.filter((i) => i.card_validated) : allItems;
     const requiredCards = playerCount * activeCategories.length;
-    if (allItems.length < requiredCards) {
-      alert(`Il faut au moins ${requiredCards} cartes dans la base pour ${playerCount} joueurs.`);
+    if (poolItems.length < requiredCards) {
+      alert(
+        displayMode === 'card'
+          ? `Il faut au moins ${requiredCards} cartes validées dans le deck pour ${playerCount} joueurs.`
+          : `Il faut au moins ${requiredCards} cartes dans la base pour ${playerCount} joueurs.`
+      );
       return;
     }
 
@@ -117,7 +140,7 @@ export default function AnimeDraftPage() {
       cards: { ...emptyCards },
     }));
 
-    const deck = pickRandom(allItems, allItems.length);
+    const deck = pickRandom(poolItems, poolItems.length);
     const firstCard = deck.pop() || null;
 
     setBoards(initialBoards);
@@ -239,6 +262,11 @@ export default function AnimeDraftPage() {
                 </option>
               ))}
             </select>
+            {deckAvailable && (
+              <div className="mt-3">
+                <DisplayModeToggle mode={displayMode} onChange={setDisplayMode} available={deckAvailable} />
+              </div>
+            )}
           </div>
 
           {/* Mode de jeu */}
@@ -360,15 +388,25 @@ export default function AnimeDraftPage() {
 
           {drawnCard && (
             <div className="flex items-center gap-3 bg-black/40 p-2.5 px-4 rounded-xl border border-white/10">
-              <div className="relative w-12 h-14 rounded-lg overflow-hidden bg-slate-800 border border-white/20 shrink-0">
-                {drawnCard.image_url ? (
-                  <Image src={drawnCard.image_url} fill className="object-cover" alt="" unoptimized />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs">
-                    {isNaruto ? '🌀' : '🏴‍☠️'}
-                  </div>
-                )}
-              </div>
+              {displayMode === 'card' ? (
+                <div className="w-20 shrink-0">
+                  <GameCard
+                    item={drawnCard}
+                    template={mergeCardConfig(drawnCard, deckTemplate)}
+                    disableTilt
+                  />
+                </div>
+              ) : (
+                <div className="relative w-12 h-14 rounded-lg overflow-hidden bg-slate-800 border border-white/20 shrink-0">
+                  {drawnCard.image_url ? (
+                    <Image src={drawnCard.image_url} fill className="object-cover" alt="" unoptimized />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs">
+                      {isNaruto ? '🌀' : '🏴‍☠️'}
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <span className="text-sm font-extrabold text-[#FACC15] block">{drawnCard.name}</span>
                 <span className="text-[11px] text-slate-400">Où placer cette carte ?</span>
