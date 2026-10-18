@@ -32,6 +32,9 @@ export interface ListItem {
   /** Surcharge de couleur propre à cette carte (null = hérite du deck). */
   card_accent_color?: string | null;
   card_name_color?: string | null;
+  /** Date (année + mois optionnel) utilisée par le jeu Timeline. */
+  timeline_year?: number | null;
+  timeline_month?: number | null;
 }
 
 export interface TierAssignment {

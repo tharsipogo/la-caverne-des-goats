@@ -22,6 +22,7 @@ const NAV_GAMES = [
   { href: '/draft-anime', label: '🥷 Anime Draft' },
   { href: '/le-five', label: '⚽ Le Five' },
   { href: '/qui-est-ce', label: '❓ Qui est-ce ?' },
+  { href: '/timeline', label: '📅 Timeline' },
 ];
 
 function useSidebarNav() {

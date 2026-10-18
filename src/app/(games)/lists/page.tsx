@@ -493,9 +493,14 @@ function ListDetail({ list, onBack }: { list: GameList; onBack: () => void }) {
           <h1 className="font-serif text-3xl">{list.name}</h1>
           <p className="text-muted mt-2 text-[14.5px]">{items.length} item{items.length > 1 ? 's' : ''}</p>
         </div>
-        <button className="btn-secondary shrink-0" onClick={() => router.push(`/cartes?list=${list.id}`)}>
-          🎴 Créer des cartes
-        </button>
+        <div className="flex gap-2 flex-wrap shrink-0">
+          <button className="btn-secondary" onClick={() => router.push(`/timeline/dates?list=${list.id}`)}>
+            📅 Dater les items
+          </button>
+          <button className="btn-secondary" onClick={() => router.push(`/cartes?list=${list.id}`)}>
+            🎴 Créer des cartes
+          </button>
+        </div>
       </div>
 
       <div className="panel flex flex-col gap-5 mb-6">

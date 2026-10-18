@@ -1311,3 +1311,26 @@ sur la table `items`).
 
 ### Vérification
 `npx tsc --noEmit` et `npx next build` passent sans erreur (17 routes).
+
+## Session 40 — Jeu « Timeline » (frise chronologique)
+
+**Nouveaux fichiers**
+- `src/lib/timeline.ts` — dates (mois + année), comparaison tolérante (même année + mois inconnu = interchangeables), `isPlacementCorrect`, `cardFromItem`, `fetchDatedCounts`.
+- `src/lib/timelineEvents.ts` — 97 événements intégrés datés (Histoire, Sciences & tech, Culture, Sport, Jeux vidéo).
+- `src/app/(games)/timeline/page.tsx` — jeu local 2–6 joueurs : frise commune, chaque joueur place la carte piochée ; bon placement = +1 point, mauvais = carte défaussée ; fin au premier à 5/7/10 points ou pioche épuisée. Sources : événements intégrés et/ou plusieurs bases (items datés). Toggle Images/Cartes (cartes validées, via `ScaledGameCard`).
+- `src/app/(games)/timeline/dates/page.tsx` — éditeur de dates (mois + année) par base ; accessible via « Mes bases » (📅 Dater les items) et le setup Timeline.
+- `supabase/migration_timeline_dates.sql` — colonnes `items.timeline_year` / `timeline_month`.
+- Sidebar « 📅 Timeline » ; `ListItem` étendu.
+
+**⚠️ Action manuelle requise**
+- Exécuter `supabase/migration_timeline_dates.sql` dans l'éditeur SQL Supabase.
+- (Rappel) `supabase/migration_image_crop.sql` doit aussi avoir été exécuté.
+
+**Vérifié** : logique (11 cas), parcours complet events seuls et base en mode Cartes. Éditeur de dates non rejoué visuellement.
+
+## Session 41 — Timeline : mode « Main de cartes », espace carte/date, +125 événements
+
+- `ScaledGameCard` : le contenu réduit est en `position: absolute` → il ne gonfle plus la hauteur de la ligne (cause de l'espace vide entre la carte et la date dans la frise).
+- Timeline : nouveau mode **Main de cartes** (choix « Mode de jeu » au setup). Chaque joueur a 3/5/7 cartes ; il choisit la carte à placer. Raté = carte défaussée + 1 carte piochée (si pioche vide, il garde sa carte). Premier à vider sa main gagne. Le mode « Pioche partagée » est inchangé.
+- `timelineEvents.ts` : 97 → 222 événements datés.
+- Aucune migration SQL nouvelle.

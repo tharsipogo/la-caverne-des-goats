@@ -43,7 +43,7 @@ export function ScaledGameCard(props: GameCardProps) {
 
   return (
     <div ref={outerRef} style={{ width: '100%', aspectRatio: '63 / 88', position: 'relative' }}>
-      <div style={{ width: SAFE_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: SAFE_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
         <GameCard {...props} />
       </div>
     </div>
