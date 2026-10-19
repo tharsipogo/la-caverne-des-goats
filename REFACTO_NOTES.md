@@ -1334,3 +1334,11 @@ sur la table `items`).
 - Timeline : nouveau mode **Main de cartes** (choix « Mode de jeu » au setup). Chaque joueur a 3/5/7 cartes ; il choisit la carte à placer. Raté = carte défaussée + 1 carte piochée (si pioche vide, il garde sa carte). Premier à vider sa main gagne. Le mode « Pioche partagée » est inchangé.
 - `timelineEvents.ts` : 97 → 222 événements datés.
 - Aucune migration SQL nouvelle.
+
+## Session 42 — Icône PWA plein cercle
+- Ajout d'icônes **maskable** plein cadre (`public/icons/maskable-192.png`, `maskable-512.png`) : fond opaque sans coins transparents, piment dans la zone sûre. Android les découpe en cercle sans bordure blanche.
+- `manifest.json` : entrées `any` et `maskable` séparées. `apple-touch-icon.png` rendue opaque.
+- ⚠️ Action manuelle : désinstaller puis réinstaller la PWA sur le téléphone pour que la nouvelle icône soit prise en compte.
+
+### Session 42 (suite) — vraie mascotte
+- Les icônes PWA (`icon-192/512`, `maskable-192/512`, `apple-touch-icon`) et `icon.svg` sont générées depuis le logo fourni (`chili_party_logo.svg`, mascotte piment) sur fond bleu nuit `#012069` plein cadre ; aucun coin transparent, donc pas de contour blanc dans le cercle Android. Versions maskable : mascotte à 78 % (zone sûre).
