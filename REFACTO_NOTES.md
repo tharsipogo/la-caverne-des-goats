@@ -1352,3 +1352,8 @@ sur la table `items`).
 - `Icone.svg` (fond Figma #F5F5F5 retiré) → `public/logo.svg`, `public/logo-mascot.svg` (viewBox recadré sur la mascotte), `public/icons/favicon.svg` (viewBox carré) + `favicon-32/48/64.png`.
 - Sidebar (desktop + mobile) et titre de l'accueil : l'emoji 🌶️ est remplacé par `/logo-mascot.svg`. Onglet du navigateur : `metadata.icons` pointe sur le favicon mascotte. Pages d'erreur : emoji conservé.
 - Icône écran d'accueil Android : raccourci Brave/Chrome « ajouter à l'écran d'accueil » = fond blanc imposé par Android ; il faut une vraie installation WebAPK depuis Chrome (« Installer l'application »).
+
+## Session 44 — Icône Android : le manifest n'était pas lié
+- **Cause trouvée** : `layout.tsx` ne déclarait pas `manifest` → aucun `<link rel="manifest">` dans la page, Chrome créait un simple raccourci avec l'icône `any` (cercle blanc imposé par Android). Ajout de `manifest: '/manifest.json'` + `viewport.themeColor`.
+- `manifest.json` : icônes `maskable` (192/512) et `any` (192/512) séparées, `?v=2` pour contourner le cache, `id: "/?v=2"`.
+- ⚠️ Redéployer, puis désinstaller l'ancien raccourci et réinstaller via Chrome (« Installer »).

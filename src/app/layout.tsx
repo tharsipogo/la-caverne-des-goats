@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Sidebar, MobileBottomNav } from '@/components/layout/Sidebar';
 import { AuthProvider } from '@/lib/authContext';
@@ -9,6 +9,7 @@ import { Starfield } from '@/components/Starfield';
 export const metadata: Metadata = {
   title: 'Chili Party',
   description: 'Jeux et classements en ligne et local',
+  manifest: '/manifest.json',
   icons: {
     icon: [
       { url: '/icons/favicon.svg', type: 'image/svg+xml' },
@@ -16,6 +17,10 @@ export const metadata: Metadata = {
     ],
     apple: '/icons/apple-touch-icon.png',
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#101118',
 };
 
 export default function RootLayout({
