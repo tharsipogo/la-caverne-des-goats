@@ -1347,3 +1347,8 @@ sur la table `items`).
 - Icônes régénérées depuis `Logo.svg` (mascotte sur ciel étoilé bleu nuit, carré plein cadre ; l'œuvre carrée de 1024 px est à x=321 dans un SVG de 1667×1090 → recadrée). Mascotte à 80 % pour rester dans la zone sûre du cercle Android.
 - `manifest.json` : deux icônes `purpose: "any maskable"` (192 et 512) — plus d'icône « any » séparée avec marge, qui provoquait le fond blanc dans le cercle.
 - ⚠️ Désinstaller puis réinstaller la PWA sur le téléphone.
+
+## Session 43 — Logo mascotte dans l'interface et l'onglet
+- `Icone.svg` (fond Figma #F5F5F5 retiré) → `public/logo.svg`, `public/logo-mascot.svg` (viewBox recadré sur la mascotte), `public/icons/favicon.svg` (viewBox carré) + `favicon-32/48/64.png`.
+- Sidebar (desktop + mobile) et titre de l'accueil : l'emoji 🌶️ est remplacé par `/logo-mascot.svg`. Onglet du navigateur : `metadata.icons` pointe sur le favicon mascotte. Pages d'erreur : emoji conservé.
+- Icône écran d'accueil Android : raccourci Brave/Chrome « ajouter à l'écran d'accueil » = fond blanc imposé par Android ; il faut une vraie installation WebAPK depuis Chrome (« Installer l'application »).

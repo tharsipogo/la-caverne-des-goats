@@ -10,7 +10,10 @@ export const metadata: Metadata = {
   title: 'Chili Party',
   description: 'Jeux et classements en ligne et local',
   icons: {
-    icon: '/icons/icon-512.png',
+    icon: [
+      { url: '/icons/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/favicon-48.png', sizes: '48x48', type: 'image/png' },
+    ],
     apple: '/icons/apple-touch-icon.png',
   },
 };

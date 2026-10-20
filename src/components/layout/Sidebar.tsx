@@ -114,7 +114,8 @@ export function Sidebar() {
         style={{ background: 'rgba(8, 10, 24, 0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
       >
         <Link href="/" className="flex items-center gap-2 mb-4 px-2.5 hover:opacity-80 transition-opacity">
-          <span className="text-xl leading-none">🌶️</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mascot.svg" alt="" className="h-8 w-auto" />
           <span className="flex flex-col leading-tight">
             <span className="font-serif font-semibold text-[19px]" style={{ color: '#f5a623' }}>
               Chili Party
@@ -147,7 +148,8 @@ export function Sidebar() {
         style={{ background: 'rgba(8, 10, 24, 0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
       >
         <Link href="/" className="font-serif text-lg font-semibold text-white shrink-0 flex items-center gap-1.5">
-          <span>🌶️</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mascot.svg" alt="" className="h-7 w-auto" />
           <span style={{ color: '#f5a623' }}>Chili Party</span>
         </Link>
         <div className="w-36">
