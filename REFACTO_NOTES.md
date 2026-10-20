@@ -1342,3 +1342,8 @@ sur la table `items`).
 
 ### Session 42 (suite) — vraie mascotte
 - Les icônes PWA (`icon-192/512`, `maskable-192/512`, `apple-touch-icon`) et `icon.svg` sont générées depuis le logo fourni (`chili_party_logo.svg`, mascotte piment) sur fond bleu nuit `#012069` plein cadre ; aucun coin transparent, donc pas de contour blanc dans le cercle Android. Versions maskable : mascotte à 78 % (zone sûre).
+
+### Session 42 (fin) — nouveau Logo.svg plein cadre
+- Icônes régénérées depuis `Logo.svg` (mascotte sur ciel étoilé bleu nuit, carré plein cadre ; l'œuvre carrée de 1024 px est à x=321 dans un SVG de 1667×1090 → recadrée). Mascotte à 80 % pour rester dans la zone sûre du cercle Android.
+- `manifest.json` : deux icônes `purpose: "any maskable"` (192 et 512) — plus d'icône « any » séparée avec marge, qui provoquait le fond blanc dans le cercle.
+- ⚠️ Désinstaller puis réinstaller la PWA sur le téléphone.
